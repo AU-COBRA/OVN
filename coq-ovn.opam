@@ -1,0 +1,35 @@
+opam-version: "2.0"
+name: "coq-ovn"
+version: "dev"
+synopsis: "Verified implementation of the Open Vote Network protocol "
+description: """
+Verified implementation of the Open Vote Network protocol
+"""
+maintainer: "todo"
+authors: "The COBRA team"
+license: "MIT"
+homepage: "https://github.com/AU-COBRA/OVN"
+dev-repo: "git+https://github.com/AU-COBRA/OVN.git"
+bug-reports: "https://github.com/AU-COBRA/OVN/issues"
+
+depends: [
+  "coq" {>= "8.16" & < "8.17~"}
+  "coq-concert" {= "8.16"}
+  "ssprove" {= "8.16"}
+  "coq-rust-extraction" {= "dev"}
+  "coq-elm-extraction" {= "dev"}
+]
+
+pin-depends: [
+  ["coq-concert.8.16" "git+https://github.com/AU-COBRA/ConCert.git#980f08b0f9366dcca1afe3fe65f87d55ffeaf563"]
+  ["ssprove.8.16" "git+https://github.com/SSProve/ssprove.git#586d6db2e014ee4abb3af677e5ecdfc66e3f690e"]
+  ["coq-rust-extraction.dev" "git+https://github.com/AU-COBRA/coq-rust-extraction.git#61fd34d9f2fed705a860c33691642d3339681ea1"]
+  ["coq-elm-extraction.dev" "git+https://github.com/AU-COBRA/coq-elm-extraction.git#1dc7fdb299db35960174f48d813b1ea61f7e396c"]
+]
+
+build: [
+  [make "theory"]
+]
+install: [
+  [make "install"]
+]
