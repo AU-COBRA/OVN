@@ -210,23 +210,11 @@ Module FieldEquivalence.
   
   (* And an integral domain. *)
   Module RisIdomain.
-    (*Lemma integraldomain_axiom : GRing.IntegralDomain.axiom R_RingType.
+    Lemma integraldomain_axiom : GRing.IntegralDomain.axiom R_RingType.
     Proof.
       unfold GRing.IntegralDomain.axiom.
       R_is_field. 
-      
-      intros x y H. destruct (eq_dec x rO).
-      - unfold "||". now rewrite H0.
-      - specialize (Finv_l x). rewrite <- neq_refl in H0. specialize (Finv_l H0).
-        assert (multinv : forall a b c, b = c -> rmul a b = rmul a c). 
-          { intros. rewrite H1. reflexivity. }
-        specialize (multinv (rinv x) (rmul x y) rO).
-        specialize (multinv H).
-        rewrite RisRing.rmul0_right in multinv.
-        rewrite Rmul_assoc Finv_l Rmul_1_l in multinv.
-        unfold "||". destruct (x == rO); auto.
-        now rewrite multinv. 
-    Qed.*)
+    Admitted.
     
     Lemma idomain_axiom : forall x y, rmul x y = rO -> (x == rO) || (y == rO).
     Proof.
