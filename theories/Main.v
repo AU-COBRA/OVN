@@ -21,7 +21,7 @@ Module FieldEquivalence.
     This is enough since BoardroomAxioms_field_theory field states that a field as defined 
     by the BoardroomAxioms is a field in the Coq standard library.
  *)
-  (* Define a supposed field in mathcomp. *)
+ (* Define a supposed field in mathcomp. *)
   Require Import Setoid.
   Variable R : choiceType.
   (* We need to assume R has choiceType. This is a reasonable assumption as we are working
@@ -31,7 +31,6 @@ Module FieldEquivalence.
   Variable (rdiv : R -> R -> R) (rinv : R -> R).
   (*Variable req : R -> R -> Prop. (* rel R same as R -> R -> bool *)*)
   
-
 
   From Coq Require Import Field.
   (* First, we assume R is a field in the standard library. *)
@@ -51,9 +50,7 @@ Module FieldEquivalence.
 
   Axiom eq_dec : forall (x y : R), (x == y) \/ (x != y).
 
-  Lemma neq_refl : forall a b : R, a<>b <-> a!=b. 
-  Proof.
-Admitted.
+  Conjecture neq_refl : forall a b : R, a<>b <-> a!=b. 
 
   (* We then show that R is an abelian group in mathcomp. *)
   Module RisZmod. 
@@ -155,8 +152,7 @@ Admitted.
     Definition ringmixin := RingMixin rmulA rI_left_id rI_right_id 
       left_dist_rmul_radd right_dist_rmul_radd rInotrO.  
     Check ringmixin.
-    (*
-    Definition comringmixin := ComRingMixin rmulA rmulC rI_left_id 
+    (*Definition comringmixin := ComRingMixin rmulA rmulC rI_left_id 
       left_dist_rmul_radd rInotrO.*)
   End RisRing.
 
@@ -214,7 +210,7 @@ Admitted.
   
   (* And an integral domain. *)
   Module RisIdomain.
-    Lemma integraldomain_axiom : GRing.IntegralDomain.axiom R_RingType.
+    (*Lemma integraldomain_axiom : GRing.IntegralDomain.axiom R_RingType.
     Proof.
       unfold GRing.IntegralDomain.axiom.
       R_is_field. 
@@ -230,7 +226,7 @@ Admitted.
         rewrite Rmul_assoc Finv_l Rmul_1_l in multinv.
         unfold "||". destruct (x == rO); auto.
         now rewrite multinv. 
-    Qed.
+    Qed.*)
     
     Lemma idomain_axiom : forall x y, rmul x y = rO -> (x == rO) || (y == rO).
     Proof.
