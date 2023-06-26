@@ -6,10 +6,10 @@ From mathcomp Require Import all_ssreflect all_algebra reals distr realsum
   fingroup.fingroup solvable.cyclic prime ssrnat ssreflect ssrfun ssrbool ssrnum
   eqtype choice seq ssralg.
 Set Warnings "notation-overridden,ambiguous-paths".
-From HB Require Import structures.
+
 Import GRing.Theory.
 
-Section FieldEquivalence.
+Module FieldEquivalence.
   (* 
     To show that the implementations of OVN in ConCert and SSProve are equivalent in some
     sense we need to show that their implementations of finite fields are equivalent.
@@ -23,10 +23,15 @@ Section FieldEquivalence.
  *)
   (* Define a supposed field in mathcomp. *)
   Require Import Setoid.
-  Variable R : Type.
-  Variable (rO rI : R) (radd rmul rsub: R->R->R) (ropp : R -> R).
+  Variable R : choiceType.
+  (* We need to assume R has choiceType. This is a reasonable assumption as we are working
+     with finite fields and one can prove Choice for countable types so in particular for 
+     finite types. *)
+  Variable (rO rI : R) (radd rmul rsub: R -> R -> R) (ropp : R -> R).
   Variable (rdiv : R -> R -> R) (rinv : R -> R).
-  Variable req : R -> R -> bool. (* rel R same as R -> R -> bool *)
+  (*Variable req : R -> R -> Prop. (* rel R same as R -> R -> bool *)*)
+  
+
 
   From Coq Require Import Field.
   (* First, we assume R is a field in the standard library. *)
@@ -40,8 +45,18 @@ Section FieldEquivalence.
   
   Ltac R_is_field := pose R_field_theory as f; inversion f; clear f; inversion F_R.
 
+  (*Definition runit (r : R) := r != rO.*)
+
+  Axiom rinv0 : rinv rO = rO.
+
+  Axiom eq_dec : forall (x y : R), (x == y) \/ (x != y).
+
+  Lemma neq_refl : forall a b : R, a<>b <-> a!=b. 
+  Proof.
+Admitted.
+
   (* We then show that R is an abelian group in mathcomp. *)
-  Section RisZmod. 
+  Module RisZmod. 
     Lemma raddA : associative radd.
     Proof.
       R_is_field. unfold associative. apply Radd_assoc.
@@ -62,15 +77,14 @@ Section FieldEquivalence.
       R_is_field. unfold left_inverse. intros. rewrite Radd_comm. apply Ropp_def.
     Qed.
 
-Locate isZmodule.Build.
-
-    Definition zmod_Mixin := ZmodMixin raddA raddC rO_id ropp_inverse.
+    Definition zmodmixin := ZmodMixin raddA raddC rO_id ropp_inverse.
   End RisZmod.
+  
+  Canonical R_ZmodType := ZmodType R RisZmod.zmodmixin.
+  Check (R_ZmodType : zmodType).
 
-  (*HB.instance Definition _ := RisZmod.Mixin.*)
-
-  (* And a commutative ring. *)
-  Section RisComRing.
+  (* And a (commutative) ring. *)
+  Module RisRing.
     Lemma rmulC : commutative rmul.
     Proof.
       R_is_field. unfold commutative. apply Rmul_comm.
@@ -132,57 +146,127 @@ Locate isZmodule.Build.
       R_is_field. intros.
       rewrite rmul_ropp. rewrite Rmul_comm. now rewrite <- rmul_ropp.
     Qed.
-
-    Lemma rInotrO: ~ (eq rI rO).
+    
+    Lemma rInotrO: rI != rO.
     Proof.
-      R_is_field. apply F_1_neq_0.
+      R_is_field. rewrite <- neq_refl. apply F_1_neq_0.
     Qed.
-  
-    Definition ring_Mixin := GRing.Zmodule_isRing.Build R rI rmul rmulA rI_left_id rI_right_id 
-      left_dist_rmul_radd right_dist_rmul_radd rInotrO. 
     
-    Definition ring_Mixin' := GRing.Zmodule_isComRing.Build R rmulA rmulC rI_left_id 
-      left_dist_rmul_radd rInotrO.
-    
-  End RisComRing.
-  (* Zmodule_isComRing 2584*)
+    Definition ringmixin := RingMixin rmulA rI_left_id rI_right_id 
+      left_dist_rmul_radd right_dist_rmul_radd rInotrO.  
+    Check ringmixin.
+    (*
+    Definition comringmixin := ComRingMixin rmulA rmulC rI_left_id 
+      left_dist_rmul_radd rInotrO.*)
+  End RisRing.
 
-  (*HB.instance Definition _ := RisComRing.Mixin.*)
+  Canonical R_RingType := RingType R_ZmodType RisRing.ringmixin.
+  Check (R_RingType : ringType).
+  Canonical R_ComRingType := ComRingType R_RingType RisRing.rmulC.
+  Check (R_ComRingType : comRingType).
+
+  (* R is also a unit (commutative) ring. *)
+  Definition runit (r : R_RingType) := r != rO.
+  Module RisUnitRing.
+    Lemma left_unit : {in runit, left_inverse rI rinv rmul}.
+    Proof.
+      R_is_field. intros x Hunit. rewrite Finv_l. auto.
+      unfold runit in Hunit. rewrite neq_refl. apply Hunit.
+    Qed.
+    
+    Lemma right_unit : {in runit, right_inverse rI rinv rmul}.
+    Proof.
+      R_is_field. intros x Hunit. rewrite Rmul_comm. now apply left_unit.
+    Qed.
+
+    Lemma multinv_then_unit : forall x y : R_RingType, rmul y x = rI /\ rmul x y = rI -> runit x.
+    Proof.
+      R_is_field. intros x y [Hyx Hxy]. 
+      unfold runit. rewrite <- neq_refl. intros contra. intuition. 
+    Qed.
+
+    Lemma com_multinv_then_unit : forall x y : R_ComRingType, rmul y x = rI -> runit x.
+    Proof.
+      R_is_field. intros x y Hyx. 
+      unfold runit. rewrite <- neq_refl. intros contra. intuition. 
+    Qed.
+
+    Lemma inv_unit : {in [predC runit], rinv =1 id}. 
+    Proof.
+      intros x H. unfold predC in H. rewrite inE in H. unfold "\notin" in H. 
+      destruct (x \in runit) eqn:E.
+      - discriminate. 
+      - clear H.
+        unfold runit in E. unfold "\in" in E. simpl in E. 
+        destruct (eq_dec x rO); rewrite /is_true in H.
+        + clear E.
+          apply (ssrbool.elimT eqtype.eqP) in H.
+          rewrite H. apply rinv0.
+        + rewrite H in E. discriminate.
+    Qed.
+    
+    (*Definition unitringmixin := UnitRingMixin left_unit right_unit multinv_then_unit inv_unit.*)
+    Definition comunitringmixin := ComUnitRingMixin left_unit com_multinv_then_unit inv_unit.
+  End RisUnitRing.
+
+  (*Canonical R_UnitRingType := UnitRingType R_RingType RisUnitRing.unitringmixin.*)
+  Canonical R_ComUnitRingType := UnitRingType R_ComRingType RisUnitRing.comunitringmixin.
   
-  (* We must then show that R is an integral domain. Not necessary when using comring? Then need inv0 = 0... which is not true in Q... *)
-  Section RisIdomain.
-      Lemma idomain_axiom (x y : R) : rmul x y = rO -> (req x rO) || (req y rO).
-      Proof.
-        R_is_field. intros. 
-      Qed.
+  (* And an integral domain. *)
+  Module RisIdomain.
+    Lemma integraldomain_axiom : GRing.IntegralDomain.axiom R_RingType.
+    Proof.
+      unfold GRing.IntegralDomain.axiom.
+      R_is_field. 
       
+      intros x y H. destruct (eq_dec x rO).
+      - unfold "||". now rewrite H0.
+      - specialize (Finv_l x). rewrite <- neq_refl in H0. specialize (Finv_l H0).
+        assert (multinv : forall a b c, b = c -> rmul a b = rmul a c). 
+          { intros. rewrite H1. reflexivity. }
+        specialize (multinv (rinv x) (rmul x y) rO).
+        specialize (multinv H).
+        rewrite RisRing.rmul0_right in multinv.
+        rewrite Rmul_assoc Finv_l Rmul_1_l in multinv.
+        unfold "||". destruct (x == rO); auto.
+        now rewrite multinv. 
+    Qed.
+    
+    Lemma idomain_axiom : forall x y, rmul x y = rO -> (x == rO) || (y == rO).
+    Proof.
+      R_is_field. intros x y H. destruct (eq_dec x rO).
+      - unfold "||". now rewrite H0.
+      - specialize (Finv_l x). rewrite <- neq_refl in H0. specialize (Finv_l H0).
+        assert (multinv : forall a b c, b = c -> rmul a b = rmul a c). 
+          { intros. rewrite H1. reflexivity. }
+        specialize (multinv (rinv x) (rmul x y) rO).
+        specialize (multinv H).
+        rewrite RisRing.rmul0_right in multinv.
+        rewrite Rmul_assoc Finv_l Rmul_1_l in multinv.
+        unfold "||". destruct (x == rO); auto.
+        now rewrite multinv. 
+    Qed.  
   End RisIdomain.
-*)
+  Canonical R_IdomainType := IdomainType R_ComUnitRingType RisIdomain.idomain_axiom.
   
-  (* Since R is a commutative ring and an integral domain it is a field in mathcomp. *)
-  Section RisField.
+  (* Finally, R is a field! *)
+  Module RisField.
     Lemma unit_ring : forall (x : R), ~(eq x rO) -> rmul (rinv x) x = rI.
     Proof.
       R_is_field. apply Finv_l.
     Qed.
-
-    Lemma rinv0 : rinv rO = rO.
-    Proof.
-      R_is_field.
-    Qed.
     
-    
+    Definition fieldunitmixin := FieldUnitMixin unit_ring rinv0.
+    Definition fieldidomainmixin := FieldIdomainMixin fieldunitmixin.
+    Definition R_fieldish := GRing.Field.IdomainType unit_ring rinv0.
+    Definition fieldmixin := FieldMixin unit_ring rinv0.
   End RisField.
-  (* ComRing_isField 4100 *)
+  Canonical R_FieldType := FieldType R_fieldish fieldmixin.
 
   Definition field_stdlib_to_mathcomp :
     fieldType.
   Proof.
-    pose R_field_theory as f.
-    inversion f. clear f.
-    inversion F_R. 
-    exists R.
-    econstructor. econstructor.
+    exists R_FieldType.
   Qed.
 
 End FieldEquivalence.
