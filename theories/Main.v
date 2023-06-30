@@ -1,10 +1,16 @@
 From OVN Require Import BoardroomVoting BoardroomMath.
 From OVN Require Import OVN.
 
+
+
 Set Warnings "-notation-overridden,-ambiguous-paths".
 From mathcomp Require Import all_ssreflect all_algebra reals distr realsum
   fingroup.fingroup solvable.cyclic prime ssrnat ssreflect ssrfun ssrbool ssrnum
   eqtype choice seq ssralg.
+
+From Crypt Require Import Axioms ChoiceAsOrd SubDistr Couplings
+  UniformDistrLemmas FreeProbProg Theta_dens RulesStateProb UniformStateProb
+  pkg_composition Package Prelude SigmaProtocol Schnorr DDH.
 Set Warnings "notation-overridden,ambiguous-paths".
 
 Import GRing.Theory.
@@ -198,3 +204,33 @@ Module FieldEquivalence.
   Definition field_stdlib_to_mathcomp : fieldType := R_FieldType.
 End FieldEquivalence.
 End FieldEquivalence.
+
+Module FunctionalEq (BP : BoardroomParams) (OP : OVNParam).
+
+  Definition A := BP.A. (* Base group *)
+  Module BV := BoardroomVoting BP.
+  Import BV.
+
+  Module GroupP : GroupParam.
+
+    Parameter n : nat.
+    Parameter n_pos : Positive n.
+
+    Parameter gT : finGroupType. (* THIS IS A (play pretend) *)
+    Definition ζ : {set gT} := [set : gT].
+    Parameter g :  gT.
+    Parameter g_gen : ζ = cycle_group g.
+    Parameter prime_order : prime (order g).
+  End GroupP.
+
+  Module OVN := OVN GroupP OP.
+  Import OVN. 
+
+  Theorem equivalent_pk (sk : A) : 
+    compute_public_key sk 
+    
+  Proof.
+    
+  Qed.
+  
+End FunctionalEq.
