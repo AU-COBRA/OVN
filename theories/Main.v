@@ -171,12 +171,12 @@ Module FieldEquivalence.
 
     Definition fieldunitmixin := FieldUnitMixin unit_ring rinv0.
   End RisUnitRing.
-
+(*
   Definition test := UnitRingType R fieldunitmixin.
   Eval hnf in test.
   Eval compute in (2+2).
   Eval cbv beta delta in (2+2).
-  
+*)  
 
   Canonical R_UnitRingType := Eval hnf in UnitRingType R fieldunitmixin.
   Canonical R_ComUnitRingType := Eval hnf in [comUnitRingType of R].
@@ -205,6 +205,23 @@ Module FieldEquivalence.
 End FieldEquivalence.
 End FieldEquivalence.
 
+Module BoardroomIsFinGroupType.
+  (* We want to show that Z/nZ is isomorphic to Zn since Zn has the type finGroupType and is
+     the group we are working with in ovn while Z/nZ is a quotient of the same type as used
+     in boardroom voting. Since the quotient in boardroom has n elements it is isomorphic to 
+     Z/nZ and if we can show the afoare mentioned isomorphism we can show that the group in 
+     boardroomvoting is isomorphic to the group in ovn. *)
+  (* In the following we assume that n>0 since otherwise Zn the empty set. *)
+  Variable (n' : nat).
+  Local Notation n := n'.+1.
+  Definition (Zn : finGroupType) := [finGroupType of 'Z_n].
+  (* The group operation should be the following: Zp0 for the identity element for addition,
+     Z_opp for the inverse function of addition, and Z_add for addition. 'Z_n is also a ring
+     (when n>1 since otherwise it is the trivial ring which the formalisation of ssralg/finalg
+     does not like) with identity Zp1 for multiplication (this is also a generator of the additive
+     group), Zp_mul for multiplication, and Zp_inv for the inverse function of multiplication. *)
+End BoardroomIsFinGroupType.
+
 Module FunctionalEq (BP : BoardroomParams) (OP : OVNParam).
 
   Definition A := BP.A. (* Base group *)
@@ -228,7 +245,7 @@ Module FunctionalEq (BP : BoardroomParams) (OP : OVNParam).
 
   Theorem equivalent_pk (sk : A) : 
     compute_public_key sk 
-    
+
   Proof.
     
   Qed.
