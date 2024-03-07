@@ -1,6 +1,13 @@
 -Q theories OVN
 theories/Main.v
 
+# -R theories/hacspec Examples
+# -arg -w
+# -arg all
+
+theories/hacspec/Hacspec_ovn_Ovn_traits.v
+theories/hacspec/Hacspec_ovn.v
+
 theories/boardroomVoting/Egcd.v
 theories/boardroomVoting/Euler.v
 theories/boardroomVoting/BoardroomMath.v

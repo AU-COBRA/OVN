@@ -100,9 +100,9 @@ Proof.
   reflexivity.
 Qed.
 
-Definition Pid : finType := [finType of 'I_n].
-Definition Secret : finType := Zp_finComRingType (Zp_trunc #[g]).
-Definition Public : finType := FinGroup.arg_finType gT.
+Definition Pid : finType := Finite.clone _ 'I_n. 
+Definition Secret : finType := FinRing_ComRing__to__fintype_Finite (fintype_ordinal__canonical__FinRing_ComRing (Zp_trunc #[g])). (* Zp_finComRingType (Zp_trunc #[g]). *)
+Definition Public : finType := gT.
 Definition s0 : Secret := 0.
 
 Definition Pid_pos : Positive #|Pid|.
@@ -141,7 +141,7 @@ Definition i_public := #|Public|.
 
 Module Type CDSParams <: SigmaProtocolParams.
   Definition Witness : finType := Secret.
-  Definition Statement : finType := prod_finType (prod_finType Public Public) Public.
+  Definition Statement : finType := prod (prod Public Public) Public.
 
   Definition Witness_pos : Positive #|Witness| := Secret_pos.
   Definition Statement_pos : Positive #|Statement|.
@@ -186,7 +186,7 @@ Module Type CDSParams <: SigmaProtocolParams.
   Parameter Challenge_pos : Positive #|Challenge|.
   Parameter Response_pos : Positive #|Response|.
   Parameter State_pos : Positive #|State|.
-  Parameter Bool_pos : Positive #|bool_choiceType|.
+  Parameter Bool_pos : Positive #|'bool|.
 End CDSParams.
 
 Module OVN (π2 : CDSParams) (Alg2 : SigmaProtocolAlgorithms π2).
@@ -263,8 +263,11 @@ Module OVN (π2 : CDSParams) (Alg2 : SigmaProtocolAlgorithms π2).
     | _ => 1
     end.
 
-  Canonical finGroup_com_law := Monoid.ComLaw group_prodC.
-
+  From HB Require Import structures.
+  From mathcomp Require Import ssreflect.bigop.
+  Import Monoid.
+  HB.instance Definition _ := isCommutativeLaw.Build _ _ group_prodC.
+  
   Definition compute_key
              (m : chMap pid (chProd public choiceTranscript1))
              (i : pid)
@@ -306,7 +309,7 @@ Module OVN (π2 : CDSParams) (Alg2 : SigmaProtocolAlgorithms π2).
     rewrite setm_rem.
 
     have set_rem_eq : forall P x,
-      \big[finGroup_com_law/1]_(k <- X :\ j | P k)
+      \big[Notations_mulg__canonical__Monoid_ComLaw/1]_(k <- X :\ j | P k)
         get_value (setm keys j x) k =
       \prod_(k <- X :\ j | P k)
         get_value (remm keys j) k.
@@ -996,13 +999,13 @@ Module OVN (π2 : CDSParams) (Alg2 : SigmaProtocolAlgorithms π2).
              in
          #assert eqn
                     (size
-                       (domm (T:=[ordType of 'I_#|'I_n|]) (S:='I_#|gT| * ('I_#|gT| * 'I_#|gT| * 'I_#|'Z_Sigma1.q| * 'I_#|'Z_Sigma1.q|))
-                          (setm (T:=[ordType of 'I_#|'I_n|]) (setm (T:=[ordType of 'I_#|'I_n|]) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
+                       (domm (T:='I_#|'I_n|) (S:='I_#|gT| * ('I_#|gT| * 'I_#|gT| * 'I_#|'Z_Sigma1.q| * 'I_#|'Z_Sigma1.q|))
+                          (setm (T:='I_#|'I_n|) (setm (T:='I_#|'I_n|) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
                              (fto (expgn_rec (T:=gT) g (otf x)),
                              (fto (expgn_rec (T:=gT) g (otf x)), fto (expgn_rec (T:=gT) g (otf x1)), a, fto (Zp_add (otf v) (Zp_mul (otf a) (otf x)))))))) n ;;
           #put ckey_loc i := fto
                               (compute_key
-                                 (setm (T:=[ordType of 'I_#|'I_n|]) (setm (T:=[ordType of 'I_#|'I_n|]) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
+                                 (setm (T:='I_#|'I_n|) (setm (T:='I_#|'I_n|) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
                                     (fto (expgn_rec (T:=gT) g (otf x)),
                                     (fto (expgn_rec (T:=gT) g (otf x)), fto (expgn_rec (T:=gT) g (otf x1)), a,
                                     fto (Zp_add (otf v) (Zp_mul (otf a) (otf x)))))) i) ;;
@@ -1017,13 +1020,13 @@ Module OVN (π2 : CDSParams) (Alg2 : SigmaProtocolAlgorithms π2).
              let x4 := (fto (expgn_rec (T:=gT) g (otf x3)), fto (expgn_rec (T:=gT) g (otf x5)), a0, fto (Zp_add (otf x6) (Zp_mul (otf a0) (otf x3)))) in
          #assert eqn
                     (size
-                       (domm (T:=[ordType of 'I_#|'I_n|]) (S:='I_#|gT| * ('I_#|gT| * 'I_#|gT| * 'I_#|'Z_Sigma1.q| * 'I_#|'Z_Sigma1.q|))
-                          (setm (T:=[ordType of 'I_#|'I_n|]) (setm (T:=[ordType of 'I_#|'I_n|]) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
+                       (domm (T:='I_#|'I_n|) (S:='I_#|gT| * ('I_#|gT| * 'I_#|gT| * 'I_#|'Z_Sigma1.q| * 'I_#|'Z_Sigma1.q|))
+                          (setm (T:='I_#|'I_n|) (setm (T:='I_#|'I_n|) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
                              (fto (expgn_rec (T:=gT) g (otf x)),
                              (fto (expgn_rec (T:=gT) g (otf x)), fto (expgn_rec (T:=gT) g (otf x1)), a, fto (Zp_add (otf v) (Zp_mul (otf a) (otf x)))))))) n ;;
           #put ckey_loc i := fto
                               (compute_key
-                                 (setm (T:=[ordType of 'I_#|'I_n|]) (setm (T:=[ordType of 'I_#|'I_n|]) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
+                                 (setm (T:='I_#|'I_n|) (setm (T:='I_#|'I_n|) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
                                     (fto (expgn_rec (T:=gT) g (otf x)),
                                     (fto (expgn_rec (T:=gT) g (otf x)), fto (expgn_rec (T:=gT) g (otf x1)), a,
                                     fto (Zp_add (otf v) (Zp_mul (otf a) (otf x)))))) i) ;;
@@ -1047,13 +1050,13 @@ Module OVN (π2 : CDSParams) (Alg2 : SigmaProtocolAlgorithms π2).
              let x4 := (fto (expgn_rec (T:=gT) g (otf x3)), fto (expgn_rec (T:=gT) g (otf x5)), a0, fto (Zp_add (otf x6) (Zp_mul (otf a0) (otf x3)))) in
              #assert eqn
                  (size
-                 (domm (T:=[ordType of 'I_#|'I_n|]) (S:='I_#|gT| * ('I_#|gT| * 'I_#|gT| * 'I_#|'Z_Sigma1.q| * 'I_#|'Z_Sigma1.q|))
-                         (setm (T:=[ordType of 'I_#|'I_n|]) (setm (T:=[ordType of 'I_#|'I_n|]) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
+                 (domm (T:='I_#|'I_n|) (S:='I_#|gT| * ('I_#|gT| * 'I_#|gT| * 'I_#|'Z_Sigma1.q| * 'I_#|'Z_Sigma1.q|))
+                         (setm (T:='I_#|'I_n|) (setm (T:='I_#|'I_n|) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
                              (fto (expgn_rec (T:=gT) g (otf x)),
                                  (fto (expgn_rec (T:=gT) g (otf x)), fto (expgn_rec (T:=gT) g (otf x1)), a, fto (Zp_add (otf v) (Zp_mul (otf a) (otf x)))))))) n ;;
              #put ckey_loc i := fto
                                  (compute_key
-                                     (setm (T:=[ordType of 'I_#|'I_n|]) (setm (T:=[ordType of 'I_#|'I_n|]) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
+                                     (setm (T:='I_#|'I_n|) (setm (T:='I_#|'I_n|) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
                                              (fto (expgn_rec (T:=gT) g (otf x)),
                                              (fto (expgn_rec (T:=gT) g (otf x)), fto (expgn_rec (T:=gT) g (otf x1)), a,
                                                  fto (Zp_add (otf v) (Zp_mul (otf a) (otf x)))))) i) ;;
@@ -1068,13 +1071,13 @@ Module OVN (π2 : CDSParams) (Alg2 : SigmaProtocolAlgorithms π2).
                    let x4 := (fto (expgn_rec (T:=gT) g (otf x3)), fto (expgn_rec (T:=gT) g (otf x5)), a0, fto (Zp_add (otf x6) (Zp_mul (otf a0) (otf x3)))) in
          #assert eqn
                     (size
-                       (domm (T:=[ordType of 'I_#|'I_n|]) (S:='I_#|gT| * ('I_#|gT| * 'I_#|gT| * 'I_#|'Z_Sigma1.q| * 'I_#|'Z_Sigma1.q|))
-                          (setm (T:=[ordType of 'I_#|'I_n|]) (setm (T:=[ordType of 'I_#|'I_n|]) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
+                       (domm (T:='I_#|'I_n|) (S:='I_#|gT| * ('I_#|gT| * 'I_#|gT| * 'I_#|'Z_Sigma1.q| * 'I_#|'Z_Sigma1.q|))
+                          (setm (T:='I_#|'I_n|) (setm (T:='I_#|'I_n|) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
                              (fto (expgn_rec (T:=gT) g (otf x)),
                              (fto (expgn_rec (T:=gT) g (otf x)), fto (expgn_rec (T:=gT) g (otf x1)), a, fto (Zp_add (otf v) (Zp_mul (otf a) (otf x)))))))) n ;;
           #put ckey_loc i := fto
                               (compute_key
-                                 (setm (T:=[ordType of 'I_#|'I_n|]) (setm (T:=[ordType of 'I_#|'I_n|]) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
+                                 (setm (T:='I_#|'I_n|) (setm (T:='I_#|'I_n|) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
                                     (fto (expgn_rec (T:=gT) g (otf x)),
                                     (fto (expgn_rec (T:=gT) g (otf x)), fto (expgn_rec (T:=gT) g (otf x1)), a,
                                     fto (Zp_add (otf v) (Zp_mul (otf a) (otf x)))))) i) ;;
@@ -1117,13 +1120,13 @@ Module OVN (π2 : CDSParams) (Alg2 : SigmaProtocolAlgorithms π2).
                    let x4 := (fto (expgn_rec (T:=gT) g (otf x3)), fto (expgn_rec (T:=gT) g (otf x5)), a0, fto (Zp_add (otf x6) (Zp_mul (otf a0) (otf x3)))) in
          #assert eqn
                     (size
-                       (domm (T:=[ordType of 'I_#|'I_n|]) (S:='I_#|gT| * ('I_#|gT| * 'I_#|gT| * 'I_#|'Z_Sigma1.q| * 'I_#|'Z_Sigma1.q|))
-                          (setm (T:=[ordType of 'I_#|'I_n|]) (setm (T:=[ordType of 'I_#|'I_n|]) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
+                       (domm (T:='I_#|'I_n|) (S:='I_#|gT| * ('I_#|gT| * 'I_#|gT| * 'I_#|'Z_Sigma1.q| * 'I_#|'Z_Sigma1.q|))
+                          (setm (T:='I_#|'I_n|) (setm (T:='I_#|'I_n|) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
                              (fto (expgn_rec (T:=gT) g (otf x)),
                              (fto (expgn_rec (T:=gT) g (otf x)), fto (expgn_rec (T:=gT) g (otf x1)), a, fto (Zp_add (otf v) (Zp_mul (otf a) (otf x)))))))) n ;;
           #put ckey_loc i := fto
                               (compute_key
-                                 (setm (T:=[ordType of 'I_#|'I_n|]) (setm (T:=[ordType of 'I_#|'I_n|]) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
+                                 (setm (T:='I_#|'I_n|) (setm (T:='I_#|'I_n|) m j (fto (expgn_rec (T:=gT) g (otf x3)), x4)) i
                                     (fto (expgn_rec (T:=gT) g (otf x)),
                                     (fto (expgn_rec (T:=gT) g (otf x)), fto (expgn_rec (T:=gT) g (otf x1)), a,
                                     fto (Zp_add (otf v) (Zp_mul (otf a) (otf x)))))) i) ;;
@@ -1304,7 +1307,7 @@ Module OVN (π2 : CDSParams) (Alg2 : SigmaProtocolAlgorithms π2).
         by apply /fset1P.
       - apply preserve_update_mem_nil.
     }
-    ssprove_sync.
+    eapply (@rsame_head_cmd_alt _ _ (λ z, _) (λ z, _) (cmd_put _ _)) ; [eapply cmd_put_preserve_pre ; ssprove_invariant | intros ].
     ssprove_swap_seq_lhs [:: 0 ]%N.
     ssprove_swap_seq_rhs [:: 2 ; 1 ; 0]%N.
     ssprove_sync => queries.
