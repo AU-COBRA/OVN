@@ -10,7 +10,7 @@ homepage: "https://github.com/AU-COBRA/OVN"
 bug-reports: "https://github.com/AU-COBRA/OVN/issues"
 depends: [
   "base" {= "v0.16.3"}
-  "coq" {= "8.18.dev"}
+  "coq" {= "8.18.0"}
   "coq-concert" {= "dev"}
   "coq-hacspec-ssprove" {= "dev"}
   "coq-mathcomp-word" {= "3.0"}
