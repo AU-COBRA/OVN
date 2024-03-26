@@ -1,0 +1,66 @@
+name: Build
+on:
+  push:
+    branches:
+    - 'master'
+    paths-ignore:
+    - '**.md'
+    - '**.gitignore'
+    - '**.opam'
+    - 'LICENSE'
+  pull_request:
+    paths-ignore:
+    - '**.md'
+    - '**.gitignore'
+    - '**.opam'
+    - 'LICENSE'
+concurrency:
+  group: "${{ github.workflow }}-${{ github.event.pull_request.number || github.head_ref || github.ref }}"
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  OCAML_COMILER_VERSION: "4.14.1"
+  JOBS: 2
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout branch ${{ github.ref_name }}
+        uses: actions/checkout@v4
+
+      - run: sudo apt-get update
+      - name: Restore opam cache
+        id: opam-cache
+        uses: actions/cache@v3
+        with:
+          path: "~/.opam"
+          key: opam-${{env.OCAML_COMILER_VERSION}}-${{hashFiles('.github/coq-ovn.opam.locked')}}
+          restore-keys: |
+            opam-${{env.OCAML_COMILER_VERSION}}-
+
+      - name: Set up OCaml
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{env.OCAML_COMILER_VERSION}}
+
+      - name: Build dependencies
+        #if: ${{ !steps.opam-cache.outputs.cache-hit }}
+        run: |
+          opam repo add coq-released https://coq.inria.fr/opam/released
+          opam install --deps-only -j${{ env.JOBS }} .github/coq-ovn.opam.locked
+          opam clean -a -c -s --logs
+
+      - name: Set up environment
+        run: |
+          echo "::group::Setting up problem matcher"
+          echo "::add-matcher::./.github/coq-errors.json"
+          echo "::endgroup::"
+
+      - name: Build OVN
+        run: |
+          echo "::group::Build OVN"
+          opam exec -- make -j${{ env.JOBS }}
+          echo "::endgroup::"
