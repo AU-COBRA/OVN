@@ -5,6 +5,7 @@ theories/Main.v
 # -arg -w
 # -arg all
 
+theories/hacspec/Hacspec_helpers.v
 theories/hacspec/Hacspec_ovn_Ovn_traits.v
 theories/hacspec/Hacspec_ovn.v
 
