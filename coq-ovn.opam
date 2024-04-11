@@ -1,7 +1,7 @@
 opam-version: "2.0"
 name: "coq-ovn"
 version: "dev"
-synopsis: "Verified implementation of the Open Vote Network protocol "
+synopsis: "Verified implementation of the Open Vote Network protocol"
 description: """
 Verified implementation of the Open Vote Network protocol
 """
@@ -23,7 +23,7 @@ depends: [
   "coq-mathcomp-zify" {>= "1.5.0+2.0+8.16"}
   "coq-concert" {= "dev"}
   "coq" {>= "8.18.0"}
-  "odoc" {with-doc}
+  # "odoc" {with-doc}
   # "coq" {>= "8.18"}
   # "ssprove" {= "dev"}
   # "coq-concert" {= "dev"}
