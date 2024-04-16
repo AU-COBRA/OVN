@@ -56,6 +56,13 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
     apply eqb_refl.
   Qed.
 
+  Infix "g*" := f_prod (at level 77).
+  Notation "g_g^" := (f_g_pow) (at level 77).
+  Infix "g^" := (f_pow) (at level 77).
+  Infix "g/" := (f_prod) (at level 77).
+  Infix "g+" := (f_add) (at level 77).
+  Infix "g-" := (f_sub) (at level 77).
+
   Lemma zkp_one_out_of_two_correct :
     forall x y z h j b, zkp_one_out_of_two_validate h (zkp_one_out_of_two x y z h j b) ≈both ret_both (true : 'bool).
     intros.
@@ -167,199 +174,155 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
     eapply both_eq_trans ; [ apply both_eq_let_both | ].
     eapply both_eq_trans ; [ apply both_eq_solve_lift | ].
 
-    repeat (eapply both_eq_trans ; [ apply both_eq_andb_true | ]) ; try rewrite <- both_eq_eqb_true.
+    repeat (eapply both_eq_trans ; [ apply both_eq_andb_true | ]).
+    all: try rewrite <- both_eq_eqb_true ; try now apply both_eq_reflexivity.
+    all: destruct (is_pure b).
+    all: subst y0.
+
+    all: try rewrite f_or_zkp_a1_equation_1 ;
+        try rewrite f_or_zkp_a2_equation_1 ;
+        try rewrite f_or_zkp_r1_equation_1 ;
+        try rewrite f_or_zkp_r2_equation_1 ;
+      try rewrite f_or_zkp_x_equation_1 ;
+      try rewrite f_or_zkp_y_equation_1 ;
+      try rewrite f_or_zkp_b1_equation_1 ;
+      try rewrite f_or_zkp_b2_equation_1 ;
+      try rewrite f_or_zkp_d1_equation_1 ;
+      try rewrite f_or_zkp_d2_equation_1 ;
+      simpl.
+
+    all: rewrite both_eq_guarantees ; simpl ; rewrite !Build_t_OrZKPCommit_equation_1; simpl ; rewrite <- both_eq_guarantees.
     - eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_add _ _)) ].
 
-      rewrite f_or_zkp_d1_equation_1; rewrite f_or_zkp_d2_equation_1 ; simpl.
-      unfold y0 at 7 8.
       simpl.
-      destruct (is_pure b).
-      1: set (add_cancel := add_sub_cancel).
-      2: set (add_cancel := add_sub_cancel2).
-      1,2: rewrite !Build_t_OrZKPCommit_equation_1; simpl ; eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_add _ _)) ] ; eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_cancel ] ; do 4 apply both_eq_fun_ext ; now apply both_equivalence_is_pure_eq.
-    - destruct (is_pure b).
-      + rewrite f_or_zkp_r1_equation_1.
-        rewrite f_or_zkp_a1_equation_1.
-        rewrite f_or_zkp_x_equation_1.
-        rewrite f_or_zkp_d1_equation_1.
-        rewrite both_eq_guarantees ; subst y0 ; simpl ; rewrite !Build_t_OrZKPCommit_equation_1; simpl ; rewrite <- both_eq_guarantees.
 
-        eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
+      set (add_cancel := add_sub_cancel). simpl ; eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_add _ _)) ] ; eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_cancel ] ; do 4 apply both_eq_fun_ext ; now apply both_equivalence_is_pure_eq.
+    - eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_add _ _)) ].
+      simpl.
 
-        rewrite (hacspec_function_guarantees f_g_pow); simpl.
-        rewrite <- (hacspec_function_guarantees f_g_pow).
+      set (add_cancel := add_sub_cancel2).
+       simpl ; eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_add _ _)) ] ; eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_cancel ] ; do 4 apply both_eq_fun_ext ; now apply both_equivalence_is_pure_eq.
+    - eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
 
-        rewrite (hacspec_function_guarantees2 f_pow); simpl.
-        rewrite <- (hacspec_function_guarantees2 f_pow).
+      rewrite (hacspec_function_guarantees f_g_pow); simpl.
+      rewrite <- (hacspec_function_guarantees f_g_pow).
 
-        eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
+      rewrite (hacspec_function_guarantees2 f_pow); simpl.
+      rewrite <- (hacspec_function_guarantees2 f_pow).
 
-        repeat (apply both_eq_fun_ext2 || apply both_eq_fun_ext || apply both_eq_reflexivity).
-      + rewrite f_or_zkp_r1_equation_1.
-        rewrite f_or_zkp_a1_equation_1.
-        rewrite f_or_zkp_x_equation_1.
-        rewrite f_or_zkp_d1_equation_1.
+      eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
 
-        rewrite both_eq_guarantees ; simpl ; subst y0 ; simpl ; rewrite !Build_t_OrZKPCommit_equation_1 ; simpl ; rewrite <- both_eq_guarantees.
+      repeat (apply both_eq_fun_ext2 || apply both_eq_fun_ext || apply both_eq_reflexivity).
+    - eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
 
-        eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
+      rewrite (hacspec_function_guarantees f_g_pow (bind_both _ _)) ; simpl.
+      rewrite <- (hacspec_function_guarantees f_g_pow).
 
-        rewrite (hacspec_function_guarantees f_g_pow (bind_both _ _)) ; simpl.
-        rewrite <- (hacspec_function_guarantees f_g_pow).
+      rewrite (hacspec_function_guarantees2 f_pow); simpl.
+      rewrite <- (hacspec_function_guarantees2 f_pow).
 
-        rewrite (hacspec_function_guarantees2 f_pow); simpl.
-        rewrite <- (hacspec_function_guarantees2 f_pow).
+      eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
 
-        eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
+      eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_add_mul ].
+      apply both_eq_fun_ext.
+      eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel2 ].
+      apply both_eq_reflexivity.
+    - eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
 
-        eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_add_mul ].
+      rewrite (hacspec_function_guarantees2 f_pow); simpl.
+      rewrite <- (hacspec_function_guarantees2 f_pow).
 
-        apply both_eq_fun_ext.
-        eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel2 ].
-        apply both_eq_reflexivity.
-    - apply both_eq_reflexivity.
-    - rewrite f_or_zkp_b1_equation_1.
-      rewrite f_or_zkp_r1_equation_1.
-      rewrite f_or_zkp_y_equation_1.
-      rewrite f_or_zkp_d1_equation_1.
+      rewrite (hacspec_function_guarantees2 f_pow (bind_both _ _)); simpl.
+      rewrite <- (hacspec_function_guarantees2 f_pow).
 
-      destruct (is_pure b).
-      +
-        rewrite both_eq_guarantees ; simpl ; subst y0 ; simpl ; rewrite !Build_t_OrZKPCommit_equation_1 ; simpl ; rewrite <- both_eq_guarantees.
+      eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
 
-        eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
+      simpl.
 
-        rewrite (hacspec_function_guarantees2 f_pow); simpl.
-        rewrite <- (hacspec_function_guarantees2 f_pow).
+      apply both_eq_reflexivity.
+    - eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
 
-        rewrite (hacspec_function_guarantees2 f_pow (bind_both _ _)); simpl.
-        rewrite <- (hacspec_function_guarantees2 f_pow).
+      rewrite (hacspec_function_guarantees2 f_pow); simpl.
+      rewrite <- (hacspec_function_guarantees2 f_pow).
 
-        eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
+      rewrite (hacspec_function_guarantees2 f_pow (bind_both _ _)); simpl.
+      rewrite <- (hacspec_function_guarantees2 f_pow).
 
-        apply both_eq_reflexivity.
-      +
+      eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
 
-        rewrite both_eq_guarantees ; simpl ; subst y0 ; simpl ; rewrite !Build_t_OrZKPCommit_equation_1 ; simpl ; rewrite <- both_eq_guarantees.
-
-        eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
-
-        rewrite (hacspec_function_guarantees2 f_pow); simpl.
-        rewrite <- (hacspec_function_guarantees2 f_pow).
-
-        rewrite (hacspec_function_guarantees2 f_pow (bind_both _ _)); simpl.
-        rewrite <- (hacspec_function_guarantees2 f_pow).
-
-        eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
-
-        eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_pow ].
+      eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_pow ].
 
         apply both_eq_fun_ext2.
         * apply both_eq_reflexivity.
         * eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel2 ].
           apply both_eq_reflexivity.
-    - apply both_eq_reflexivity.
-    - rewrite f_or_zkp_a2_equation_1.
-      rewrite f_or_zkp_r2_equation_1.
-      rewrite f_or_zkp_x_equation_1.
-      rewrite f_or_zkp_d2_equation_1.
+    - eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
 
-      destruct (is_pure b).
-      +
-        rewrite both_eq_guarantees ; simpl ; subst y0 ; simpl ; rewrite !Build_t_OrZKPCommit_equation_1 ; simpl ; rewrite <- both_eq_guarantees.
+      rewrite (hacspec_function_guarantees f_g_pow); simpl.
+      rewrite <- (hacspec_function_guarantees f_g_pow).
 
-        eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
+      rewrite (hacspec_function_guarantees2 f_pow (bind_both _ _)); simpl.
+      rewrite <- (hacspec_function_guarantees2 f_pow).
 
-        rewrite (hacspec_function_guarantees f_g_pow); simpl.
-        rewrite <- (hacspec_function_guarantees f_g_pow).
+      eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
 
-        rewrite (hacspec_function_guarantees2 f_pow (bind_both _ _)); simpl.
-        rewrite <- (hacspec_function_guarantees2 f_pow).
+      eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_add_mul ].
+      apply both_eq_fun_ext.
+      eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel2 ].
+      apply both_eq_reflexivity.
+    - eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
 
-        eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
+      rewrite (hacspec_function_guarantees f_g_pow); simpl.
+      rewrite <- (hacspec_function_guarantees f_g_pow).
 
-        eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_add_mul ].
+      rewrite (hacspec_function_guarantees2 f_pow (bind_both _ _)); simpl.
+      rewrite <- (hacspec_function_guarantees2 f_pow).
+
+      eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
+
+      apply both_eq_reflexivity.
+    - eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
+
+      rewrite (hacspec_function_guarantees2 f_pow); simpl.
+      rewrite <- (hacspec_function_guarantees2 f_pow).
+
+      rewrite (hacspec_function_guarantees2 f_pow (f_div _ _)); simpl.
+      rewrite (hacspec_function_guarantees2 f_div); simpl.
+      rewrite <- (hacspec_function_guarantees2 f_div).
+      rewrite <- (hacspec_function_guarantees2 f_pow).
+
+      eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
+
+      eapply both_eq_trans.
+      2:{
+        apply both_eq_symmetry.
+        let H_in := fresh in
+        set (H_in := f_prod _ _) ; pattern (f_div (f_prod (f_pow h j) f_g) f_g) in H_in ; subst H_in.
         apply both_eq_fun_ext.
-        eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel2 ].
-        apply both_eq_reflexivity.
-      +
-        rewrite both_eq_guarantees ; simpl ; subst y0 ; simpl ; rewrite !Build_t_OrZKPCommit_equation_1 ; simpl ; rewrite <- both_eq_guarantees.
+        apply div_prod_cancel.
+      }
+      eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_pow ].
+      apply both_eq_fun_ext.
+      eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel2 ].
+      apply both_eq_reflexivity.
+    - eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
 
-        eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
+      rewrite (hacspec_function_guarantees2 f_pow); simpl.
+      rewrite <- (hacspec_function_guarantees2 f_pow).
 
-        rewrite (hacspec_function_guarantees f_g_pow); simpl.
-        rewrite <- (hacspec_function_guarantees f_g_pow).
+      rewrite (hacspec_function_guarantees2 f_pow (f_div _ _)); simpl.
+      rewrite (hacspec_function_guarantees2 f_div); simpl.
+      rewrite <- (hacspec_function_guarantees2 f_div).
+      rewrite <- (hacspec_function_guarantees2 f_pow).
 
-        rewrite (hacspec_function_guarantees2 f_pow (bind_both _ _)); simpl.
-        rewrite <- (hacspec_function_guarantees2 f_pow).
+      eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
 
-        eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
-
-        apply both_eq_reflexivity.
-    - apply both_eq_reflexivity.
-    -
-      rewrite f_or_zkp_b2_equation_1.
-      rewrite f_or_zkp_r2_equation_1.
-      rewrite f_or_zkp_y_equation_1.
-      rewrite f_or_zkp_d2_equation_1.
-
-      destruct (is_pure b).
-      +
-        rewrite both_eq_guarantees ; simpl ; subst y0 ; simpl ; rewrite !Build_t_OrZKPCommit_equation_1 ; simpl ; rewrite <- both_eq_guarantees.
-
-        eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
-
-        rewrite (hacspec_function_guarantees2 f_pow); simpl.
-        rewrite <- (hacspec_function_guarantees2 f_pow).
-
-        rewrite (hacspec_function_guarantees2 f_pow (f_div _ _)); simpl.
-        rewrite (hacspec_function_guarantees2 f_div); simpl.
-        rewrite <- (hacspec_function_guarantees2 f_div).
-        rewrite <- (hacspec_function_guarantees2 f_pow).
-
-        eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
-
-        eapply both_eq_trans.
-        2:{
-          apply both_eq_symmetry.
-          let H_in := fresh in
-          set (H_in := f_prod _ _) ; pattern (f_div (f_prod (f_pow h j) f_g) f_g) in H_in ; subst H_in.
-          apply both_eq_fun_ext.
-          apply div_prod_cancel.
-        }
-        eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_pow ].
-        apply both_eq_fun_ext.
-        eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel2 ].
-        apply both_eq_reflexivity.
-      +
-        rewrite both_eq_guarantees ; simpl ; subst y0 ; simpl ; rewrite !Build_t_OrZKPCommit_equation_1 ; simpl ; rewrite <- both_eq_guarantees.
-
-        eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
-
-        rewrite (hacspec_function_guarantees2 f_pow); simpl.
-        rewrite <- (hacspec_function_guarantees2 f_pow).
-
-        rewrite (hacspec_function_guarantees2 f_pow (f_div _ _)); simpl.
-        rewrite (hacspec_function_guarantees2 f_div); simpl.
-        rewrite <- (hacspec_function_guarantees2 f_div).
-        rewrite <- (hacspec_function_guarantees2 f_pow).
-
-        eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
-
-        eapply both_eq_trans.
-        2:{
-          apply both_eq_symmetry.
-          let H_in := fresh in
-          set (H_in := f_prod _ _) ; pattern (f_div (f_prod (f_pow h j) f_g) f_g) in H_in ; subst H_in.
-          apply both_eq_fun_ext.
-          apply div_prod_cancel.
-        }
-        apply both_eq_fun_ext2.
-        {
-          apply both_eq_reflexivity.
-        }
-        apply both_eq_reflexivity.
-    - apply both_eq_reflexivity.
+      eapply both_eq_trans ; [ | apply both_eq_symmetry ;
+        let H_in := fresh in
+        set (H_in := f_prod _ _) ; pattern (f_div (f_prod (f_pow h j) f_g) f_g) in H_in ; subst H_in ;
+        apply both_eq_fun_ext ;
+        apply div_prod_cancel].
+      apply both_eq_fun_ext2 ; apply both_eq_reflexivity.
   Qed.
 
   Lemma schnorr_zkp_correct :
