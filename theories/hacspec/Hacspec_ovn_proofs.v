@@ -326,7 +326,7 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
     }
 
     repeat cancel_operations ; apply both_eq_reflexivity.
-  Admitted. (* (* Slow *) Qed. *)
+  (* Admitted. *) (* Slow *) Qed.
 
   Lemma prod_both_pure_eta_3 : forall {A B C} (a : both A) (b : both B) (c : both C), 
                  ((is_pure (both_prog a) : A,
@@ -406,26 +406,26 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
   }
   Qed.
 
-  Module HacspecGP : GroupParam.
-    Open Scope group_scope.
-    Definition hacspec_group_type : Type := both f_group_type.
-    HB.instance Definition _ : FinGroup hacspec_group_type := _.
-    Definition gT : finGroupType := HacspecGP_hacspec_group_type__canonical__fingroup_FinGroup.
-    Definition ζ : {set gT} := [set : gT].
-    Definition g :  gT := f_g.
-    Lemma g_gen : ζ = <[g]>.
-    Proof.
-      intros.
-      unfold ζ, g.
-      (* apply Zp_cycle. *)
-    Admitted.
+  (* Module HacspecGP : GroupParam. *)
+  (*   Open Scope group_scope. *)
+  (*   Definition hacspec_group_type : Type := both f_group_type. *)
+  (*   HB.instance Definition _ : FinGroup hacspec_group_type := _. *)
+  (*   Definition gT : finGroupType := HacspecGP_hacspec_group_type__canonical__fingroup_FinGroup. *)
+  (*   Definition ζ : {set gT} := [set : gT]. *)
+  (*   Definition g :  gT := f_g. *)
+  (*   Lemma g_gen : ζ = <[g]>. *)
+  (*   Proof. *)
+  (*     intros. *)
+  (*     unfold ζ, g. *)
+  (*     (* apply Zp_cycle. *) *)
+  (*   Admitted. *)
 
-    Lemma prime_order : prime #[g].
-    Proof.
-      unfold g.
-    Admitted.
+  (*   Lemma prime_order : prime #[g]. *)
+  (*   Proof. *)
+  (*     unfold g. *)
+  (*   Admitted. *)
 
-  End HacspecGP.
+  (* End HacspecGP. *)
 
   (* Theorem schnorr_com_binding : *)
   (*   forall LA A, *)
