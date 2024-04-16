@@ -56,150 +56,109 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
     apply eqb_refl.
   Qed.
 
+  Infix "f+" := (f_add) (at level 77).
+  Infix "f-" := (f_sub) (at level 77).
+  Infix "f*" := f_mul (at level 77).
+  Notation "'<$-'" := (f_random_field_elem) (at level 77).
+
   Infix "g*" := f_prod (at level 77).
-  Notation "g_g^" := (f_g_pow) (at level 77).
+  Notation "'g_g^'" := (f_g_pow) (at level 77).
   Infix "g^" := (f_pow) (at level 77).
-  Infix "g/" := (f_prod) (at level 77).
-  Infix "g+" := (f_add) (at level 77).
-  Infix "g-" := (f_sub) (at level 77).
+  Infix "g/" := (f_div) (at level 77).
+
+  Notation "'vec_from_list' l" :=
+    (impl__into_vec
+      (unsize
+         (box_new
+            (array_from_list l) ) )) (at level 77).
+
+  Lemma if_eta : forall {A B} (a : bool) (b c : A) (f : A -> B),
+      f (if a then b else c) = if a then f b else f c.
+  Proof. now destruct a. Qed.
+
+  Lemma if_pure_eta : forall {A} (a : bool) (b c : both A),
+      is_pure (if a then b else c) = is_pure (if a then ret_both (is_pure b) else ret_both (is_pure c)).
+  Proof. now destruct a. Qed.
+
+  Lemma bind_both_assoc :
+    forall {A B C} (v : both A) (f : A -> both B) (g : B -> both C),
+      bind_both (bind_both v f) g ≈both
+        bind_both v (fun x => bind_both (f x) g).
+  Proof. by now intros ; apply both_equivalence_is_pure_eq. Qed.
+
+  Lemma prod_both_pure_eta_11 : forall {A B C D E F G H I J K} (a : both A) (b : both B) (c : both C) (d : both D) (e : both E) (f : both F) (g : both G) (h : both H) (i : both I) (j : both J) (k : both K), 
+                 ((is_pure (both_prog a) : A,
+                   is_pure (both_prog b) : B,
+                   is_pure (both_prog c) : C,
+                   is_pure (both_prog d) : D,
+                   is_pure (both_prog e) : E,
+                   is_pure (both_prog f) : F,
+                   is_pure (both_prog g) : G,
+                   is_pure (both_prog h) : H,
+                   is_pure (both_prog i) : I,
+                   is_pure (both_prog j) : J,
+                   is_pure (both_prog k) : K)) =
+                   is_pure (both_prog (prod_b( a , b, c, d, e, f, g, h, i, j, k ))).
+  Proof. reflexivity. Qed.
 
   Lemma zkp_one_out_of_two_correct :
     forall x y z h j b, zkp_one_out_of_two_validate h (zkp_one_out_of_two x y z h j b) ≈both ret_both (true : 'bool).
     intros.
-    set (zkp_one_out_of_two _ _ _ _ _ _).
 
-    assert (is_pure b0 = if is_pure b
-                         then is_pure (@Build_t_OrZKPCommit
-                                         (f_g_pow j)
-                                         (f_prod (f_pow h j) f_g)
-                                         (f_prod (f_g_pow (f_random_field_elem y)) (f_pow (f_g_pow j) (f_random_field_elem z)))
-                                         (f_prod (f_pow h (f_random_field_elem y)) (f_pow (f_prod (f_pow h j) f_g) (f_random_field_elem z)))
-                                         (f_g_pow (f_random_field_elem x))
-                                         (f_pow h (f_random_field_elem x))
-                                         (f_hash
-                                            (impl__into_vec
-                                               (unsize
-                                                  (box_new
-                                                     (array_from_list
-                                                        [f_g_pow j; f_prod (f_pow h j) f_g;
-                                                         f_prod (f_g_pow (f_random_field_elem y)) (f_pow (f_g_pow j) (f_random_field_elem z));
-                                                         f_prod (f_pow h (f_random_field_elem y))
-                                                           (f_pow (f_prod (f_pow h j) f_g) (f_random_field_elem z));
-                                                         f_g_pow (f_random_field_elem x); f_pow h (f_random_field_elem x)])))))
-                                         (f_random_field_elem z)
-                                         (f_sub
-                                            (f_hash
-                                               (impl__into_vec
-                                                  (unsize
-                                                     (box_new
-                                                        (array_from_list
-                                                           [f_g_pow j; f_prod (f_pow h j) f_g;
-                                                            f_prod (f_g_pow (f_random_field_elem y))
-                                                              (f_pow (f_g_pow j) (f_random_field_elem z));
-                                                            f_prod (f_pow h (f_random_field_elem y))
-                                                              (f_pow (f_prod (f_pow h j) f_g) (f_random_field_elem z));
-                                                            f_g_pow (f_random_field_elem x); f_pow h (f_random_field_elem x)])))))
-                                            (f_random_field_elem z))
-                                         (f_random_field_elem y)
-                                         (f_sub (f_random_field_elem x)
-                                            (f_mul j
-                                               (f_sub
-                                                  (f_hash
-                                                     (impl__into_vec
-                                                        (unsize
-                                                           (box_new
-                                                              (array_from_list
-                                                                 [f_g_pow j; f_prod (f_pow h j) f_g;
-                                                                  f_prod (f_g_pow (f_random_field_elem y))
-                                                                    (f_pow (f_g_pow j) (f_random_field_elem z));
-                                                                  f_prod (f_pow h (f_random_field_elem y))
-                                                                    (f_pow (f_prod (f_pow h j) f_g) (f_random_field_elem z));
-                                                                  f_g_pow (f_random_field_elem x); f_pow h (f_random_field_elem x)])))))
-                                                  (f_random_field_elem z)))))
-                         else is_pure (@Build_t_OrZKPCommit
-                                         (f_g_pow j)
-                                         (f_pow h j)
-                                         (f_g_pow (f_random_field_elem x))
-                                         (f_pow h (f_random_field_elem x))
-                                         (f_prod (f_g_pow (f_random_field_elem y)) (f_pow (f_g_pow j) (f_random_field_elem z)))
-                                         (f_prod (f_pow h (f_random_field_elem y)) (f_pow (f_div (f_pow h j) f_g) (f_random_field_elem z)))
-                                         (f_hash
-                                            (impl__into_vec
-                                               (unsize
-                                                  (box_new
-                                                     (array_from_list
-                                                        [f_g_pow j; f_pow h j; f_g_pow (f_random_field_elem x);
-                                                         f_pow h (f_random_field_elem x);
-                                                         f_prod (f_g_pow (f_random_field_elem y)) (f_pow (f_g_pow j) (f_random_field_elem z));
-                                                         f_prod (f_pow h (f_random_field_elem y))
-                                                           (f_pow (f_div (f_pow h j) f_g) (f_random_field_elem z))])))))
-                                         (f_sub
-                                            (f_hash
-                                               (impl__into_vec
-                                                  (unsize
-                                                     (box_new
-                                                        (array_from_list
-                                                           [f_g_pow j; f_pow h j; f_g_pow (f_random_field_elem x);
-                                                            f_pow h (f_random_field_elem x);
-                                                            f_prod (f_g_pow (f_random_field_elem y))
-                                                              (f_pow (f_g_pow j) (f_random_field_elem z));
-                                                            f_prod (f_pow h (f_random_field_elem y))
-                                                              (f_pow (f_div (f_pow h j) f_g) (f_random_field_elem z))])))))
-                                            (f_random_field_elem z))
-                                         (f_random_field_elem z)
-                                         (f_sub (f_random_field_elem x)
-                                            (f_mul j
-                                               (f_sub
-                                                  (f_hash
-                                                     (impl__into_vec
-                                                        (unsize
-                                                           (box_new
-                                                              (array_from_list
-                                                                 [f_g_pow j; f_pow h j; f_g_pow (f_random_field_elem x);
-                                                                  f_pow h (f_random_field_elem x);
-                                                                  f_prod (f_g_pow (f_random_field_elem y))
-                                                                    (f_pow (f_g_pow j) (f_random_field_elem z));
-                                                                  f_prod (f_pow h (f_random_field_elem y))
-                                                                    (f_pow (f_div (f_pow h j) f_g) (f_random_field_elem z))])))))
-                                                  (f_random_field_elem z))))
-                                         (f_random_field_elem y))).
-    { intros.
-      unfold b0 at 1.
-      rewrite zkp_one_out_of_two_equation_1.
+    rewrite (both_equivalence_is_pure_eq).
+    rewrite hacspec_function_guarantees.
+
+      rewrite zkp_one_out_of_two_equation_1 .
       repeat unfold let_both at 1.
-      unfold lift_both ; simpl.
-      now destruct (is_pure b).
-    }
+      unfold lift_both ; simpl ret_both.
 
-    assert (forall {A B} (a : bool) (b c : A) (f : A -> B), f (if a then b else c) = if a then f b else f c) by now destruct a.
-    do 2 rewrite <- H0 in H ; apply both_equivalence_is_pure_eq in H.
+      do 4 rewrite if_eta ; simpl ret_both.
 
-    eapply both_eq_trans ; [ apply both_eq_fun_ext, H | clear H b0 ].
+      do 2 unfold Build_t_OrZKPCommit at 1.
+      simpl ret_both.
+      do 2 rewrite prod_both_pure_eta_11.
 
+      do 4 rewrite <- if_eta.
+      rewrite if_pure_eta.
+      repeat unfold prod_both at 1 ; simpl ret_both.
+
+    rewrite <- hacspec_function_guarantees.
+    rewrite <- both_equivalence_is_pure_eq.
+    
     set (if _ then _ else _).
     rewrite zkp_one_out_of_two_validate_equation_1.
 
     eapply both_eq_trans ; [ apply both_eq_let_both | ].
     eapply both_eq_trans ; [ apply both_eq_solve_lift | ].
 
-    repeat (eapply both_eq_trans ; [ apply both_eq_andb_true | ]).
+    eapply both_eq_trans ;
+      [ apply both_eq_andb_true ; eapply both_eq_trans ;
+        [ apply both_eq_andb_true ; eapply both_eq_trans ; [
+            apply both_eq_andb_true ; eapply both_eq_trans ; [ apply both_eq_andb_true | .. ] | .. ] | .. ]|  ].
+   
     all: try rewrite <- both_eq_eqb_true ; try now apply both_eq_reflexivity.
     all: destruct (is_pure b).
-    all: subst y0.
 
-    all: try rewrite f_or_zkp_a1_equation_1 ;
-      try rewrite f_or_zkp_a2_equation_1 ;
-      try rewrite f_or_zkp_r1_equation_1 ;
-      try rewrite f_or_zkp_r2_equation_1 ;
-      try rewrite f_or_zkp_x_equation_1 ;
-      try rewrite f_or_zkp_y_equation_1 ;
-      try rewrite f_or_zkp_b1_equation_1 ;
-      try rewrite f_or_zkp_b2_equation_1 ;
-      try rewrite f_or_zkp_d1_equation_1 ;
-      try rewrite f_or_zkp_d2_equation_1 ;
-      simpl.
+    all: subst y0 ;
+      repeat try unfold f_or_zkp_a1 at 1 ;
+      repeat try unfold f_or_zkp_a2 at 1 ;
+      repeat try unfold f_or_zkp_b1 at 1 ;
+      repeat try unfold f_or_zkp_b2 at 1 ;
+      repeat try unfold f_or_zkp_d1 at 1 ;
+      repeat try unfold f_or_zkp_d2 at 1 ;
+      repeat try unfold f_or_zkp_r1 at 1 ;
+      repeat try unfold f_or_zkp_r2 at 1 ;
+      repeat try unfold f_or_zkp_x at 1 ;
+      repeat try unfold f_or_zkp_y at 1.
+    all: simpl.
+    all: try rewrite !bind_ret_both ; simpl.
+    all: simpl.
 
-    all: rewrite both_eq_guarantees ; simpl ; rewrite !Build_t_OrZKPCommit_equation_1; simpl ; rewrite <- both_eq_guarantees.
+    (* Remove is_pure in the start of expressions *)
+    all: try (eapply both_eq_trans ; [ apply both_eq_symmetry ; apply ret_both_is_pure_cancel | ]).
+    all: try (eapply both_eq_trans ; [ | apply ret_both_is_pure_cancel]).
+
+    
     - eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_add _ _)) ].
 
       simpl.
@@ -223,7 +182,7 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
       repeat (apply both_eq_fun_ext2 || apply both_eq_fun_ext || apply both_eq_reflexivity).
     - eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
 
-      rewrite (hacspec_function_guarantees f_g_pow (bind_both _ _)) ; simpl.
+      rewrite (hacspec_function_guarantees f_g_pow) ; simpl.
       rewrite <- (hacspec_function_guarantees f_g_pow).
 
       rewrite (hacspec_function_guarantees2 f_pow); simpl.
@@ -240,9 +199,9 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
       rewrite (hacspec_function_guarantees2 f_pow); simpl.
       rewrite <- (hacspec_function_guarantees2 f_pow).
 
-      rewrite (hacspec_function_guarantees2 f_pow (bind_both _ _)); simpl.
+      rewrite (hacspec_function_guarantees2 f_pow (ret_both _)); simpl.
       rewrite <- (hacspec_function_guarantees2 f_pow).
-
+      
       eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
 
       simpl.
@@ -253,7 +212,7 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
       rewrite (hacspec_function_guarantees2 f_pow); simpl.
       rewrite <- (hacspec_function_guarantees2 f_pow).
 
-      rewrite (hacspec_function_guarantees2 f_pow (bind_both _ _)); simpl.
+      rewrite (hacspec_function_guarantees2 f_pow (ret_both _)); simpl.
       rewrite <- (hacspec_function_guarantees2 f_pow).
 
       eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
@@ -269,7 +228,7 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
       rewrite (hacspec_function_guarantees f_g_pow); simpl.
       rewrite <- (hacspec_function_guarantees f_g_pow).
 
-      rewrite (hacspec_function_guarantees2 f_pow (bind_both _ _)); simpl.
+      rewrite (hacspec_function_guarantees2 f_pow (ret_both _)); simpl.
       rewrite <- (hacspec_function_guarantees2 f_pow).
 
       eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
@@ -283,7 +242,7 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
       rewrite (hacspec_function_guarantees f_g_pow); simpl.
       rewrite <- (hacspec_function_guarantees f_g_pow).
 
-      rewrite (hacspec_function_guarantees2 f_pow (bind_both _ _)); simpl.
+      rewrite (hacspec_function_guarantees2 f_pow (ret_both _)); simpl.
       rewrite <- (hacspec_function_guarantees2 f_pow).
 
       eapply both_eq_trans ; [ | apply (proj2 both_equivalence_is_pure_eq (hacspec_function_guarantees2 f_prod _ _)) ].
@@ -305,7 +264,7 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
       2:{
         apply both_eq_symmetry.
         let H_in := fresh in
-        set (H_in := f_prod _ _) ; pattern (f_div (f_prod (f_pow h j) f_g) f_g) in H_in ; subst H_in.
+        set (H_in := f_prod _ _) ; pattern (f_div (((f_pow h j) g* (f_g))) f_g) in H_in ; subst H_in.
         apply both_eq_fun_ext.
         apply div_prod_cancel.
       }
@@ -327,7 +286,7 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
 
       eapply both_eq_trans ; [ | apply both_eq_symmetry ;
         let H_in := fresh in
-        set (H_in := f_prod _ _) ; pattern (f_div (f_prod (f_pow h j) f_g) f_g) in H_in ; subst H_in ;
+        set (H_in := f_prod _ _) ; pattern (f_div (((f_pow h j) g* (f_g))) f_g) in H_in ; subst H_in ;
         apply both_eq_fun_ext ;
         apply div_prod_cancel].
       apply both_eq_fun_ext2 ; apply both_eq_reflexivity.
