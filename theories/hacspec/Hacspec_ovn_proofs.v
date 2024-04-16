@@ -86,45 +86,53 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
                                                          f_prod (f_pow h (f_random_field_elem y))
                                                            (f_pow (f_prod (f_pow h j) f_g) (f_random_field_elem z));
                                                          f_g_pow (f_random_field_elem x); f_pow h (f_random_field_elem x)])))))
-                                         (f_random_field_elem z) (f_sub
-                                                                    (f_hash
-                                                                       (impl__into_vec
-                                                                          (unsize
-                                                                             (box_new
-                                                                                (array_from_list
-                                                                                   [f_g_pow j; f_prod (f_pow h j) f_g;
-                                                                                    f_prod (f_g_pow (f_random_field_elem y))
-                                                                                      (f_pow (f_g_pow j) (f_random_field_elem z));
-                                                                                    f_prod (f_pow h (f_random_field_elem y))
-                                                                                      (f_pow (f_prod (f_pow h j) f_g) (f_random_field_elem z));
-                                                                                    f_g_pow (f_random_field_elem x); f_pow h (f_random_field_elem x)])))))
-                                                                    (f_random_field_elem z)) (f_random_field_elem y) (f_sub (f_random_field_elem x)
-                                                                                                                        (f_mul j
-                                                                                                                           (f_sub
-                                                                                                                              (f_hash
-                                                                                                                                 (impl__into_vec
-                                                                                                                                    (unsize
-                                                                                                                                       (box_new
-                                                                                                                                          (array_from_list
-                                                                                                                                             [f_g_pow j; f_prod (f_pow h j) f_g;
-                                                                                                                                              f_prod (f_g_pow (f_random_field_elem y))
-                                                                                                                                                (f_pow (f_g_pow j) (f_random_field_elem z));
-                                                                                                                                              f_prod (f_pow h (f_random_field_elem y))
-                                                                                                                                                (f_pow (f_prod (f_pow h j) f_g) (f_random_field_elem z));
-                                                                                                                                              f_g_pow (f_random_field_elem x); f_pow h (f_random_field_elem x)])))))
-                                                                                                                              (f_random_field_elem z)))))
-                         else is_pure (@Build_t_OrZKPCommit (f_g_pow j) (f_pow h j) (f_g_pow (f_random_field_elem x))
+                                         (f_random_field_elem z)
+                                         (f_sub
+                                            (f_hash
+                                               (impl__into_vec
+                                                  (unsize
+                                                     (box_new
+                                                        (array_from_list
+                                                           [f_g_pow j; f_prod (f_pow h j) f_g;
+                                                            f_prod (f_g_pow (f_random_field_elem y))
+                                                              (f_pow (f_g_pow j) (f_random_field_elem z));
+                                                            f_prod (f_pow h (f_random_field_elem y))
+                                                              (f_pow (f_prod (f_pow h j) f_g) (f_random_field_elem z));
+                                                            f_g_pow (f_random_field_elem x); f_pow h (f_random_field_elem x)])))))
+                                            (f_random_field_elem z))
+                                         (f_random_field_elem y)
+                                         (f_sub (f_random_field_elem x)
+                                            (f_mul j
+                                               (f_sub
+                                                  (f_hash
+                                                     (impl__into_vec
+                                                        (unsize
+                                                           (box_new
+                                                              (array_from_list
+                                                                 [f_g_pow j; f_prod (f_pow h j) f_g;
+                                                                  f_prod (f_g_pow (f_random_field_elem y))
+                                                                    (f_pow (f_g_pow j) (f_random_field_elem z));
+                                                                  f_prod (f_pow h (f_random_field_elem y))
+                                                                    (f_pow (f_prod (f_pow h j) f_g) (f_random_field_elem z));
+                                                                  f_g_pow (f_random_field_elem x); f_pow h (f_random_field_elem x)])))))
+                                                  (f_random_field_elem z)))))
+                         else is_pure (@Build_t_OrZKPCommit
+                                         (f_g_pow j)
+                                         (f_pow h j)
+                                         (f_g_pow (f_random_field_elem x))
                                          (f_pow h (f_random_field_elem x))
-                                         (f_prod (f_g_pow (f_random_field_elem y)) (f_pow (f_g_pow j) (f_random_field_elem z))) (f_prod (f_pow h (f_random_field_elem y)) (f_pow (f_div (f_pow h j) f_g) (f_random_field_elem z))) (f_hash
-                                                                                                                                                                                                                                      (impl__into_vec
-                                                                                                                                                                                                                                         (unsize
-                                                                                                                                                                                                                                            (box_new
-                                                                                                                                                                                                                                               (array_from_list
-                                                                                                                                                                                                                                                  [f_g_pow j; f_pow h j; f_g_pow (f_random_field_elem x);
-                                                                                                                                                                                                                                                   f_pow h (f_random_field_elem x);
-                                                                                                                                                                                                                                                   f_prod (f_g_pow (f_random_field_elem y)) (f_pow (f_g_pow j) (f_random_field_elem z));
-                                                                                                                                                                                                                                                   f_prod (f_pow h (f_random_field_elem y))
-                                                                                                                                                                                                                                                     (f_pow (f_div (f_pow h j) f_g) (f_random_field_elem z))])))))
+                                         (f_prod (f_g_pow (f_random_field_elem y)) (f_pow (f_g_pow j) (f_random_field_elem z)))
+                                         (f_prod (f_pow h (f_random_field_elem y)) (f_pow (f_div (f_pow h j) f_g) (f_random_field_elem z)))
+                                         (f_hash
+                                            (impl__into_vec
+                                               (unsize
+                                                  (box_new
+                                                     (array_from_list
+                                                        [f_g_pow j; f_pow h j; f_g_pow (f_random_field_elem x);
+                                                         f_pow h (f_random_field_elem x);
+                                                         f_prod (f_g_pow (f_random_field_elem y)) (f_pow (f_g_pow j) (f_random_field_elem z));
+                                                         f_prod (f_pow h (f_random_field_elem y))
+                                                           (f_pow (f_div (f_pow h j) f_g) (f_random_field_elem z))])))))
                                          (f_sub
                                             (f_hash
                                                (impl__into_vec
@@ -154,7 +162,7 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
                                                                   f_prod (f_pow h (f_random_field_elem y))
                                                                     (f_pow (f_div (f_pow h j) f_g) (f_random_field_elem z))])))))
                                                   (f_random_field_elem z))))
-                                         (f_random_field_elem y) )).
+                                         (f_random_field_elem y))).
     { intros.
       unfold b0 at 1.
       rewrite zkp_one_out_of_two_equation_1.
@@ -180,9 +188,9 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
     all: subst y0.
 
     all: try rewrite f_or_zkp_a1_equation_1 ;
-        try rewrite f_or_zkp_a2_equation_1 ;
-        try rewrite f_or_zkp_r1_equation_1 ;
-        try rewrite f_or_zkp_r2_equation_1 ;
+      try rewrite f_or_zkp_a2_equation_1 ;
+      try rewrite f_or_zkp_r1_equation_1 ;
+      try rewrite f_or_zkp_r2_equation_1 ;
       try rewrite f_or_zkp_x_equation_1 ;
       try rewrite f_or_zkp_y_equation_1 ;
       try rewrite f_or_zkp_b1_equation_1 ;
