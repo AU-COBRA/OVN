@@ -42,6 +42,9 @@ Module Type GroupOperationProperties.
   Axiom prod_pow_add_mul : forall x y z, f_prod (f_g_pow x) (f_pow (f_g_pow z) y) ≈both f_g_pow (f_add x (f_mul z y)).
   Axiom prod_pow_pow : forall h x a b, f_prod (f_pow h x) (f_pow (f_pow h a) b) ≈both f_pow h (f_add x (f_mul a b)).
   Axiom div_prod_cancel : forall x y, f_div (f_prod x y) y ≈both x.
+
+  Axiom mul_comm : forall x y, f_mul x y ≈both f_mul y x.
+
   HB.instance Definition _ : Finite hacspec_group_type := _.
 End GroupOperationProperties.
 
@@ -230,7 +233,7 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
     forall x y z h j b, zkp_one_out_of_two_validate h (zkp_one_out_of_two x y z h j b) ≈both ret_both (true : 'bool).
   Proof.
     intros.
-
+    
     rewrite (both_equivalence_is_pure_eq).
     rewrite hacspec_function_guarantees.
 
@@ -323,11 +326,85 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
     }
 
     repeat cancel_operations ; apply both_eq_reflexivity.
- Qed.
+  Admitted. (* (* Slow *) Qed. *)
+
+  Lemma prod_both_pure_eta_3 : forall {A B C} (a : both A) (b : both B) (c : both C), 
+                 ((is_pure (both_prog a) : A,
+                   is_pure (both_prog b) : B,
+                   is_pure (both_prog c) : C)) =
+                   is_pure (both_prog (prod_b( a , b, c ))).
+  Proof. reflexivity. Qed.
 
   Lemma schnorr_zkp_correct :
-    forall x h z, schnorr_zkp_validate h (schnorr_zkp x h z) = ret_both (true : 'bool).
-  Admitted.
+    forall r x, schnorr_zkp_validate (g_g^ x) (schnorr_zkp r (g_g^ x) x) ≈both ret_both (true : 'bool).
+  Proof.
+    intros.
+    
+    (* Unfold definition *)
+    rewrite (both_equivalence_is_pure_eq).
+    rewrite hacspec_function_guarantees.
+
+      rewrite schnorr_zkp_equation_1 .
+      repeat unfold let_both at 1.
+      unfold lift_both ; simpl ret_both.
+
+      unfold Build_t_SchnorrZKPCommit at 1.
+      simpl ret_both.
+      repeat unfold prod_both at 1 ; simpl ret_both.
+
+      unfold run at 1.
+      simpl ret_both.
+
+      unfold f_from_residual at 1.
+      simpl ret_both.
+      unfold lift1_both at 1.
+      simpl ret_both.
+
+      rewrite prod_both_pure_eta_3.
+      rewrite (hacspec_function_guarantees2 prod_both).
+
+    rewrite <- hacspec_function_guarantees.
+    rewrite <- both_equivalence_is_pure_eq.
+    
+    repeat unfold prod_both at 1 ; rewrite !bind_ret_both ; simpl.
+     set (_, _, _).
+        
+    (* unfold definition *)
+    rewrite schnorr_zkp_validate_equation_1 .
+ 
+    eapply both_eq_trans ; [ apply both_eq_solve_lift | ].
+
+    eapply both_eq_trans ;
+      [ apply both_eq_andb_true |  ].
+
+    all: try rewrite <- both_eq_eqb_true ; try now apply both_eq_reflexivity.
+
+    all: subst p;
+      try repeat unfold f_schnorr_zkp_c at 1 ;
+      try repeat unfold f_schnorr_zkp_u at 1 ;
+      try repeat unfold f_schnorr_zkp_z at 1 ;
+      simpl ; try rewrite !bind_ret_both ; simpl.
+    all: rewrite both_equivalence_is_pure_eq ;
+      normalize_equation ;
+      rewrite <- both_equivalence_is_pure_eq.
+    
+  {
+    repeat cancel_operations.
+    now apply both_equivalence_is_pure_eq.
+  }
+  {
+    try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_add_mul ]) ; 
+      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel ]) ;
+      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel2 ]) ;
+      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_pow ]) ;
+      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply div_prod_cancel ]).
+
+    apply both_eq_fun_ext.
+    apply both_eq_fun_ext.
+
+    apply mul_comm.
+  }
+  Qed.
 
   Module HacspecGP : GroupParam.
     Open Scope group_scope.
