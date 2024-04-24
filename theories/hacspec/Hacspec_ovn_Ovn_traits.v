@@ -27,43 +27,35 @@ Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
 From ConCert.Execution Require Import Serializable.
 From Hacspec Require Import ConCertLib.
 
-Class t_Z_Field (Self : choice_type) := {
-  f_field_type : choice_type ;
-  f_field_type_Serializable : Serializable f_field_type;
-  f_field_type_t_Serialize :> (t_Serialize f_field_type) ;
-  f_field_type_t_Deserial :> (t_Deserial f_field_type) ;
-  f_field_type_t_Serial :> (t_Serial f_field_type) ;
-  f_field_type_t_Copy :> (t_Copy f_field_type) ;
-  f_field_type_t_Clone :> (t_Clone f_field_type) ;
-  f_field_type_t_Eq :> (t_Eq f_field_type) ;
-  f_field_type_t_PartialEq :> (t_PartialEq f_field_type) ;
-  f_field_type_t_Sized :> (t_Sized f_field_type) ;
-  f_q : (both f_field_type) ;
-  f_random_field_elem : (both int32 -> both f_field_type) ;
-  f_field_zero : (both f_field_type) ;
-  f_field_one : (both f_field_type) ;
-  f_add : (both f_field_type -> both f_field_type -> both f_field_type) ;
-  f_sub : (both f_field_type -> both f_field_type -> both f_field_type) ;
-  f_mul : (both f_field_type -> both f_field_type -> both f_field_type) ;
+Class t_Field (v_Self : choice_type) := {
+  f_field_type_Serializable : Serializable v_Self;
+  f_q : (both 'unit -> both v_Self) ;
+  f_random_field_elem : (both int32 -> both v_Self) ;
+  f_field_zero : (both 'unit -> both v_Self) ;
+  f_field_one : (both 'unit -> both v_Self) ;
+  f_add : (both v_Self -> both v_Self -> both v_Self) ;
+  f_sub : (both v_Self -> both v_Self -> both v_Self) ;
+  f_mul : (both v_Self -> both v_Self -> both v_Self) ;
 }.
 
-Class t_Group (Self : choice_type) `{t_Z_Field} := {
-  f_group_type : choice_type ;
-    f_group_type_Serializable : Serializable f_group_type;
-  f_group_type_t_Serialize :> (t_Serialize f_group_type) ;
-  f_group_type_t_Deserial :> (t_Deserial f_group_type) ;
-  f_group_type_t_Serial :> (t_Serial f_group_type) ;
-  f_group_type_t_Copy :> (t_Copy f_group_type) ;
-  f_group_type_t_Clone :> (t_Clone f_group_type) ;
-  f_group_type_t_Eq :> (t_Eq f_group_type) ;
-  f_group_type_t_PartialEq :> (t_PartialEq f_group_type) ;
-  f_group_type_t_Sized :> (t_Sized f_group_type) ;
-  f_g : (both f_group_type) ;
-  f_g_pow : (both f_field_type -> both f_group_type) ;
-  f_pow : (both f_group_type -> both f_field_type -> both f_group_type) ;
-  f_group_one : (both f_group_type) ;
-  f_prod : (both f_group_type -> both f_group_type -> both f_group_type) ;
-  f_inv : (both f_group_type -> both f_group_type) ;
-  f_div : (both f_group_type -> both f_group_type -> both f_group_type) ;
-  f_hash : (both (t_Vec f_group_type t_Global) -> both f_field_type) ;
+Class t_Group (v_Self : choice_type) := {
+  f_group_type_Serializable : Serializable v_Self;
+  f_Z : choice_type ;
+  f_Z_t_Field :> (t_Field f_Z) ;
+  f_Z_t_Serialize :> (t_Serialize f_Z) ;
+  f_Z_t_Deserial :> (t_Deserial f_Z) ;
+  f_Z_t_Serial :> (t_Serial f_Z) ;
+  f_Z_t_Clone :> (t_Clone f_Z) ;
+  f_Z_t_Eq :> (t_Eq f_Z) ;
+  f_Z_t_PartialEq :> (t_PartialEq f_Z) ;
+  f_Z_t_Copy :> (t_Copy f_Z) ;
+  f_Z_t_Sized :> (t_Sized f_Z) ;
+  f_g : (both 'unit -> both v_Self) ;
+  f_g_pow : (both f_Z -> both v_Self) ;
+  f_pow : (both v_Self -> both f_Z -> both v_Self) ;
+  f_group_one : (both 'unit -> both v_Self) ;
+  f_prod : (both v_Self -> both v_Self -> both v_Self) ;
+  f_inv : (both v_Self -> both v_Self) ;
+  f_div : (both v_Self -> both v_Self -> both v_Self) ;
+  f_hash : (both (t_Vec v_Self t_Global) -> both f_Z) ;
 }.
