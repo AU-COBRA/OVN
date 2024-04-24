@@ -29,10 +29,10 @@ From Hacspec Require Import ConCertLib.
 
 Class t_Field (v_Self : choice_type) := {
   f_field_type_Serializable : Serializable v_Self;
-  f_q : (both 'unit -> both v_Self) ;
+  f_q : (both v_Self) ;
   f_random_field_elem : (both int32 -> both v_Self) ;
-  f_field_zero : (both 'unit -> both v_Self) ;
-  f_field_one : (both 'unit -> both v_Self) ;
+  f_field_zero : (both v_Self) ;
+  f_field_one : (both v_Self) ;
   f_add : (both v_Self -> both v_Self -> both v_Self) ;
   f_sub : (both v_Self -> both v_Self -> both v_Self) ;
   f_mul : (both v_Self -> both v_Self -> both v_Self) ;
@@ -50,10 +50,10 @@ Class t_Group (v_Self : choice_type) := {
   f_Z_t_PartialEq :> (t_PartialEq f_Z) ;
   f_Z_t_Copy :> (t_Copy f_Z) ;
   f_Z_t_Sized :> (t_Sized f_Z) ;
-  f_g : (both 'unit -> both v_Self) ;
+  f_g : (both v_Self) ;
   f_g_pow : (both f_Z -> both v_Self) ;
   f_pow : (both v_Self -> both f_Z -> both v_Self) ;
-  f_group_one : (both 'unit -> both v_Self) ;
+  f_group_one : (both v_Self) ;
   f_prod : (both v_Self -> both v_Self -> both v_Self) ;
   f_inv : (both v_Self -> both v_Self) ;
   f_div : (both v_Self -> both v_Self -> both v_Self) ;
