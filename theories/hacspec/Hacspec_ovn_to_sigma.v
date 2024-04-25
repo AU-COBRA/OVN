@@ -420,6 +420,242 @@ Module HacspecGroupParam (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupO
   Definition g_gen : ζ = <[g]> := v_G_g_gen.
 End HacspecGroupParam.
 
+Module Type OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl) (SG : SecureGroup OVN_impl GOP).
+  Module OVN := HacspecOVN OVN_impl.
+
+  Module HacspecGroup := HacspecGroupParam OVN_impl GOP SG.
+  Module Schnorr := Schnorr HacspecGroup.
+
+  Import Schnorr.MyParam.
+  Import Schnorr.MyAlg.
+
+  Import Schnorr.Sigma.Oracle.
+  Import Schnorr.Sigma.
+
+  Axiom StatementToGroup :
+    Statement -> OVN_impl.v_G.
+ 
+  Axiom WitnessToGroup :
+    Witness -> @f_Z _ OVN_impl.v_G_t_Group.
+
+  Transparent OVN.schnorr_zkp.
+ 
+  Definition run_code (ab : src (RUN, (choiceStatement × choiceWitness, choiceTranscript))) : code fset0 [interface
+          #val #[ VERIFY ] : chTranscript → 'bool ;
+          #val #[ RUN ] : chRelation → chTranscript
+                                                                                                ] choiceTranscript :=
+    {code (x ← op (RUN, ((chProd choiceStatement choiceWitness), choiceTranscript)) ⋅ ab ;;
+              ret x) }.
+
+  Transparent OVN.schnorr_zkp.
+  Transparent run.
+ 
+  (* A slightly more general version where we don't fix the precondition *)
+  Theorem rsame_head_cmd_alt :
+    ∀ {A B C : ord_choiceType} {f₀ : A → raw_code B} {f₁ : A → raw_code C}
+      (m : command A) pre (post : postcond B C),
+      ⊢ ⦃ pre ⦄
+        x ← cmd m ;; ret x ≈ x ← cmd m ;; ret x
+                                            ⦃ λ '(a₀, s₀) '(a₁, s₁), pre (s₀, s₁) ∧ a₀ = a₁ ⦄ →
+      (∀ a, ⊢ ⦃ pre ⦄ f₀ a ≈ f₁ a ⦃ post ⦄) →
+      ⊢ ⦃ pre ⦄ x ← cmd m ;; f₀ x ≈ x ← cmd m ;; f₁ x ⦃ post ⦄.
+  Proof.
+    intros A B C f₀ f₁ m pre post hm hf.
+    eapply from_sem_jdg. rewrite !repr_cmd_bind.
+    eapply (bind_rule_pp (repr_cmd m) (repr_cmd m)).
+    - eapply to_sem_jdg in hm. rewrite !repr_cmd_bind in hm.
+      rewrite bindrFree_ret in hm. eauto.
+    - intros a₀ a₁. eapply to_sem_jdg.
+      eapply rpre_hypothesis_rule.
+      intros s₀ s₁ [h e]. subst.
+      eapply rpre_weaken_rule. 1: eapply hf.
+      simpl. intros ? ? [? ?]. subst. auto.
+  Qed.
+
+  (* One-sided sampling rule. *)
+  (* Removes the need for intermediate games in some cases. *)
+  Lemma r_const_sample_L :
+    ∀ {A B : choiceType} (op : Op) c₀ c₁ (pre : precond) (post : postcond A B),
+      LosslessOp op →
+      (∀ x, ⊢ ⦃ pre ⦄ c₀ x ≈ c₁ ⦃ post ⦄) →
+      ⊢ ⦃ pre ⦄ x ← sample op ;; c₀ x ≈ c₁ ⦃ post ⦄.
+  Proof.
+    intros A B op c₀ c₁ pre post hop h.
+    eapply r_transR with (x ← sample op ;; (λ _, c₁) x).
+    - apply r_dead_sample_L. 1: auto.
+      apply rreflexivity_rule.
+    - apply (rsame_head_cmd_alt (cmd_sample op)).
+      + eapply rpre_weaken_rule. 1: eapply cmd_sample_preserve_pre.
+        auto.
+      + apply h.
+  Qed.
+
+  Lemma r_const_sample_R :
+    ∀ {A B : choiceType} (op : Op) c₀ c₁ (pre : precond) (post : postcond A B),
+      LosslessOp op →
+      (∀ x, ⊢ ⦃ pre ⦄ c₀ ≈ c₁ x ⦃ post ⦄) →
+      ⊢ ⦃ pre ⦄ c₀ ≈ x ← sample op ;; c₁ x ⦃ post ⦄.
+  Proof.
+    intros A B op c₀ c₁ pre post hop h.
+    eapply r_transL with (x ← sample op ;; (λ _, c₀) x).
+    - apply r_dead_sample_L. 1: auto.
+      apply rreflexivity_rule.
+    - apply (rsame_head_cmd_alt (cmd_sample op)).
+      + eapply rpre_weaken_rule. 1: eapply cmd_sample_preserve_pre.
+        auto.
+      + apply h.
+  Qed.
+
+  (* Ltac make_pure_rhs p := *)
+  (*   match goal with *)
+  (*   | [ |- context [ ⊢ ⦃ ?P ⦄ ?x ≈ _ ⦃ ?Q ⦄ ] ] => *)
+  (*       let Hx := fresh in *)
+  (*       set (Hx := x) ; *)
+  (*       pattern p in Hx ; *)
+  (*       subst Hx ; *)
+
+  (*       (* Match bind and apply *) *)
+  (*       match goal with *)
+  (*       | [ |- context [ ⊢ ⦃ ?P ⦄ _ ≈ bind (is_state ?a) ?f ⦃ ?Q ⦄ ] ] => *)
+  (*           let av := fresh in *)
+  (*           let fv := fresh in *)
+  (*           set (av := a) *)
+  (*           ; set (fv := f) *)
+  (*           ; eapply (r_bind (ret p) av _ fv P (fun '(v0, h0) '(v1, h1) => v0 = v1 /\ P (h0, h1)) Q) *)
+  (*           ; subst av fv ; hnf ; [ | intros ; apply rpre_hypothesis_rule' ; intros ? ? [] ; apply rpre_weaken_rule with (pre := fun '(s₀, s₁) => P (s₀, s₁)) *)
+  (*             ] *)
+  (*       end *)
+  (*   end. *)
+
+ 
+  (* Corollary r_transR_val' : *)
+  (*   forall {A B C : choice_type} (c₀ : raw_code A) (c₀' : raw_code B) (c₁ : raw_code B) (f : B -> A), *)
+  (*     deterministic c₀' -> *)
+  (*     deterministic c₀ -> *)
+  (*     deterministic c₁ -> *)
+  (*     ⊢ ⦃ true_precond ⦄ c₀' ≈ c₀ ⦃ fun '(v₀, _) '(v₁, _) => f v₀ = v₁ ⦄ -> *)
+  (*     ⊢ ⦃ true_precond ⦄ c₁ ≈ c₀ ⦃ fun '(v₀, _) '(v₁, _) => f v₀ = v₁ ⦄ -> *)
+  (*     ⊢ ⦃ true_precond ⦄ c₀' ≈ c₁ ⦃ fun '(v₀, _) '(v₁, _) => v₀ = v₁ ⦄. *)
+  (* Proof. *)
+  (*   intros. *)
+  (*   intros A₀ A₁ P Q c₀ c₀' c₁ hd₀' hd₀ hd₁ he h. *)
+  (* unshelve eapply det_to_sem. 1,2: assumption. *)
+  (* unshelve eapply sem_to_det in he. 1,2: assumption. *)
+  (* unshelve eapply sem_to_det in h. 1,2: assumption. *)
+  (* intros s₀ s₁ hP. *)
+  (* specialize (h s₀ s₁ hP). specialize (he s₀ s₀ hP). *)
+  (* destruct (det_run c₀ _). *)
+  (* destruct (det_run c₀' _). *)
+  (* destruct (det_run c₁ _). *)
+  (* subst. *)
+  (* assumption. *)
+
+  (*   apply r_transL_val with c₀ ; try assumption ; now apply r_nice_swap. *)
+  (* Qed. *)
+
+  Definition schnorr_run_post_cond :
+    tgt (RUN, (choiceStatement × choiceWitness, choiceTranscript))
+    → OVN.t_SchnorrZKPCommit → Prop.
+  Proof.
+    intros [[[l1 l2] l3] l4] [[r1 r2] r3] ; cbn in *.
+    refine ((StatementToGroup (otf l1) = r1) /\ (WitnessToGroup (otf l3) = r2) /\ (WitnessToGroup (otf l4) = r3)).
+  Defined.
+ 
+  Theorem forget_precond {A B} (x : raw_code A) (y : raw_code B) P Q :
+    ⊢ ⦃ true_precond ⦄ x ≈ y ⦃ Q ⦄ ->
+    ⊢ ⦃ P ⦄ x ≈ y ⦃ Q ⦄.
+  Proof.
+    intros.
+    now apply (rpre_weaken_rule _ _ _ H).
+  Qed.
+ 
+  Theorem rpre_hypothesis_rule' :
+    ∀ {A₀ A₁ : _} {p₀ : raw_code A₀} {p₁ : raw_code A₁}
+      (pre : precond) post,
+      (∀ s₀ s₁,
+          pre (s₀, s₁) → ⊢ ⦃ λ '(s₀', s₁'), s₀' = s₀ ∧ s₁' = s₁ ⦄ p₀ ≈ p₁ ⦃ post ⦄
+      ) →
+      ⊢ ⦃ pre ⦄ p₀ ≈ p₁ ⦃ post ⦄.
+  Proof.
+    intros A₀ A₁ p₀ p₁ pre post h.
+    eapply rpre_hypothesis_rule.
+    intros s0 s1 H. now eapply rpre_weaken_rule.
+  Qed.
+
+  
+ Lemma schnorr_run_eq  (pre : precond) :
+    forall (b : Witness) c,
+      Some c = lookup_op RUN_interactive (RUN, ((chProd choiceStatement choiceWitness), choiceTranscript)) ->
+      ⊢ ⦃ pre ⦄
+        c (fto (HacspecGroup.g ^+ b), fto b)
+        ≈
+        r ← sample uniform (2^32) ;;
+        is_state (OVN.schnorr_zkp (ret_both (nat_of_ord r)) (ret_both (StatementToGroup (HacspecGroup.g ^+ b))) (ret_both (WitnessToGroup b)))
+          ⦃ fun '(x,_) '(y,_) => schnorr_run_post_cond x y  ⦄.
+  Proof.
+    intros.
+
+    cbn in H.
+    destruct choice_type_eqP ; [ | discriminate ].
+    destruct choice_type_eqP ; [ | discriminate ].
+    rewrite cast_fun_K in H.
+    clear e e1.
+    inversion_clear H.
+
+    unfold OVN.schnorr_zkp.
+
+    rewrite !otf_fto; unfold R; rewrite eqxx; unfold assertD.
+
+    apply (r_const_sample_L) ; [ apply LosslessOp_uniform | intros ].
+    apply (r_const_sample_R) ; [ apply LosslessOp_uniform | intros ].
+    apply better_r_put_lhs.
+    apply (r_const_sample_L) ; [ apply LosslessOp_uniform | intros ].
+    apply getr_set_lhs.
+
+    unfold lift_both, both_prog at 1.
+    unfold run.
+    unfold bind_both at 1, both_prog at 1.
+    unfold bind_raw_both at 1, is_state at 1.
+
+    apply forget_precond.
+    apply better_r.
+    unfold true_precond.
+
+    set (lhs := ret _).
+    set (let_both _ _).
+    set (fun _ => is_state _).
+
+    apply rsymmetry.
+    eapply (r_transL_val (x ← ret (is_pure b0) ;; r x) (x ← is_state b0 ;; r x) lhs) ; [ admit | admit | admit | .. ].
+    -
+      replace _ with (fun '(s0, s1) => true_precond (s0, s1)) by reflexivity.
+      apply better_r.
+
+      eapply (@r_bind _ _ _ _ (ret (is_pure b0)) _ _ r).
+      + apply r_nice_swap_rule ; [ easy | admit | .. ].
+        apply (p_eq b0).
+      + intros ; apply rpre_hypothesis_rule' ; intros ? ? [[]].
+        subst.
+        now apply r_ret.
+    - simpl.
+      subst r.
+      subst lhs.
+      apply rsymmetry.
+
+      subst b0.
+      repeat unfold let_both at 1.
+      simpl is_pure ; fold chElement.
+      set (is_pure _). cbn in s.
+      subst s.
+  Admitted.
+End OVN_schnorr_proof.
+
+
+
+
+
+(*** Example (Z89) *)
+
 Module Z89_impl : HacspecOVNParams.
   #[local] Open Scope hacspec_scope.
  
@@ -556,61 +792,3 @@ Module OVN_Z89 := HacspecOVN Z89_impl.
 (* Import Schnorr_Z89.Sigma.Oracle. *)
 
 (* Import Z89_impl. *)
-
-Module Type OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl) (SG : SecureGroup OVN_impl GOP).
-  Module OVN := HacspecOVN OVN_impl.
-
-  Module HacspecGroup := HacspecGroupParam OVN_impl GOP SG.
-  Module Schnorr := Schnorr HacspecGroup.
-
-  Import Schnorr.MyParam.
-  Import Schnorr.MyAlg.
-
-  Import Schnorr.Sigma.Oracle.
-  Import Schnorr.Sigma.
-
-  Axiom StatementToGroup :
-    'I_#|Statement| -> OVN_impl.v_G.
- 
-  Axiom WitnessToGroup :
-    'I_#|Witness| -> @f_Z _ OVN_impl.v_G_t_Group.
-
-  Transparent OVN.schnorr_zkp.
- 
-  Definition run_code (ab : src (RUN, (choiceStatement × choiceWitness, choiceTranscript))) : code fset0 [interface
-          #val #[ VERIFY ] : chTranscript → 'bool ;
-          #val #[ RUN ] : chRelation → chTranscript
-                                                                                                ] choiceTranscript :=
-    {code (x ← op (RUN, ((chProd choiceStatement choiceWitness), choiceTranscript)) ⋅ ab ;;
-              ret x) }.
-
-  Transparent OVN.schnorr_zkp.
-  Transparent run.
-  
-  Lemma schnorr_run_eq  (pre : precond) :
-    forall a b c,
-      Some c = lookup_op RUN_interactive (RUN, ((chProd choiceStatement choiceWitness), choiceTranscript)) ->
-      ⊢ ⦃ pre ⦄
-        c (a, b)
-        ≈
-        r ← sample uniform (2^32) ;;
-        is_state (OVN.schnorr_zkp (ret_both (nat_of_ord r)) (ret_both (StatementToGroup a)) (ret_both (WitnessToGroup b)))
-          ⦃ fun v1 v2 => True ⦄.
-  Proof.
-    intros.
-
-    cbn in H.
-    destruct choice_type_eqP ; [ | discriminate ].
-    destruct choice_type_eqP ; [ | discriminate ].
-    rewrite cast_fun_K in H.
-    clear e e1.
-    inversion_clear H.
-
-    unfold OVN.schnorr_zkp.
-    repeat unfold let_both at 1.
-    simpl ; fold chElement.
-
-    ssprove_code_simpl.
-
-  Admitted.
-End OVN_schnorr_proof.
