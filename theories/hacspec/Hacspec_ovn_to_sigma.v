@@ -262,14 +262,14 @@ Module Misc.
 
 End Misc.
 
+Definition lower1 {A B : choice_type} (f : both A -> both B) : A -> B :=
+  fun x => is_pure (f (ret_both x)).
+
+Definition lower2 {A B C : choice_type} (f : both A -> both B -> both C) : A -> B -> C :=
+  fun x y => is_pure (f (ret_both x) (ret_both y)).
+
 Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
   Import OVN_impl.
-
-  (* Notation v_G := OVN_impl.v_G. *)
-  (* Instance v_G_t_Group : t_Group v_G := OVN_impl.v_G_t_Group. *)
-
-  (* Notation v_Z := v_G_t_Group.(f_Z). *)
-  (* Instance v_Z_t_Field : t_Field v_Z := _. *)
 
   Axiom add_sub_cancel : forall a b, f_add a (f_sub b a) ≈both b.
   Axiom add_sub_cancel2 : forall a b, f_add (f_sub b a) a ≈both b.
@@ -286,6 +286,34 @@ Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
   Axiom both_v_G_countable : Choice_isCountable (both v_G).
   Axiom both_v_G_hasDecEq : hasDecEq (both v_G).
   Axiom both_v_G_isFinite : isFinite.axioms_ (both v_G) both_v_G_hasDecEq.
+
+  Axiom v_G_countable : Choice_isCountable (Choice.sort (chElement v_G)).
+  Axiom v_G_isFinite : isFinite (Choice.sort (chElement v_G)).
+
+  Axiom both_v_Z_choice : hasChoice.axioms_ (both v_Z).
+  Axiom both_v_Z_countable : Choice_isCountable (both v_Z).
+  Axiom both_v_Z_hasDecEq : hasDecEq (both v_Z).
+  Axiom both_v_Z_isFinite : isFinite.axioms_ (both v_Z) both_v_Z_hasDecEq.
+
+  Axiom v_Z_countable : Choice_isCountable (Choice.sort (chElement v_Z)).
+  Axiom v_Z_isFinite : isFinite (Choice.sort (chElement v_Z)).
+
+  Axiom f_prodA : associative (lower2 f_prod).
+  Axiom f_prod1 : associative (lower2 f_prod).
+  Axiom f_prod_left_id : left_id (is_pure f_group_one) (lower2 f_prod).
+  Axiom f_invK : involutive (lower1 f_inv).
+  Axiom f_invM : {morph (lower1 f_inv)  : x y / (lower2 f_prod) x y >-> (lower2 f_prod)  y x}.
+
+  Axiom v_Z_Field : GRing.Field (v_Z).
+
+  Axiom prod_inv_cancel : forall x, f_prod (f_inv x) x ≈both f_group_one.
+
+End GroupOperationProperties.
+
+Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl).
+  Import OVN_impl.
+  Import GOP.
+
   Definition both_v_G_Finite : Finite (both v_G) :=
     {|
       Finite.choice_hasChoice_mixin := both_v_G_choice;
@@ -294,8 +322,6 @@ Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
       Finite.fintype_isFinite_mixin := both_v_G_isFinite
     |}.
 
-  Axiom v_G_countable : Choice_isCountable (Choice.sort (chElement v_G)).
-  Axiom v_G_isFinite : isFinite (Choice.sort (chElement v_G)).
   Definition v_G_Finite : Finite (Choice.sort (chElement v_G)) :=
     {|
       Finite.choice_hasChoice_mixin := Choice.choice_hasChoice_mixin (Choice.class v_G);
@@ -303,11 +329,7 @@ Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
       Finite.eqtype_hasDecEq_mixin := Choice.eqtype_hasDecEq_mixin (Choice.class v_G);
       Finite.fintype_isFinite_mixin := v_G_isFinite
     |}.
-
-  Axiom both_v_Z_choice : hasChoice.axioms_ (both v_Z).
-  Axiom both_v_Z_countable : Choice_isCountable (both v_Z).
-  Axiom both_v_Z_hasDecEq : hasDecEq (both v_Z).
-  Axiom both_v_Z_isFinite : isFinite.axioms_ (both v_Z) both_v_Z_hasDecEq.
+  
   Definition both_v_Z_Finite : Finite (both v_Z) :=
     {|
       Finite.choice_hasChoice_mixin := both_v_Z_choice;
@@ -316,8 +338,6 @@ Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
       Finite.fintype_isFinite_mixin := both_v_Z_isFinite
     |}.
 
-  Axiom v_Z_countable : Choice_isCountable (Choice.sort (chElement v_Z)).
-  Axiom v_Z_isFinite : isFinite (Choice.sort (chElement v_Z)).
   Definition v_Z_Finite : Finite (Choice.sort (chElement v_Z)) :=
     {|
       Finite.choice_hasChoice_mixin := Choice.choice_hasChoice_mixin (Choice.class v_Z);
@@ -333,28 +353,8 @@ Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
   Definition f_field_finType : finType := Finite.Pack v_Z_Finite.
   Definition f_group_finType : finType := Finite.Pack v_G_Finite.
 
-End GroupOperationProperties.
-
-
-Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl).
-  Import OVN_impl.
-  Import GOP.
-
   (* both v_Z is a field *)
   (* ChoiceEquality_both__canonical__GRing_Field *)
-  Axiom v_Z_Field : GRing.Field (v_Z).
-
-  Definition lower1 {A B : choice_type} (f : both A -> both B) : A -> B :=
-    fun x => is_pure (f (ret_both x)).
-
-  Definition lower2 {A B C : choice_type} (f : both A -> both B -> both C) : A -> B -> C :=
-    fun x y => is_pure (f (ret_both x) (ret_both y)).
-
-  Axiom f_prodA : associative (lower2 f_prod).
-  Axiom f_prod1 : associative (lower2 f_prod).
-  Axiom f_prod_left_id : left_id (is_pure f_group_one) (lower2 f_prod).
-  Axiom f_invK : involutive (lower1 f_inv).
-  Axiom f_invM : {morph (lower1 f_inv)  : x y / (lower2 f_prod) x y >-> (lower2 f_prod)  y x}.
   Definition mul_group : isMulBaseGroup (v_G) :=
     {|
       isMulBaseGroup.mulg_subdef := lower2 f_prod;
@@ -365,8 +365,6 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       isMulBaseGroup.invgK_subproof := f_invK;
       isMulBaseGroup.invMg_subproof := f_invM
     |}.
-
-  Axiom prod_inv_cancel : forall x, f_prod (f_inv x) x ≈both f_group_one.
 
   #[export] Definition v_G_BaseFinGroup : baseFinGroupType :=
     BaseFinGroup.Pack
@@ -394,17 +392,24 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
 
   (* prime_cyclic *)
 
-  Axiom v_G_prime_order : prime #[is_pure f_g : v_G_is_group].
-  Axiom v_G_g_gen : [set : v_G_is_group] = <[is_pure f_g : v_G_is_group]>.
 End HacspecGroup.
 
-Module HacspecGroupParam (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl) <: GroupParam.
+Module Type SecureGroup  (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl). 
   Import OVN_impl.
   Import GOP.
+  Module Group := HacspecGroup OVN_impl GOP.
+  Export Group.
+  Import Group.
 
-  Module Hacspec_group := HacspecGroup OVN_impl GOP.
-  Import Hacspec_group.
-  
+  Axiom v_G_prime_order : prime #[is_pure f_g : v_G_is_group].
+  Axiom v_G_g_gen : [set : v_G_is_group] = <[is_pure f_g : v_G_is_group]>.
+End SecureGroup.
+
+Module HacspecGroupParam (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl) (SG : SecureGroup OVN_impl GOP) <: GroupParam.
+  Import OVN_impl.
+  Import GOP.
+  Import SG.
+
   Definition gT : finGroupType := v_G_is_group.
   Definition ζ : {set gT} := [set : gT].
   Definition g :  gT := is_pure f_g.
@@ -417,206 +422,195 @@ End HacspecGroupParam.
 
 Module Z89_impl : HacspecOVNParams.
   #[local] Open Scope hacspec_scope.
-
+ 
   Definition v_Z : choice_type := 'nat.
   Definition v_G : choice_type := 'nat.
-  Definition v_A : choice_type := 'nat.
+   Definition v_A : choice_type := 'nat.
   Definition n : both uint_size := ret_both 55.
 
-  Axiom v_Z_t_Field : t_Field v_Z.
-  Axiom v_G_t_Group : t_Group v_G.
+  Instance v_Z_t_Field : t_Field v_Z :=
+    {|
+      f_field_type_Serializable := Serializable.nat_serializable : Serializable.Serializable 'nat;
+      f_q := ret_both (89%nat : 'nat);
+      f_random_field_elem := fun x => bind_both x (fun x => ret_both (Z.to_nat (unsigned x) : 'nat));
+      f_field_zero := ret_both (0%nat : 'nat);
+      f_field_one := ret_both (1%nat : 'nat);
+      f_add x y := bind_both x (fun (x : nat) => bind_both y (fun (y : nat) => ret_both (((x + y) mod 88)%nat : 'nat))) ;
+      f_sub x y := bind_both x (fun (x : nat) => bind_both y (fun (y : nat) => ret_both (((x - y) mod 88)%nat : 'nat))) ;
+      f_mul x y := bind_both x (fun (x : nat) => bind_both y (fun (y : nat) => ret_both (((x * y) mod 88)%nat : 'nat))) ; 
+    |}.
 
-  Axiom v_G_t_Eq : t_Eq v_G.
-  Axiom v_A_t_HasActions : t_HasActions v_A.
+  Fixpoint f_inv_helper (prod : both v_G -> both v_G -> both v_G) (one : both v_G) (n : 'nat) (x : both v_G) : both v_G :=
+    match n with
+    | O => ret_both (O : 'nat)  (* Failure *)
+    | S n' =>
+        ifb (prod x (ret_both n)) =.? one
+        then ret_both n
+        else f_inv_helper prod one n' x
+    end.
+  
+  Program Definition v_G_t_Group : t_Group v_G :=
+    (
+      let f_Z := v_Z in
+      let f_g := ret_both (3%nat : 'nat) in
+      let f_pow x y := bind_both x (fun (x : v_G) => bind_both y (fun (y : f_Z) => ret_both (((x ^ y) mod 89)%nat : 'nat))) in
+      let f_g_pow := f_pow f_g in
+      let f_group_one := ret_both (1%nat : 'nat) in
+      let f_prod x y := bind_both x (fun (x : v_G) => bind_both y (fun (y : v_G) => ret_both (((x * y) mod 89)%nat : 'nat))) in
+      let f_inv := f_inv_helper f_prod f_group_one 88%nat in
+      let f_div x y := f_prod x (f_inv y) in
+      let f_hash x := (ret_both (0%nat : 'nat)) in
+      {|
+        f_group_type_Serializable := v_Z_t_Field.(f_field_type_Serializable);
+        f_Z := f_Z;
+        f_Z_t_Field := v_Z_t_Field;
+        f_Z_t_Serialize := _;
+        f_Z_t_Deserial := _;
+        f_Z_t_Serial := _;
+        f_Z_t_Clone := _;
+        f_Z_t_Eq := Hacspec_Lib_Pre.nat_eqdec;
+        f_Z_t_PartialEq := _;
+        f_Z_t_Copy := _;
+        f_Z_t_Sized := _;
+        f_g := f_g;
+        f_g_pow := f_g_pow;
+        f_pow := f_pow;
+        f_group_one := f_group_one;
+        f_prod := f_prod ;
+        f_inv := f_inv;
+        f_div := f_div;
+        f_hash := f_hash
+      |}).
+  Admit Obligations.
+  
+  Definition v_G_t_Eq : t_Eq v_G := Hacspec_Lib_Pre.nat_eqdec.
+  Definition v_A_t_HasActions : t_HasActions v_A.
+  Proof.
+    constructor.
+    refine (ret_both (0%nat : 'nat)).
+  Defined.
 
 End Z89_impl.
 
-(* Module Z89_group_operations : GroupOperationProperties Z89_impl. *)
-(*   #[local] Open Scope hacspec_scope. *)
-(*   Import Z89_impl. *)
+Module Z89_group_operations : GroupOperationProperties Z89_impl.
+  #[local] Open Scope hacspec_scope.
+  Import Z89_impl.
+
+  Axiom v_G_t_Group : t_Group v_G.
+  Axiom add_sub_cancel : ∀ a b : both v_Z, f_add a (f_sub b a) ≈both b.
+  Axiom add_sub_cancel2 : ∀ a b : both v_Z, f_add (f_sub b a) a ≈both b. 
+  Axiom prod_pow_add_mul : ∀ x y z : both f_Z, f_prod (f_g_pow x) (f_pow (f_g_pow z) y) ≈both f_g_pow (f_add x (f_mul z y)).
+Axiom prod_pow_pow : forall h x a b, f_prod (f_pow h x) (f_pow (f_pow h a) b) ≈both f_pow h (f_add x (f_mul a b)).
+  Axiom div_prod_cancel : forall x y, f_div (f_prod x y) y ≈both x.
+
+  Axiom mul_comm : forall x y, f_mul x y ≈both f_mul y x.
+
+  (* HB.instance Definition sort_group : hasChoice (Choice.sort (chElement v_G)) := _. (* Choice.clone (Choice.sort (chElement v_G)) _.  *) *)
+
+  Axiom both_v_G_choice : hasChoice.axioms_ (both v_G).
+  Axiom both_v_G_countable : Choice_isCountable (both v_G).
+  Axiom both_v_G_hasDecEq : hasDecEq (both v_G).
+  Axiom both_v_G_isFinite : isFinite.axioms_ (both v_G) both_v_G_hasDecEq.
+
+  Axiom v_G_countable : Choice_isCountable (Choice.sort (chElement v_G)).
+  Axiom v_G_isFinite : isFinite (Choice.sort (chElement v_G)).
+
+  Axiom both_v_Z_choice : hasChoice.axioms_ (both v_Z).
+  Axiom both_v_Z_countable : Choice_isCountable (both v_Z).
+  Axiom both_v_Z_hasDecEq : hasDecEq (both v_Z).
+  Axiom both_v_Z_isFinite : isFinite.axioms_ (both v_Z) both_v_Z_hasDecEq.
+
+  Axiom v_Z_countable : Choice_isCountable (Choice.sort (chElement v_Z)).
+  Axiom v_Z_isFinite : isFinite (Choice.sort (chElement v_Z)).
+
+  Axiom f_prodA : associative (lower2 f_prod).
+  Axiom f_prod1 : associative (lower2 f_prod).
+  Axiom f_prod_left_id : left_id (is_pure f_group_one) (lower2 f_prod).
+  Axiom f_invK : involutive (lower1 f_inv).
+  Axiom f_invM : {morph (lower1 f_inv)  : x y / (lower2 f_prod) x y >-> (lower2 f_prod)  y x}.
+
+  Axiom v_Z_Field : GRing.Field (v_Z).
+
+  Axiom prod_inv_cancel : forall x, f_prod (f_inv x) x ≈both f_group_one.
+
+End Z89_group_operations.
+
+Module Z89_secure_group : SecureGroup Z89_impl Z89_group_operations.
+  Import Z89_impl.
+  Import Z89_group_operations.
+  Module Group := HacspecGroup Z89_impl Z89_group_operations.
+  Import Group.
+  Axiom v_G_prime_order : prime #[is_pure f_g : v_G_is_group].
+  Axiom v_G_g_gen : [set : v_G_is_group] = <[is_pure f_g : v_G_is_group]>.
+End Z89_secure_group.
+
+Module Hacspec_Z89 := HacspecGroupParam Z89_impl Z89_group_operations Z89_secure_group.
+Module Schnorr_Z89 := Schnorr Hacspec_Z89.
+
+Module OVN_Z89 := HacspecOVN Z89_impl.
+
+(* Schnorr_Z89.Sigma.RUN_interactive *)
+
+(* Import Schnorr_Z89.Sigma. *)
+(* Import Schnorr_Z89.MyAlg. *)
+(* Import Schnorr_Z89.Sigma.Oracle. *)
+
+(* Import Z89_impl. *)
+
+Module Type OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl) (SG : SecureGroup OVN_impl GOP).
+  Module OVN := HacspecOVN OVN_impl.
+
+  Module HacspecGroup := HacspecGroupParam OVN_impl GOP SG.
+  Module Schnorr := Schnorr HacspecGroup.
+
+  Import Schnorr.MyParam.
+  Import Schnorr.MyAlg.
+
+  Import Schnorr.Sigma.Oracle.
+  Import Schnorr.Sigma.
+
+  Axiom StatementToGroup :
+    'I_#|Statement| -> OVN_impl.v_G.
+ 
+  Axiom WitnessToGroup :
+    'I_#|Witness| -> @f_Z _ OVN_impl.v_G_t_Group.
+
+  Transparent OVN.schnorr_zkp.
+ 
+  Definition run_code (ab : src (RUN, (choiceStatement × choiceWitness, choiceTranscript))) : code fset0 [interface
+          #val #[ VERIFY ] : chTranscript → 'bool ;
+          #val #[ RUN ] : chRelation → chTranscript
+                                                                                                ] choiceTranscript :=
+    {code (x ← op (RUN, ((chProd choiceStatement choiceWitness), choiceTranscript)) ⋅ ab ;;
+              ret x) }.
+
+  Transparent OVN.schnorr_zkp.
+  Transparent run.
   
-(*   Axiom v_G_t_Group : t_Group v_G. *)
-(*   Axiom add_sub_cancel : ∀ a b : both v_Z, f_add a (f_sub b a) ≈both b. *)
+  Lemma schnorr_run_eq  (pre : precond) :
+    forall a b c,
+      Some c = lookup_op RUN_interactive (RUN, ((chProd choiceStatement choiceWitness), choiceTranscript)) ->
+      ⊢ ⦃ pre ⦄
+        c (a, b)
+        ≈
+        r ← sample uniform (2^32) ;;
+        is_state (OVN.schnorr_zkp (ret_both (nat_of_ord r)) (ret_both (StatementToGroup a)) (ret_both (WitnessToGroup b)))
+          ⦃ fun v1 v2 => True ⦄.
+  Proof.
+    intros.
 
-(* End Z89_group_operations. *)
+    cbn in H.
+    destruct choice_type_eqP ; [ | discriminate ].
+    destruct choice_type_eqP ; [ | discriminate ].
+    rewrite cast_fun_K in H.
+    clear e e1.
+    inversion_clear H.
 
-(* Module Hacspec_Z89 := HacspecGroupParam Z89_impl . *)
+    unfold OVN.schnorr_zkp.
+    repeat unfold let_both at 1.
+    simpl ; fold chElement.
 
-(* Module Schnorr_Z3 := Schnorr. *)
+    ssprove_code_simpl.
 
-(* Module Schnorr_v_G (OVN_impl : Hacspec_ovn.HacspecOVN) (GOP : GroupOperationProperties OVN_impl) := Schnorr. *)
-
-(* Module HacspecSchnorr (GP : GOP : GroupOperationProperties). *)
-
-(* Import GP. *)
-
-(* (* order of g *) *)
-(* Definition q : nat := #[g]. *)
-
-
-(* Module MyParam <: SigmaProtocolParams. *)
-(*   Include HacspecGroup. *)
-(*   Include Misc. *)
-
-(*   Definition Witness : finType := Finite.Pack (word32_Finite 32). *)
-(*   Locate HacspecGP.v_G_is_group. *)
-(*   Check HacspecGP.gT. *)
-(*   Definition Statement : finType := v_G_is_group. *)
-(*   Definition Message : finType := *)
-(*     (Datatypes_prod__canonical__fintype_Finite *)
-(*        (Datatypes_prod__canonical__fintype_Finite v_G_is_group v_G_is_group) *)
-(*        v_G_is_group). *)
-(*   Definition Challenge : finType := f_field_finType. *)
-(*   Definition Response : finType :=  f_field_finType. *)
-(*   Definition Transcript : finType := *)
-(*     prod (prod Message Challenge) Response. *)
-
-(*   Definition w0 : Witness := mkword _ 0 . *)
-(*   Definition e0 : Challenge := is_pure f_field_zero. *)
-(*   Definition z0 : Response := is_pure f_field_zero. *)
-
-(*   Definition R : Statement -> Witness -> bool := *)
-(*     (fun (h : Statement) (w : Witness) => h == ((is_pure f_g : v_G_is_group) ^+ w : v_G_is_group)). *)
-
-(*   #[export] Instance positive_gT : Positive #|f_group_finType|. *)
-(*   Proof. *)
-(*     apply /card_gt0P. exists (is_pure f_g). auto. *)
-(*   Qed. *)
-
-(*   #[export] Instance positive_fT : Positive #|f_field_finType|. *)
-(*   Proof. *)
-(*     apply /card_gt0P. exists (is_pure f_field_zero). auto. *)
-(*   Qed. *)
-
-(*   #[export] Instance Witness_pos : Positive #|Witness|. *)
-(*   Proof. *)
-(*     apply /card_gt0P. exists (mkword _ 0). auto. *)
-(*   Defined. *)
-
-(*   Definition Statement_pos : Positive #|Statement| := _. *)
-(*   #[export] Definition Message_pos : Positive #|Message|. *)
-(*   Proof. *)
-(*     rewrite !card_prod. repeat apply Positive_prod ; apply positive_gT. *)
-(*   Defined. *)
-(*   Definition Challenge_pos : Positive #|Challenge| := _. *)
-(*   Definition Response_pos : Positive #|Response| := _. *)
-(*   Definition Bool_pos : Positive #|'bool|. *)
-(*   Proof. *)
-(*     rewrite card_bool. done. *)
-(*   Defined. *)
-
-(* End MyParam. *)
-
-
-
-(* Module MyParam <: SigmaProtocolParams. *)
-
-(*   Definition Witness : finType := Finite.clone _ 'Z_q. *)
-(*   Definition Statement : finType := gT. *)
-(*   Definition Message : finType := gT. *)
-(*   Definition Challenge : finType := Finite.clone _ 'Z_q. *)
-(*   Definition Response : finType :=  Finite.clone _ 'Z_q. *)
-(*   Definition Transcript : finType := *)
-(*     prod (prod Message Challenge) Response. *)
-
-(*   Definition w0 : Witness := 0. *)
-(*   Definition e0 : Challenge := 0. *)
-(*   Definition z0 : Response := 0. *)
-
-(*   Definition R : Statement -> Witness -> bool := *)
-(*     (λ (h : Statement) (w : Witness), h == (g ^+ w)). *)
-
-(*   #[export] Instance positive_gT : Positive #|gT|. *)
-(*   Proof. *)
-(*     apply /card_gt0P. exists g. auto. *)
-(*   Qed. *)
-
-(*   #[export] Instance Witness_pos : Positive #|Witness|. *)
-(*   Proof. *)
-(*     apply /card_gt0P. exists w0. auto. *)
-(*   Qed. *)
-
-(*   Definition Statement_pos : Positive #|Statement| := _. *)
-(*   Definition Message_pos : Positive #|Message| := _. *)
-(*   Definition Challenge_pos : Positive #|Challenge| := _. *)
-(*   Definition Response_pos : Positive #|Response| := _. *)
-(*   Definition Bool_pos : Positive #|'bool|. *)
-(*   Proof. *)
-(*     rewrite card_bool. done. *)
-(*   Defined. *)
-
-(* End MyParam. *)
-
-
-
-
-
-
-(* Module MyAlg <: SigmaProtocolAlgorithms MyParam. *)
-
-(*   Import MyParam. *)
-
-(*   #[local] Existing Instance Bool_pos. *)
-
-(*   Definition choiceWitness : choice_type := 'fin #|Witness|. *)
-(*   Definition choiceStatement : choice_type := 'fin #|Statement|. *)
-(*   Definition choiceMessage : choice_type := 'fin #|Message|. *)
-(*   Definition choiceChallenge : choice_type := 'fin #|Challenge|. *)
-(*   Definition choiceResponse : choice_type := 'fin #|Response|. *)
-(*   Definition choiceTranscript : choice_type := *)
-(*     chProd *)
-(*       (chProd (chProd choiceStatement choiceMessage) choiceChallenge) *)
-(*       choiceResponse. *)
-(*   Definition choiceBool := 'fin #|'bool|. *)
-
-(*   Definition i_witness := #|Witness|. *)
-
-(*   Definition HIDING : nat := 0. *)
-(*   Definition SOUNDNESS : nat := 1. *)
-
-(*   Definition commit_loc : Location := (choiceWitness; 2%N). *)
-
-(*   Definition Sigma_locs : {fset Location} := fset [:: commit_loc]. *)
-(*   Definition Simulator_locs : {fset Location} := fset0. *)
-
-(*   Definition Commit (h : choiceStatement) (w : choiceWitness): *)
-(*     code Sigma_locs [interface] choiceMessage := *)
-(*     {code *)
-(*       r ← sample uniform i_witness ;; *)
-(*       #put commit_loc := r ;; *)
-(*       ret (fto (g ^+ (otf r))) *)
-(*     }. *)
-
-(*   Definition Response (h : choiceStatement) (w : choiceWitness) (a : choiceMessage) (e : choiceChallenge) : *)
-(*     code Sigma_locs [interface] choiceResponse := *)
-(*     {code *)
-(*       r ← get commit_loc ;; *)
-(*       ret (fto (otf r + otf e * otf w)) *)
-(*     }. *)
-
-(*   Definition Simulate (h : choiceStatement) (e : choiceChallenge) : *)
-(*     code Simulator_locs [interface] choiceTranscript := *)
-(*     {code *)
-(*       z ← sample uniform i_witness ;; *)
-(*       ret (h, fto (g ^+ (otf z) * (otf h ^- (otf e))), e, z) *)
-(*     }. *)
-
-(*   Definition Verify (h : choiceStatement) (a : choiceMessage) *)
-(*     (e : choiceChallenge) (z : choiceResponse) : choiceBool := *)
-(*     fto (g ^+ (otf z) == (otf a) * (otf h) ^+ (otf e)). *)
-
-(*   Definition Extractor (h : choiceStatement) (a : choiceMessage) *)
-(*     (e : choiceChallenge) (e' : choiceChallenge) *)
-(*     (z : choiceResponse)  (z' : choiceResponse) : 'option choiceWitness := *)
-(*     Some (fto ((otf z - otf z') / (otf e - otf e'))). *)
-
-(*   Definition KeyGen (w : choiceWitness) := fto (g ^+ w). *)
-
-(* End MyAlg. *)
-
-
-(* #[local] Open Scope package_scope. *)
-
-(* Module Sigma := SigmaProtocol MyParam MyAlg. *)
-
-(* Import MyParam MyAlg Sigma. *)
+  Admitted.
+End OVN_schnorr_proof.

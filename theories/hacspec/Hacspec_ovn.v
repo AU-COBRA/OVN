@@ -27,12 +27,19 @@ Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
 From OVN Require Import Hacspec_ovn_Ovn_traits.
 Export Hacspec_ovn_Ovn_traits.
 
-Context (v_Z : choice_type) (v_G : choice_type) (v_A : choice_type).
-Context {n : both (uint_size)}.
-Context (v_Z_t_Field : t_Field (v_Z)).
-Context (v_G_t_Group : t_Group v_G).
-Context (v_G_t_Eq : t_Eq v_G).
-Context (v_A_t_HasActions : t_HasActions (v_A)) .
+Module Type HacspecOVNParams.
+  Context (v_Z : choice_type) (v_G : choice_type) (v_A : choice_type).
+  #[global] Transparent v_G.
+  Context {n : both (uint_size)}.
+  Instance v_Z_t_Field : t_Field (v_Z). Admitted.
+  Instance v_G_t_Group : t_Group v_G. Admitted.
+  Instance v_G_t_Eq : t_Eq v_G. Admitted.
+  Instance v_A_t_HasActions : t_HasActions (v_A) . Admitted.
+End HacspecOVNParams.
+
+Module HacspecOVN (Params : HacspecOVNParams).
+  Import Params.
+  Export Params.
 
 Equations select_private_voting_key (random : both int32) : both v_Z :=
   select_private_voting_key random  :=
@@ -647,3 +654,5 @@ Fail Next Obligation.
 
 Definition contract_OVN  : @Contract _ (state_OVN) (Msg_OVN) (state_OVN) (t_ParseError) state_OVN_Serializable Msg_OVN_Serializable state_OVN_Serializable _ :=
   build_contract init_OVN receive_OVN.
+
+End HacspecOVN.

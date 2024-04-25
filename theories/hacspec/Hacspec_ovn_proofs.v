@@ -154,6 +154,76 @@ Module Misc.
 
   Lemma is_pure_cancel_ret_both : forall {A : choice_type}, cancel (@ret_both A) (@is_pure A).
   Proof. easy. Qed.
+
+    Definition finite_to_word {n} (x : 'I_(Z.to_nat (modulus n)).-1.+1) : n.-word :=
+      mkword _ (Z.of_nat (nat_of_ord x)).
+
+    Definition word_to_finite {n} (x : n.-word) : 'I_((Z.to_nat (modulus n)).-1.+1) := inord (Z.to_nat (toword x)).
+
+    Lemma finite_word_cancel : forall {n}, cancel word_to_finite (finite_to_word (n := n)).
+    Proof.
+      intros.
+      unfold word_to_finite, finite_to_word.
+      intros x ; clear.
+      rewrite inordK.
+      - rewrite Z2Nat.id.
+        + now rewrite ureprK.
+        + now destruct x as [[] ?].
+      - destruct x.
+        simpl.
+        apply (ssrbool.elimT andP) in i as [].
+        apply Z.leb_le in H.
+        apply Z.ltb_lt in H0. 
+        apply (ssrbool.introT (jasmin_util.ZNltP _ _)).
+        rewrite Nat.succ_pred.
+        + now rewrite !Z2Nat.id.
+        + unfold modulus.
+          unfold two_power_nat.
+          easy.
+    Qed.
+ 
+    Lemma word_finite_cancel : forall {n}, cancel (finite_to_word (n := n)) word_to_finite.
+    Proof.
+      intros.
+      unfold finite_to_word, word_to_finite.
+      intros x.
+      
+      destruct n.
+      {
+        simpl in x |- *.
+        rewrite Z.mod_1_r.
+        unfold Z.to_nat.
+        destruct x as [[]].
+        + unfold inord, insubd, odflt, oapp, insub.
+          destruct idP ; now apply ord_ext.
+        + discriminate i.
+      }
+      
+      rewrite mkword_val_small.
+      2:{
+        destruct x ; simpl.
+        rewrite <- modulusE.
+        rewrite Nat.succ_pred in i. 2: now unfold modulus, two_power_nat .
+        apply (ssrbool.introT andP) ; split ; [ apply Z.leb_le | apply Z.ltb_lt ].
+        - eapply (ssrbool.elimT (isword_ofnatZP _ _)).
+          apply (ltn_expl m).
+          easy.
+        - eapply Z.lt_le_trans ; [ apply (ssrbool.elimT (jasmin_util.ZNltP _ _) i) | ].
+          clear.
+          rewrite !Z2Nat.id. 2: easy.
+          unfold modulus.
+          now rewrite two_power_nat_equiv.
+      }
+      rewrite Nat2Z.id.
+      now rewrite inord_val.
+    Qed.
+
+    Definition word32_Finite (n : nat) : Finite (word n) :=
+      finite_bijective
+        finite_to_word
+        word_to_finite finite_word_cancel word_finite_cancel
+        (Finite.fintype_isFinite_mixin (Finite.class (fintype_ordinal__canonical__fintype_Finite (Z.to_nat (modulus n)).-1.+1))).
+    
 End Misc.
 
 Module Type GroupOperationProperties.
@@ -721,86 +791,426 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
 
   Module HacspecScnorr := Schnorr HacspecGP.
 
+  Import HacspecScnorr.
+  Import MyParam MyAlg Sigma.
+
+  #[local] Open Scope package_scope.
+  Import GroupScope GRing.Theory.
+
+  (* Main theorem. *)
+  (* Proves that Schnorr is a ∑-protocol with perfect special honest-verifier
+  zero-knowledge *)
+  Theorem schnorr_SHVZK :
+    forall LA A,
+      ValidPackage LA [interface
+                         #val #[ TRANSCRIPT ] : chInput → chTranscript
+        ] A_export A ->
+      fdisjoint LA Sigma_locs ->
+      ɛ_SHVZK A = (@GRing.zero (reals.Real.Exports.reals_Real__to__GRing_Nmodule Axioms.R)).
+  Proof.
+    intros LA A Va Hdisj.
+    apply: eq_rel_perf_ind.
+    all: ssprove_valid.
+    3: apply fdisjoints0.
+    1:{ instantiate (1 := heap_ignore Sigma_locs).
+        ssprove_invariant.
+        apply fsubsetUl. }
+    simplify_eq_rel hwe.
+    (* Programming logic part *)
+    destruct hwe as [[h w] e].
+    (* We can only simulate if the relation is valid *)
+    ssprove_sync_eq. intros rel.
+    (* When relation holds we can reconstruct the first message from the response *)
+    unfold R in rel. apply reflection_nonsense in rel.
+    eapply r_uniform_bij with (1 := bij_f (otf w) (otf e)). intros z_val.
+    ssprove_contract_put_get_lhs.
+    apply r_put_lhs.
+    ssprove_restore_pre.
+    1: ssprove_invariant.
+    apply r_ret.
+    (* Ambient logic proof of post condition *)
+    intros s₀ s₁ Hs.
+    unfold f.
+    rewrite rel.
+    split.
+    2: apply Hs.
+    simpl.
+    rewrite otf_fto expg_mod.
+    2: rewrite order_ge1 ; apply expg_order.
+    rewrite expgD - !expgVn.
+    rewrite group_prodC group_prodA group_prodC group_prodA /=.
+    rewrite expg_mod.
+    2: rewrite order_ge1 ; apply expg_order.
+    rewrite -expgM -expgMn.
+    2: apply group_prodC.
+    rewrite mulgV expg1n mul1g.
+    cbn. rewrite Zp_mulC.
+    reflexivity.
+  Qed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  From Crypt Require Import pkg_notation.
+  Include PackageNotation.
+  Open Scope package_scope. 
+  (* Definition choiceTranscript := *)
+  (*   chProd (chProd (chProd choiceStatement choiceMessage) choiceChallenge) choiceResponse. *)
+  
+  Definition my_locations : {fset Location} := fset0.
+
+  Import PackageNotation.
+  Open Scope package_scope.
+
+  Locate HacspecScnorr.Sigma.witness.
+  Program Definition chRelation : choice_type := chProd f_group_type f_field_type.
+  Admit Obligations.
+  
+  Import Misc.
+
+  Definition chTranscript : choice_type := t_SchnorrZKPCommit.
+  Check chTranscript.
+  Locate "#val  #[ f ]  :  A  →  B".
+
+  Definition my_raw hw :=
+    let '(h,w) := hw in
+    ((r ← sample uniform (Z.to_nat (modulus 32)).-1.+1 ;;
+             is_state (schnorr_zkp (ret_both (finite_to_word r : uint32)) (ret_both h) (ret_both w)))
+             : raw_code t_SchnorrZKPCommit).
+  
+  #[tactic=notac] Program Definition mypkg :
+      package my_locations
+        [interface]
+        (fset [(pair HacspecScnorr.Sigma.RUN
+                  (chRelation, chTranscript));
+               (pair HacspecScnorr.Sigma.VERIFY
+                  (chTranscript,
+                    'bool))]
+        ) :=
+    (mkpackage (fmap.mkfmap [
+                    (HacspecScnorr.Sigma.RUN,
+                      (chRelation;
+                       chTranscript;
+                       _ ));
+                    (HacspecScnorr.Sigma.VERIFY,
+                      (chTranscript;
+                       'bool;
+                       fun _ => ret (false : 'bool)))
+       ]) _).
+  Next Obligation.
+    refine (fun hw => my_raw hw).
+  Defined.
+  Next Obligation.
+    unfold my_locations.
+    rewrite fset0E.
+
+    apply valid_package_cons. 
+    {
+      apply valid_package1.
+      intros.
+
+      ssprove_valid.
+    }
+    
+    {
+      intros [].
+      apply valid_scheme.
+      unfold mypkg_obligation_1.
+      unfold my_raw.
+      
+      ssprove_valid.
+      rewrite <- fset0E.
+      apply (is_valid_code (both_prog_valid (schnorr_zkp _ _ _))).
+    }
+
+    {
+      rewrite <- fset1E.
+      rewrite imfset1.
+      easy.
+    }    
+  Defined.
+
+  Print mypkg.
+  Include HacspecGroup.
+  Import PackageNotation.
+
+  Check (pkg_composition.link HacspecScnorr.Sigma.Fiat_Shamir HacspecScnorr.Sigma.Oracle.RO).
+  
+ (* Lemma proving that the output of the extractor defined for Schnorr's
+  protocol is perfectly indistinguishable from real protocol execution.
+  *)
+  (* Definition chSoundness := (chProd _ (chProd _ (chProd _ _))). *)
+
+  From Crypt Require Import SigmaProtocol.
+  
+  Goal forall LA A,
+      ValidPackage LA (fset []) (fset [(pair HacspecScnorr.Sigma.RUN (chRelation, chTranscript));
+                             (pair HacspecScnorr.Sigma.VERIFY (chTranscript, 'bool))]) A ->
+           fdisjoint LA my_locations ->
+      fdisjoint my_locations HacspecScnorr.Sigma.Oracle.RO_locs ->
+      HacspecScnorr.Sigma.ɛ_hiding A = (@GRing.zero (reals.Real.Exports.reals_Real__to__GRing_Nmodule Axioms.R)).
+    intros.
+    unfold HacspecScnorr.Sigma.ɛ_hiding.
+
+    eapply eq_rel_perf_ind_ignore.
+    all: ssprove_valid.
+    - admit.
+    - admit.
+    -  admit.
+    - simplify_eq_rel hw.
+ 
+  Qed.
+  
+Lemma extractor_success:
+  forall LA A,
+    ValidPackage LA (fset [(pair HacspecScnorr.Sigma.RUN (chRelation, chTranscript));
+        (pair HacspecScnorr.Sigma.VERIFY (chTranscript, 'bool))]) A_export A ->
+    ɛ_soundness A = 0.
+
+  Lemma some :
+    ValidPackage LA [interface
+      #val #[ TRANSCRIPT ] : chInput → chTranscript
+    ] A_export A →
+    fdisjoint LA Sigma_locs →
+    ɛ_SHVZK A = 0.
+
+  Lemma test :
+    forall LA A,
+      ValidPackage LA (fset [(pair HacspecScnorr.Sigma.RUN (chRelation, chTranscript));
+        (pair HacspecScnorr.Sigma.VERIFY (chTranscript, 'bool))]) A_export A ->
+      fdisjoint LA my_locations ->
+      fdisjoint my_locations HacspecScnorr.Sigma.Oracle.RO_locs ->
+      AdvantageE
+        mypkg
+        (pkg_composition.link HacspecScnorr.Sigma.Fiat_Shamir HacspecScnorr.Sigma.Oracle.RO)
+        A = (@GRing.zero (reals.Real.Exports.reals_Real__to__GRing_Nmodule Axioms.R)).
+  Proof.
+    intros LA A Va Hdisj Hdisj_oracle.
+    eapply eq_rel_perf_ind_ignore.
+    6: apply Hdisj.
+    6: apply Hdisj.
+    5: apply Va.
+    - ssprove_valid.
+    - admit.
+    - admit.      
+    - unfold mypkg.
+      unfold mypkg_obligation_1.
+      unfold my_raw.
+      
+      simplify_eq_rel hw.
+      ssprove_code_simpl.
+      destruct hw as [h w].
+      ssprove_sync. intros rel.
+      eapply rsame_head_alt.
+      1: exact _.
+      1:{
+        intros l Il.
+        apply get_pre_cond_heap_ignore.
+        revert l Il.
+        apply /fdisjointP.
+        assumption.
+      }
+      1:{ intros. apply put_pre_cond_heap_ignore. }
+      intros [a st].
+      ssprove_contract_put_get_lhs.
+      rewrite emptymE.
+      apply r_put_lhs.
+      ssprove_sync. intro e.
+      apply r_put_lhs.
+      ssprove_restore_pre. 1: ssprove_invariant.
+      eapply r_reflexivity_alt.
+      - exact _.
+      - intros l Il.
+        ssprove_invariant.
+        revert l Il.
+        apply /fdisjointP. assumption.
+      - intros. ssprove_invariant.
+
+      
+  Definition test :
+    HacspecScnorr.Sigma.fiat_shamir_correct _ _ _ _ _.
+  
+  Check SiSigmaProtocol.Fiat_Shamir.
+ 
+
+
+  
   Require Import mathcomp.algebra.ssralg.
   Open Scope group_scope.
 
   Module MyParam <: SigmaProtocolParams.
     Include HacspecGroup.
     Include Misc.
-    Definition word32_Finite (n : nat) : Finite (word n).
-    Proof.
-      pose (f_inv := (fun x : n.-word => inord (Z.to_nat (toword x)) : 'I_((Z.to_nat (modulus n)).-1.+1))).
-      (* rewrite Nat.succ_pred in f_inv. *)
-      (*   - apply (inord (Z.to_nat (toword H))). *)
-      (*   - unfold modulus, two_power_nat. *)
-      (*     easy. *)
-      (*     Show Proof. *)
-      (* } *)
-      (* pose (f_inv := (fun x : n.-word => inord (Z.to_nat (toword x)) : 'I_(modulus n))). *)
-      pose (f := (fun (x : 'I_(Z.to_nat (modulus n)).-1.+1) => mkword _ (Z.of_nat (nat_of_ord x)) : n.-word)).
-      refine (finite_bijective f f_inv  _ _ (Finite.fintype_isFinite_mixin (Finite.class (fintype_ordinal__canonical__fintype_Finite (Z.to_nat (modulus n)).-1.+1)))).
-      {
-        unfold f_inv, f.
-        intros x ; clear.
-        
-        rewrite inordK.
-        - rewrite Z2Nat.id.
-          + now rewrite ureprK.
-          + now destruct x as [[] ?].
-        - destruct x.
-          simpl.
-          apply (ssrbool.elimT andP) in i as [].
-          apply Z.leb_le in H.
-          apply Z.ltb_lt in H0. 
-          apply (ssrbool.introT (jasmin_util.ZNltP _ _)).
-          rewrite Nat.succ_pred.
-          + now rewrite !Z2Nat.id.
-          + unfold modulus.
-            unfold two_power_nat.
-            easy.
-      }
-          
-      {
-        unfold f_inv, f.
-        intros x.
-        Set Printing Coercions.
-
-        (* apply (proj1 (ord_ext _ _)). *)
-        
-        destruct n.
-        {
-          simpl in x |- *.
-          rewrite Z.mod_1_r.
-          unfold Z.to_nat.
-          destruct x as [[]].
-          + unfold inord, insubd, odflt, oapp, insub.
-            destruct idP ; now apply ord_ext.
-          + discriminate i.
-        }
-        
-        rewrite mkword_val_small.
-        2:{
-          destruct x ; simpl.
-          rewrite <- modulusE.
-          rewrite Nat.succ_pred in i. 2: now unfold modulus, two_power_nat .
-          apply (ssrbool.introT andP) ; split ; [ apply Z.leb_le | apply Z.ltb_lt ].
-          - eapply (ssrbool.elimT (isword_ofnatZP _ _)).
-            apply (ltn_expl m).
-            easy.
-          - eapply Z.lt_le_trans ; [ apply (ssrbool.elimT (jasmin_util.ZNltP _ _) i) | ].
-            clear.
-            rewrite !Z2Nat.id. 2: easy.
-            unfold modulus.
-            now rewrite two_power_nat_equiv.
-      }
-        rewrite Nat2Z.id.
-        now rewrite inord_val.
-      }
-    Defined.
-
-    Definition word32_finType : finType := Finite.Pack word32_Finite.
     
-    Definition Witness : finType := word32_finType.
+    Definition Witness : finType := Finite.Pack (word32_Finite 32).
     Locate HacspecGP.f_group_type_is_group.
     Check HacspecGP.gT.
     Definition Statement : finType := f_group_type_is_group.
@@ -832,12 +1242,9 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
 
     #[export] Instance Witness_pos : Positive #|Witness|.
     Proof.
-      simpl.
-      
-      rewrite !card_prod. repeat apply Positive_prod ; apply positive_gT.
+      apply /card_gt0P. exists (mkword _ 0). auto.
     Defined.
-    
-      
+
     Definition Statement_pos : Positive #|Statement| := _.
     #[export] Definition Message_pos : Positive #|Message|.
     Proof.
@@ -852,19 +1259,21 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
 
   End MyParam.
 
+
+  
+  From Crypt Require Import SigmaProtocol. 
+  Module MyAlg <: Oracle. MyParam.
+
+  
   Module MyAlg <: SigmaProtocolAlgorithms MyParam.
 
     Import MyParam.
 
     #[local] Existing Instance Bool_pos.
 
-    Definition choiceWitness : choice_type := 'fin #|Witness|.
-    Definition choiceStatement : choice_type := 'fin #|Statement|.
-    Definition choiceMessage : choice_type.
-    Proof.
-      refine 'fin #|Message|.
-      apply Message_pos.
-    Defined.
+    Definition choiceWitness : choice_type := f_field_type (* 'fin #|Witness| *).
+    Definition choiceStatement : choice_type := f_group_type (* 'fin #|Statement| *).
+    Definition choiceMessage : choice_type := chProd (chProd f_group_type f_field_type) f_field_type.
     Definition choiceChallenge : choice_type := 'fin #|Challenge|.
     Definition choiceResponse : choice_type := 'fin #|Response|.
     Definition choiceTranscript : choice_type :=
@@ -873,44 +1282,33 @@ Module OVN_proofs (group_properties : GroupOperationProperties).
         choiceResponse.
     Definition choiceBool := 'fin #|'bool|.
 
-    Definition i_witness := #|Witness|.
+    Definition i_witness := (* #|Witness| *) (Z.to_nat (modulus 32)).-1.+1.
 
     Definition HIDING : nat := 0.
     Definition SOUNDNESS : nat := 1.
 
-    Definition commit_loc : Location := (choiceWitness; 2%nat).
-
+    Definition commit_loc : Location := (int32; 2%nat).
+    
     Definition Sigma_locs : {fset Location} := fset [:: commit_loc].
     Definition Simulator_locs : {fset Location} := fset0.
 
     (* schnorr_zkp_validate (g_g^ x) (schnorr_zkp r (g_g^ x) x) *)
+    Obligation Tactic := try timeout 1 intros.
     Program Definition Commit (h : choiceStatement) (w : choiceWitness):
       code Sigma_locs [interface] choiceMessage :=
       {code
          r ← sample uniform i_witness ;;
-         #put commit_loc := r ;;
-         commitment ← is_state (schnorr_zkp (ret_both 0 (* TODO replace with r *)) (ret_both h) (ret_both w)) ;;
-         ret (commitment)
+         #put commit_loc := (finite_to_word (n := 32) r : int32) ;;
+         is_state (schnorr_zkp (ret_both (finite_to_word (n := 32) r)) (ret_both ( h)) (ret_both w))
       }.
     Next Obligation.
-      unfold choiceStatement.
-      simpl.
-      simpl in *.
-      unfold i_witness.
-      simpl.
-      
-      unfold 'fin #|f_field_type|.
-      apply 
-      apply c.
-      Locate "#| _ |".
-      
-      rewrite card_ord.      
-    Definition Response (h : choiceStatement) (w : choiceWitness) (a : choiceMessage) (e : choiceChallenge) :
-      code Sigma_locs [interface] choiceResponse :=
-      {code
-         r ← get commit_loc ;;
-       ret (fto (otf r + otf e * otf w))
-      }.
+      ssprove_valid.
+      epose (is_valid_code (both_prog_valid (schnorr_zkp _ _ _))).
+      ssprove_valid.
+      apply valid_scheme.
+      rewrite <- fset0E.
+      apply v0.
+    Qed.
 
     Definition Simulate (h : choiceStatement) (e : choiceChallenge) :
       code Simulator_locs [interface] choiceTranscript :=
