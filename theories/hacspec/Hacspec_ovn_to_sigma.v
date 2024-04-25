@@ -645,14 +645,22 @@ Module Type OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : G
       subst b0.
       repeat unfold let_both at 1.
       simpl is_pure ; fold chElement.
-      set (is_pure _). cbn in s.
-      subst s.
+
+      unfold f_from_residual.
+      Transparent lift1_both.
+      simpl.
+
+      apply r_ret.
+      intros.
+      simpl.
+      repeat split.
+      + rewrite otf_fto.
+        admit.
+      + admit.
+      + admit.
+
   Admitted.
 End OVN_schnorr_proof.
-
-
-
-
 
 (*** Example (Z89) *)
 
