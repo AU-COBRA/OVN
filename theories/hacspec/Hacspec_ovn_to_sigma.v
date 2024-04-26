@@ -745,8 +745,7 @@ Module Type OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : G
         set (b0 := f_random_field_elem _) ; generalize dependent b0 ; intros.
         rewrite <- expgnE.
         apply conversion_is_true.
-      -- 
-
+      -- rewrite! otf_fto.
         admit.
   Admitted.
 End OVN_schnorr_proof.
