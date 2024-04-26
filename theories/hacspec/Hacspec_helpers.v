@@ -42,14 +42,14 @@ Proof.
     apply IHa_state.
     * now inversion a_valid_both.
   + exfalso. inversion a_valid_both.
-Qed.
+Defined.
 
 Corollary both_deterministic : forall {A: choice_type} (a : both A), deterministic (is_state a).
 Proof.
   intros.
   destruct a as [[] [] ?].
   apply (valid_both_is_deterministic is_pure is_state is_valid_both).
-Qed.
+Defined.
 
 Definition both_equivalence {A} (a : both A) (b : both A) :=
   is_pure a = is_pure b /\ ⊢ ⦃ true_precond ⦄ is_state a ≈ is_state b ⦃ fun '(a, h₀) '(b, h₁) => (a = b) ⦄.
@@ -58,20 +58,20 @@ Infix "≈both" := (both_equivalence) (at level 77).
 
 Require Import FunctionalExtensionality.
 
-Lemma r_swap_post : forall {A B : choice_type} {P} {a b} (Q Q' : postcond A B),
+Lemma r_swap_post : forall {A B : choiceType} {P} {a b} (Q Q' : postcond A B),
     Q = Q' ->
     ⊢ ⦃ P ⦄ a ≈ b ⦃ Q' ⦄ ->
     ⊢ ⦃ P ⦄ a ≈ b ⦃ Q ⦄.
 Proof. now intros ; subst. Qed.
 
-Lemma r_swap_precond : forall {A B : choice_type} {Q : postcond A B} {a b} P P',
+Lemma r_swap_precond : forall {A B : choiceType} {Q : postcond A B} {a b} P P',
     P = P' ->
     ⊢ ⦃ P' ⦄ a ≈ b ⦃ Q ⦄ ->
     ⊢ ⦃ P ⦄ a ≈ b ⦃ Q ⦄.
 Proof. now intros ; subst. Qed.
 
 Corollary r_transL_val' :
-  forall {A : choice_type} (c₀ c₀' c₁ : raw_code A),
+  forall {A} (c₀ c₀' c₁ : raw_code A),
     deterministic c₀' ->
     deterministic c₀ ->
     deterministic c₁ ->
@@ -80,14 +80,14 @@ Corollary r_transL_val' :
     ⊢ ⦃ true_precond ⦄ c₀' ≈ c₁ ⦃ fun '(v₀, _) '(v₁, _) => v₀ = v₁ ⦄.
 Proof.
   intros A.
-  pose (r := @r_transL_val A A (True) (@Logic.eq (Choice.sort (chElement A)))).
+  pose (r := @r_transL_val A A (True) (@Logic.eq A)).
   now replace (fun '(_, _) => True) with true_precond in r by now apply functional_extensionality ; intros [].
 Qed.
 
 Ltac prop_fun_eq :=
   repeat (apply functional_extensionality ; intros []) ; simpl ; rewrite (boolp.propeqP).
 
-Lemma r_nice_swap_rule : forall {A : choice_type} {P Q} (c₀ c₁ : raw_code A),
+Lemma r_nice_swap_rule : forall {A} {P Q} (c₀ c₁ : raw_code A),
   (forall (x y : heap), P (x, y) <-> P (y, x)) ->
   (forall (x y : A * heap), Q x y <-> Q y x) ->
  ⊢ ⦃ P ⦄ c₁ ≈ c₀ ⦃ Q ⦄ ->
@@ -100,13 +100,13 @@ Proof.
   apply H1.
 Qed.
 
-Lemma r_nice_swap : forall {A : choice_type} (c₀ c₁ : raw_code A),
+Lemma r_nice_swap : forall {A} (c₀ c₁ : raw_code A),
  ⊢ ⦃ true_precond ⦄ c₁ ≈ c₀ ⦃ fun '(v₀, _) '(v₁, _) => v₀ = v₁ ⦄ ->
  ⊢ ⦃ true_precond ⦄ c₀ ≈ c₁ ⦃ fun '(a₀, _) '(a₁, _) => a₀ = a₁ ⦄.
 Proof. intros ; now apply r_nice_swap_rule. Qed.
 
 Corollary r_transR_val' :
-  forall {A : choice_type} (c₀ c₀' c₁ : raw_code A),
+  forall {A} (c₀ c₀' c₁ : raw_code A),
     deterministic c₀' ->
     deterministic c₀ ->
     deterministic c₁ ->

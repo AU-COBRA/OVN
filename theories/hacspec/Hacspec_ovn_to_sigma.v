@@ -435,9 +435,25 @@ Module Type OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : G
   Axiom StatementToGroup :
     Statement -> OVN_impl.v_G.
  
-  Axiom WitnessToGroup :
-    Witness -> @f_Z _ OVN_impl.v_G_t_Group.
+  Axiom WitnessToField :
+    Witness -> OVN_impl.v_G_t_Group.(f_Z).
 
+  Axiom FieldToWitness :
+    OVN_impl.v_G_t_Group.(f_Z) -> Witness.
+
+  Axiom randomness_sample_is_bijective :
+    bijective
+    (λ x : 'I_(2 ^ 32),
+       fto
+         (FieldToWitness
+            (is_pure
+               (f_random_field_elem (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord x)))))))).
+
+  Axiom conversion_is_true :
+    forall (b : both (OVN_impl.v_G_t_Group.(f_Z))), StatementToGroup
+    (HacspecGroup.g ^+ FieldToWitness (is_pure b)) = is_pure (f_g_pow b).
+
+  
   Transparent OVN.schnorr_zkp.
  
   Definition run_code (ab : src (RUN, (choiceStatement × choiceWitness, choiceTranscript))) : code fset0 [interface
@@ -558,7 +574,7 @@ Module Type OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : G
     → OVN.t_SchnorrZKPCommit → Prop.
   Proof.
     intros [[[l1 l2] l3] l4] [[r1 r2] r3] ; cbn in *.
-    refine ((StatementToGroup (otf l1) = r1) /\ (WitnessToGroup (otf l3) = r2) /\ (WitnessToGroup (otf l4) = r3)).
+    refine ((StatementToGroup (otf l2) = r1) /\ (WitnessToField (otf l3) = r2) /\ (WitnessToField (otf l4) = r3)).
   Defined.
  
   Theorem forget_precond {A B} (x : raw_code A) (y : raw_code B) P Q :
@@ -581,16 +597,71 @@ Module Type OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : G
     eapply rpre_hypothesis_rule.
     intros s0 s1 H. now eapply rpre_weaken_rule.
   Qed.
+   
 
-  
+  Lemma r_eq_symmetry : forall {A B} {P Q} (c₀ : raw_code A) (c₁ : raw_code B) (f : A -> B),
+      (forall (x y : heap), P (x, y) <-> P (y, x)) ->
+      (forall (x : A) (y : B), Q (f x) y <-> Q y (f x)) ->
+      ⊢ ⦃ P ⦄ c₁ ≈ c₀ ⦃ λ '(a, _) '(b, _), Q a (f b) ⦄ ->
+      ⊢ ⦃ P ⦄ c₀ ≈ c₁ ⦃ λ '(a, _) '(b, _), Q (f a) b ⦄.
+  Proof.
+    intros.
+    apply rsymmetry.
+    eapply r_swap_precond ; [ prop_fun_eq ; apply H | ].
+    eapply r_swap_post with (Q' := λ '(a, _) '(b, _), Q a (f b)); [ prop_fun_eq ; apply H0 | ].
+    apply H1.
+  Qed.
+
+ Theorem r_transR_both :
+    ∀ {A B : _} {x : raw_code A} {y z : both B}
+      (pre : precond) (post : postcond A B),
+      y ≈both z ->
+      ⊢ ⦃ pre ⦄ x ≈ is_state z ⦃ post ⦄ ->
+      ⊢ ⦃ pre ⦄ x ≈ is_state y ⦃ post ⦄.
+  Proof.
+    intros A B x y z pre post [] H_xz.
+    eapply r_transR.
+    2:{
+      apply H_xz.
+    }
+    destruct y as [[] []] , z as [[] []] ;  simpl in *.
+    inversion is_valid_both.
+    inversion is_valid_both0.
+    now apply r_ret.
+  Qed.    
+
+  Corollary make_pure :
+     ∀ {A B : _} {x : raw_code A} {y : both B}
+      (pre : precond) (post : postcond A B),
+       ⊢ ⦃ pre ⦄ x ≈ ret (is_pure y) ⦃ post ⦄ ->
+       ⊢ ⦃ pre ⦄ x ≈ is_state y ⦃ post ⦄.
+  Proof.
+    intros.
+    eapply r_transR_both.
+    + apply ret_both_is_pure_cancel.
+    + simpl.
+      apply H.
+  Qed.
+    
+  Lemma prod_both_pure_eta_3 : forall {A B C} (a : both A) (b : both B) (c : both C), 
+                 ((is_pure (both_prog a) : A,
+                   is_pure (both_prog b) : B,
+                   is_pure (both_prog c) : C)) =
+                   is_pure (both_prog (prod_b( a , b, c ))).
+  Proof. reflexivity. Qed.
+
+
+ 
  Lemma schnorr_run_eq  (pre : precond) :
     forall (b : Witness) c,
       Some c = lookup_op RUN_interactive (RUN, ((chProd choiceStatement choiceWitness), choiceTranscript)) ->
+      (* (b = (f_random_field_elem *)
+      (*        (ret_both (jasmin_word.wrepr jasmin_wsize.U32 (Z.of_nat (nat_of_ord x0)))))) -> *)
       ⊢ ⦃ pre ⦄
         c (fto (HacspecGroup.g ^+ b), fto b)
         ≈
         r ← sample uniform (2^32) ;;
-        is_state (OVN.schnorr_zkp (ret_both (nat_of_ord r)) (ret_both (StatementToGroup (HacspecGroup.g ^+ b))) (ret_both (WitnessToGroup b)))
+        is_state (OVN.schnorr_zkp (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord r)))) (ret_both (StatementToGroup (HacspecGroup.g ^+ b))) (ret_both (WitnessToField b)))
           ⦃ fun '(x,_) '(y,_) => schnorr_run_post_cond x y  ⦄.
   Proof.
     intros.
@@ -606,59 +677,77 @@ Module Type OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : G
 
     rewrite !otf_fto; unfold R; rewrite eqxx; unfold assertD.
 
-    apply (r_const_sample_L) ; [ apply LosslessOp_uniform | intros ].
-    apply (r_const_sample_R) ; [ apply LosslessOp_uniform | intros ].
+      (* Unset Printing Notations. *)
+      (* pkg_core_definition.sampler *)
+    (* apply (r_const_sample_L) ; [ apply LosslessOp_uniform | intros ]. *)
+    (* apply (r_const_sample_R) ; [ apply LosslessOp_uniform | intros ]. *)
+
+    eapply rsymmetry ;
+    eapply r_uniform_bij with (f := fun x => fto (FieldToWitness(is_pure (f_random_field_elem (t_Field := OVN_impl.v_G_t_Group.(f_Z_t_Field)) (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord x)))))))) ; [ apply randomness_sample_is_bijective | intros ] ;
+    eapply rsymmetry.
+    
     apply better_r_put_lhs.
-    apply (r_const_sample_L) ; [ apply LosslessOp_uniform | intros ].
-    apply getr_set_lhs.
 
-    unfold lift_both, both_prog at 1.
-    unfold run.
-    unfold bind_both at 1, both_prog at 1.
-    unfold bind_raw_both at 1, is_state at 1.
-
-    apply forget_precond.
-    apply better_r.
-    unfold true_precond.
-
-    set (lhs := ret _).
-    set (let_both _ _).
-    set (fun _ => is_state _).
-
-    apply rsymmetry.
-    eapply (r_transL_val (x ← ret (is_pure b0) ;; r x) (x ← is_state b0 ;; r x) lhs) ; [ admit | admit | admit | .. ].
-    -
-      replace _ with (fun '(s0, s1) => true_precond (s0, s1)) by reflexivity.
-      apply better_r.
-
-      eapply (@r_bind _ _ _ _ (ret (is_pure b0)) _ _ r).
-      + apply r_nice_swap_rule ; [ easy | admit | .. ].
-        apply (p_eq b0).
-      + intros ; apply rpre_hypothesis_rule' ; intros ? ? [[]].
-        subst.
-        now apply r_ret.
-    - simpl.
-      subst r.
-      subst lhs.
-      apply rsymmetry.
-
-      subst b0.
+    eapply (r_transR_both).
+    - apply both_equivalence_is_pure_eq.
       repeat unfold let_both at 1.
-      simpl is_pure ; fold chElement.
-
-      unfold f_from_residual.
       Transparent lift1_both.
+      Transparent OVN.Build_t_SchnorrZKPCommit.
       simpl.
+      apply prod_both_pure_eta_3.
+    - eapply (r_transR_both).
+      + set (r := prod_b (_, _, _)).
+        set (f_hash _) in r.
+        pattern b0 in r.
+        subst r.
+        apply bind_both_eta.
+      + hnf.
+        simpl.
+
+        (* TODO : connect hash to random sample value ! *)
+        (* apply (r_const_sample_L) ; [ apply LosslessOp_uniform | intros ]. *)
+
+        Check r_uniform_bij.
+        assert (
+            forall {A B} i (H : Positive i) f pre post (c0 : _ -> raw_code A) (c1 : _ -> raw_code B),
+            bijective f
+            → (∀ x1 : Arit (uniform i), ⊢ ⦃ pre ⦄ c0 x1 ≈ c1 (f x1) ⦃ post ⦄) ->         
+            ⊢ ⦃ pre ⦄
+          e ← sample uniform i ;;
+          c0 e ≈ x ← is_state
+            (f_hash (t_Group := OVN_impl.v_G_t_Group)
+               (impl__into_vec
+                  (unsize
+                     (box_new
+                        (array_from_list
+                           [:: f_g(t_Group := OVN_impl.v_G_t_Group); ret_both (StatementToGroup (HacspecGroup.g ^+ b));
+                               f_g_pow
+                                 (f_random_field_elem (t_Field := OVN_impl.v_G_t_Group.(f_Z_t_Field))
+                                    (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord x)))))]))))) ;; c1 x ⦃ post ⦄) by admit.
+        (* TODO : connect hash to random sample value ! *)
+
+        eapply H ; clear H.
+        * admit.
+        * intros.
+
+          apply getr_set_lhs.
+
+          set (ret _).
+          set (prod_b (_,_,_)).
+          apply (make_pure (x := r) (y := b0)).
+          subst r b0.
 
       apply r_ret.
       intros.
       simpl.
       repeat split.
-      + rewrite otf_fto.
-        admit.
-      + admit.
-      + admit.
+      -- rewrite! otf_fto.
+        set (b0 := f_random_field_elem _) ; generalize dependent b0 ; intros.
+        rewrite <- expgnE.
+        apply conversion_is_true.
+      -- 
 
+        admit.
   Admitted.
 End OVN_schnorr_proof.
 
