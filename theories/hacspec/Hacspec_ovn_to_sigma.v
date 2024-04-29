@@ -441,6 +441,15 @@ Module Type OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : G
   Axiom FieldToWitness :
     OVN_impl.v_G_t_Group.(f_Z) -> Witness.
 
+  Axiom WitnessToFieldCancel :
+    forall x, WitnessToField (FieldToWitness x) = x.
+
+  Axiom FieldToWitnessCancel :
+    forall x, FieldToWitness (WitnessToField x) = x.
+
+  Axiom WitnessToFieldAdd : forall x y, WitnessToField (Zp_add x y) = is_pure (f_add (ret_both (WitnessToField x)) (ret_both (WitnessToField y))).
+  Axiom WitnessToFieldMul : forall x y, WitnessToField (Zp_mul x y) = is_pure (f_mul (ret_both (WitnessToField x)) (ret_both (WitnessToField y))).
+
   Axiom randomness_sample_is_bijective :
     bijective
     (λ x : 'I_(2 ^ 32),
@@ -449,6 +458,20 @@ Module Type OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : G
             (is_pure
                (f_random_field_elem (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord x)))))))).
 
+  Axiom hash_is_psudorandom :
+    forall {A B} i (H : Positive i) f pre post (c0 : _ -> raw_code A) (c1 : _ -> raw_code B) l,
+            bijective f
+            → (∀ x1 : Arit (uniform i), ⊢ ⦃ pre ⦄ c0 x1 ≈ c1 (f x1) ⦃ post ⦄) ->         
+            ⊢ ⦃ pre ⦄
+          e ← sample uniform i ;;
+          c0 e ≈
+          x ← is_state
+            (f_hash (t_Group := OVN_impl.v_G_t_Group)
+               (impl__into_vec
+                  (unsize
+                     (box_new
+                        (array_from_list l))))) ;; c1 x ⦃ post ⦄.
+  
   Axiom conversion_is_true :
     forall (b : both (OVN_impl.v_G_t_Group.(f_Z))), StatementToGroup
     (HacspecGroup.g ^+ FieldToWitness (is_pure b)) = is_pure (f_g_pow b).
@@ -706,48 +729,35 @@ Module Type OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : G
 
         (* TODO : connect hash to random sample value ! *)
         (* apply (r_const_sample_L) ; [ apply LosslessOp_uniform | intros ]. *)
+        eapply (hash_is_psudorandom _ _ (fun x => WitnessToField (otf x)) _ _ _ _ [:: _; _; _]).
+        {
+          exists (fun x => fto (FieldToWitness x)).
+          -- now intros n ; rewrite FieldToWitnessCancel ; rewrite fto_otf.
+          -- now intros n; rewrite otf_fto ; rewrite WitnessToFieldCancel.
+        }
+        intros.
 
-        Check r_uniform_bij.
-        assert (
-            forall {A B} i (H : Positive i) f pre post (c0 : _ -> raw_code A) (c1 : _ -> raw_code B),
-            bijective f
-            → (∀ x1 : Arit (uniform i), ⊢ ⦃ pre ⦄ c0 x1 ≈ c1 (f x1) ⦃ post ⦄) ->         
-            ⊢ ⦃ pre ⦄
-          e ← sample uniform i ;;
-          c0 e ≈ x ← is_state
-            (f_hash (t_Group := OVN_impl.v_G_t_Group)
-               (impl__into_vec
-                  (unsize
-                     (box_new
-                        (array_from_list
-                           [:: f_g(t_Group := OVN_impl.v_G_t_Group); ret_both (StatementToGroup (HacspecGroup.g ^+ b));
-                               f_g_pow
-                                 (f_random_field_elem (t_Field := OVN_impl.v_G_t_Group.(f_Z_t_Field))
-                                    (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord x)))))]))))) ;; c1 x ⦃ post ⦄) by admit.
+        apply getr_set_lhs.
+
+        set (ret _).
+        set (prod_b (_,_,_)).
+        apply (make_pure (x := r) (y := b0)).
+        subst r b0.
         (* TODO : connect hash to random sample value ! *)
 
-        eapply H ; clear H.
-        * admit.
-        * intros.
-
-          apply getr_set_lhs.
-
-          set (ret _).
-          set (prod_b (_,_,_)).
-          apply (make_pure (x := r) (y := b0)).
-          subst r b0.
-
-      apply r_ret.
-      intros.
-      simpl.
-      repeat split.
-      -- rewrite! otf_fto.
-        set (b0 := f_random_field_elem _) ; generalize dependent b0 ; intros.
-        rewrite <- expgnE.
-        apply conversion_is_true.
-      -- rewrite! otf_fto.
-        admit.
-  Admitted.
+        apply r_ret.
+        intros.
+        repeat split.
+        * rewrite! otf_fto.
+           set (b0 := f_random_field_elem _) ; generalize dependent b0 ; intros.
+           rewrite <- expgnE.
+           apply conversion_is_true.
+        * rewrite! otf_fto.
+           rewrite WitnessToFieldAdd.
+           rewrite WitnessToFieldCancel.
+           rewrite WitnessToFieldMul.
+           now rewrite <- !hacspec_function_guarantees2.
+  Qed.
 End OVN_schnorr_proof.
 
 (*** Example (Z89) *)
