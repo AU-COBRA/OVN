@@ -24,32 +24,28 @@ Import choice.Choice.Exports.
 
 Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
 
-From ConCert.Execution Require Import Serializable.
-From Hacspec Require Import ConCertLib.
-
-Class t_Field (v_Self : choice_type) := {
-  f_field_type_Serializable : Serializable v_Self;
+Class t_Field (v_Self : _) `{ t_Copy v_Self} `{ t_PartialEq v_Self v_Self} `{ t_Eq v_Self} `{ t_Clone v_Self} `{ t_Serialize v_Self} := {
   f_q : (both v_Self) ;
   f_random_field_elem : (both int32 -> both v_Self) ;
   f_field_zero : (both v_Self) ;
   f_field_one : (both v_Self) ;
   f_add : (both v_Self -> both v_Self -> both v_Self) ;
+  f_opp : (both v_Self -> both v_Self) ;
   f_sub : (both v_Self -> both v_Self -> both v_Self) ;
   f_mul : (both v_Self -> both v_Self -> both v_Self) ;
 }.
 
-Class t_Group (v_Self : choice_type) := {
-  f_group_type_Serializable : Serializable v_Self;
+Class t_Group (v_Self : _) `{ t_Copy v_Self} `{ t_PartialEq v_Self v_Self} `{ t_Eq v_Self} `{ t_Clone v_Self} `{ t_Serialize v_Self} := {
   f_Z : choice_type ;
-  f_Z_t_Field :> (t_Field f_Z) ;
   f_Z_t_Serialize :> (t_Serialize f_Z) ;
   f_Z_t_Deserial :> (t_Deserial f_Z) ;
   f_Z_t_Serial :> (t_Serial f_Z) ;
   f_Z_t_Clone :> (t_Clone f_Z) ;
   f_Z_t_Eq :> (t_Eq f_Z) ;
-  f_Z_t_PartialEq :> (t_PartialEq f_Z) ;
+  f_Z_t_PartialEq :> (t_PartialEq f_Z f_Z) ;
   f_Z_t_Copy :> (t_Copy f_Z) ;
   f_Z_t_Sized :> (t_Sized f_Z) ;
+  f_Z_t_Field :> (t_Field f_Z) ;
   f_g : (both v_Self) ;
   f_g_pow : (both f_Z -> both v_Self) ;
   f_pow : (both v_Self -> both f_Z -> both v_Self) ;
