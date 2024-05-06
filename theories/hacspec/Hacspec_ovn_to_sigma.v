@@ -498,7 +498,7 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       isMulBaseGroup.invMg_subproof := f_invM
     |}.
 
-  #[export] Definition v_G_BaseFinGroup : baseFinGroupType :=
+  Definition v_G_BaseFinGroup : baseFinGroupType :=
     BaseFinGroup.Pack
       {|
         BaseFinGroup.fingroup_isMulBaseGroup_mixin := mul_group;
@@ -507,7 +507,7 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
         BaseFinGroup.eqtype_hasDecEq_mixin := v_G_Finite;
         BaseFinGroup.fintype_isFinite_mixin := v_G_Finite
       |}.
-  #[export] Lemma inv_mul_inverse : left_inverse (T := v_G_BaseFinGroup) (R := v_G) (oneg v_G_BaseFinGroup) invg mulg.
+  Lemma inv_mul_inverse : left_inverse (T := v_G_BaseFinGroup) (R := v_G) (oneg v_G_BaseFinGroup) invg mulg.
   Proof.
     unfold invg, mulg ; change 1%g with (is_pure f_group_one) ; simpl.
     intros x.
@@ -1353,8 +1353,8 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
         now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
       + now rewrite pow_witness_to_field.
     }
-  Qed.
-End OVN_schnorr_proof.
+    Time Qed.
+End OVN_or_proof.
 
 
 (*** Example (Z89) *)
@@ -1655,181 +1655,182 @@ Module Z89_secure_group <: SecureGroup Z89_impl Z89_group_operations.
   Lemma v_G_g_gen : [set : v_G_is_group] = <[ is_pure f_g : v_G_is_group]>. Admitted.
 End Z89_secure_group.
 
-Module OVN_schnorr_proof_params_Z89 <: OVN_schnorr_proof_preconditions Z89_impl Z89_group_operations Z89_secure_group.
-  Include Z89_secure_group.
+(* Module OVN_schnorr_proof_params_Z89 <: OVN_schnorr_proof_preconditions Z89_impl Z89_group_operations Z89_secure_group. *)
+(*   Include Z89_secure_group. *)
 
-  Module HacspecGroup := HacspecGroupParam Z89_impl Z89_group_operations Z89_secure_group.
-  Module Schnorr := Schnorr HacspecGroup.
+(*   Module HacspecGroup := HacspecGroupParam Z89_impl Z89_group_operations Z89_secure_group. *)
+(*   Module Schnorr := Schnorr HacspecGroup. *)
 
-  Import Schnorr.MyParam.
-  Import Schnorr.MyAlg.
+(*   Import Schnorr.MyParam. *)
+(*   Import Schnorr.MyAlg. *)
 
-  Import Schnorr.Sigma.Oracle.
-  Import Schnorr.Sigma.
+(*   Import Schnorr.Sigma.Oracle. *)
+(*   Import Schnorr.Sigma. *)
 
-  Definition StatementToGroup : Statement -> v_G := id.
+(*   Definition StatementToGroup : Statement -> v_G := id. *)
 
-  (* Lemma group_size : #[HacspecGroup.g].-2.+2 = 89. *)
-  (* Proof. *)
-  (*   rewrite totient_gen. *)
-  (*   epose (@generator_order v_G_is_group (is_pure f_g) (1)). *)
-  (*   rewrite e. *)
-  (*   2:{ *)
-  (*     simpl. *)
-  (*     pose (cycle_generator). *)
-  (*     unfold generator. *)
-  (*     reflexivity. *)
-  (*   epose (@generator_cycle v_G_is_group (is_pure f_g)). *)
-  (*   simpl in i. *)
-  (*   unfold generator in i. *)
+(*   (* Lemma group_size : #[HacspecGroup.g].-2.+2 = 89. *) *)
+(*   (* Proof. *) *)
+(*   (*   rewrite totient_gen. *) *)
+(*   (*   epose (@generator_order v_G_is_group (is_pure f_g) (1)). *) *)
+(*   (*   rewrite e. *) *)
+(*   (*   2:{ *) *)
+(*   (*     simpl. *) *)
+(*   (*     pose (cycle_generator). *) *)
+(*   (*     unfold generator. *) *)
+(*   (*     reflexivity. *) *)
+(*   (*   epose (@generator_cycle v_G_is_group (is_pure f_g)). *) *)
+(*   (*   simpl in i. *) *)
+(*   (*   unfold generator in i. *) *)
 
-  (*   assert (HacspecGroup.g = inZp 1). *)
-  (*   { *)
-  (*     unfold inZp. *)
-  (*     unfold HacspecGroup.g. *)
-  (*     simpl. *)
-  (*     unfold inord. *)
-  (*     unfold ord0. *)
-  (*     unfold insubd. *)
-  (*     unfold insub. *)
-  (*     unfold odflt. *)
-  (*     unfold oapp. *)
-  (*     unfold sub. *)
-  (*     destruct idP. *)
-  (*     - simpl. *)
-
-
-  (*     simpl. *)
-
-  (*     simpl. *)
+(*   (*   assert (HacspecGroup.g = inZp 1). *) *)
+(*   (*   { *) *)
+(*   (*     unfold inZp. *) *)
+(*   (*     unfold HacspecGroup.g. *) *)
+(*   (*     simpl. *) *)
+(*   (*     unfold inord. *) *)
+(*   (*     unfold ord0. *) *)
+(*   (*     unfold insubd. *) *)
+(*   (*     unfold insub. *) *)
+(*   (*     unfold odflt. *) *)
+(*   (*     unfold oapp. *) *)
+(*   (*     unfold sub. *) *)
+(*   (*     destruct idP. *) *)
+(*   (*     - simpl. *) *)
 
 
-  (*   cbn. *)
-  (*   rewrite card_Aut_cycle. *)
-  (*   reflexivity. *)
+(*   (*     simpl. *) *)
 
-  Lemma inord_is_inZp : forall {n} x, (x < n.+1)%nat -> inord (n' := n) x = inZp (p' := n) x.
-  Proof.
-    intros n x H.
-    rewrite <- (inordK (m := x) (n' := n)) ; [ | assumption ].
-    rewrite (valZpK (inord (n' := n) x)).
-    rewrite inord_val.
-    reflexivity.
-  Qed.
-
-  Definition WitnessToField : Witness -> v_G_t_Group.(f_Z) := fun x => mkword _ (Z.of_nat ((nat_of_ord x) %% Schnorr.q)).
-  Definition FieldToWitness : v_G_t_Group.(f_Z) -> Witness := fun x => inord ((Z.to_nat (unsigned x)) %% Schnorr.q).
-
-  Lemma group_size_is_q : (Schnorr.q = Z.to_nat (unsigned (is_pure (HacspecGroup.v_G_t_Group.(f_Z_t_Field).(f_q))))).
-  Admitted.
+(*   (*     simpl. *) *)
 
 
-  Lemma in_equality : forall v u, is_true (0 <= v < u)%R <-> is_true (Z.to_nat v < Z.to_nat u)%N.
-  Admitted.
+(*   (*   cbn. *) *)
+(*   (*   rewrite card_Aut_cycle. *) *)
+(*   (*   reflexivity. *) *)
 
-  Lemma WitnessToFieldCancel : forall x, WitnessToField (FieldToWitness x) = x.
-  Proof.
-    intros.
-    simpl in *.
+(*   Lemma inord_is_inZp : forall {n} x, (x < n.+1)%nat -> inord (n' := n) x = inZp (p' := n) x. *)
+(*   Proof. *)
+(*     intros n x H. *)
+(*     rewrite <- (inordK (m := x) (n' := n)) ; [ | assumption ]. *)
+(*     rewrite (valZpK (inord (n' := n) x)). *)
+(*     rewrite inord_val. *)
+(*     reflexivity. *)
+(*   Qed. *)
 
-    destruct x.
-    unfold WitnessToField, FieldToWitness.
-    simpl.
-    rewrite !inordK.
-    2:{
-      simpl.
-      rewrite Schnorr.order_ge1.
-      simpl.
-      Set Printing Coercions.
-      unfold unsigned.
-      unfold urepr.
-      simpl.
+(*   Definition WitnessToField : Witness -> v_G_t_Group.(f_Z) := fun x => mkword _ (Z.of_nat ((nat_of_ord x) %% Schnorr.q)). *)
+(*   Definition FieldToWitness : v_G_t_Group.(f_Z) -> Witness := fun x => inord ((Z.to_nat (unsigned x)) %% Schnorr.q). *)
 
-      apply ltn_pmod.
-      now rewrite group_size_is_q.
-    }
-    apply word_ext.
-    rewrite modn_mod.
-    rewrite modnZE ; [ |  now rewrite group_size_is_q].
-    rewrite Z2Nat.id ; [ | now destruct toword ].
-    cbn.
-
-    rewrite group_size_is_q.
-    cbn.
-    rewrite Z2Nat.id ; [ | easy ].
-    unfold Build_t_z_89_ at 1.
-    simpl.
-    set (Z.pos _).
-    rewrite (Z.mod_small z).
-    - rewrite Z.mod_small.
+(*   Lemma group_size_is_q : (Schnorr.q = Z.to_nat (unsigned (is_pure (HacspecGroup.v_G_t_Group.(f_Z_t_Field).(f_q))))). *)
+(*   Admitted. *)
 
 
+(*   Lemma in_equality : forall v u, is_true (0 <= v < u)%R <-> is_true (Z.to_nat v < Z.to_nat u)%N. *)
+(*   Admitted. *)
 
-    assert (forall p b x, Z.pos p <= b -> x mod (Z.pos p) mod b = x mod (Z.pos p)).
-    {
-      intros.
-      rewrite Z.mod_small_iff.
+(*   Lemma WitnessToFieldCancel : forall x, WitnessToField (FieldToWitness x) = x. *)
+(*   Proof. *)
+(*     intros. *)
+(*     simpl in *. *)
 
-      epose (Znumtheory.Zmod_div_mod b (Z.pos p) xa).
-      rewrite <- e.
+(*     destruct x. *)
+(*     unfold WitnessToField, FieldToWitness. *)
+(*     simpl. *)
+(*     rewrite !inordK. *)
+(*     2:{ *)
+(*       simpl. *)
+(*       rewrite Schnorr.order_ge1. *)
+(*       simpl. *)
+(*       Set Printing Coercions. *)
+(*       unfold unsigned. *)
+(*       unfold urepr. *)
+(*       simpl. *)
 
-      induction p.
-      -
-        cbn.
-  Admitted.
+(*       apply ltn_pmod. *)
+(*       now rewrite group_size_is_q. *)
+(*     } *)
+(*     apply word_ext. *)
+(*     rewrite modn_mod. *)
+(*     rewrite modnZE ; [ |  now rewrite group_size_is_q]. *)
+(*     rewrite Z2Nat.id ; [ | now destruct toword ]. *)
+(*     cbn. *)
+
+(*     rewrite group_size_is_q. *)
+(*     cbn. *)
+(*     rewrite Z2Nat.id ; [ | easy ]. *)
+(*     unfold Build_t_z_89_ at 1. *)
+(*     simpl. *)
+(*     set (Z.pos _). *)
+(*     rewrite (Z.mod_small z). *)
+(*     - rewrite Z.mod_small. *)
 
 
 
-  Lemma FieldToWitnessCancel :
-    forall x, FieldToWitness (WitnessToField x) = x.
-  Proof.
-    intros.
-    unfold WitnessToField, FieldToWitness.
-    unfold unsigned.
-    rewrite mkwordK.
-    simpl.
-    rewrite Zmod_small.
-    2: {
-      destruct x.
-      cbn.
-      rewrite Schnorr.order_ge1 in i.
+(*     (* assert (forall p b x, Z.pos p <= b -> x mod (Z.pos p) mod b = x mod (Z.pos p)). *) *)
+(*     (* { *) *)
+(*     (*   intros. *) *)
+(*     (*   rewrite Z.mod_small_iff. *) *)
 
-    rewrite Nat2Z.id.
-    now rewrite inord_val.
-  Qed.
+(*     (*   epose (Znumtheory.Zmod_div_mod b (Z.pos p) xa). *) *)
+(*     (*   rewrite <- e. *) *)
 
-  Axiom WitnessToFieldAdd : forall x y, WitnessToField (Zp_add x y) = is_pure (f_add (ret_both (WitnessToField x)) (ret_both (WitnessToField y))).
-  Axiom WitnessToFieldMul : forall x y, WitnessToField (Zp_mul x y) = is_pure (f_mul (ret_both (WitnessToField x)) (ret_both (WitnessToField y))).
+(*     (*   induction p. *) *)
+(*     (*   - *) *)
+(*     (*     cbn. *) *)
+(*   Admitted. *)
 
-  Axiom randomness_sample_is_bijective :
-    bijective
-    (λ x : 'I_(2 ^ 32),
-       fto
-         (FieldToWitness
-            (is_pure
-               (f_random_field_elem (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord x)))))))).
 
-  Axiom hash_is_psudorandom :
-    forall {A B} i (H : Positive i) f pre post (c0 : _ -> raw_code A) (c1 : _ -> raw_code B) l,
-            bijective f
-            → (∀ x1 : Arit (uniform i), ⊢ ⦃ pre ⦄ c0 x1 ≈ c1 (f x1) ⦃ post ⦄) ->
-            ⊢ ⦃ pre ⦄
-          e ← sample uniform i ;;
-          c0 e ≈
-          x ← is_state
-            (f_hash (t_Group := v_G_t_Group)
-               (impl__into_vec
-                  (unsize
-                     (box_new
-                        (array_from_list l))))) ;; c1 x ⦃ post ⦄.
 
-  Axiom conversion_is_true :
-    forall (b : both (v_G_t_Group.(f_Z))), StatementToGroup
-    (HacspecGroup.g ^+ FieldToWitness (is_pure b)) = is_pure (f_g_pow b).
+(*   Lemma FieldToWitnessCancel : *)
+(*     forall x, FieldToWitness (WitnessToField x) = x. *)
+(*   Proof. *)
+(*     intros. *)
+(*     unfold WitnessToField, FieldToWitness. *)
+(*     unfold unsigned. *)
+(*     rewrite mkwordK. *)
+(*     simpl. *)
+(*     rewrite Zmod_small. *)
+(*     2: { *)
+(*       destruct x. *)
+(*       cbn. *)
+(*       rewrite Schnorr.order_ge1 in i. *)
 
-End OVN_schnorr_proof_params_Z89.
+(*     (* rewrite Nat2Z.id. *) *)
+(*   (*   now rewrite inord_val. *) *)
+(*       (* Qed. *) *)
+(*       Admitted. *)
 
-Module OVN_schnorr_proof_Z89 := OVN_schnorr_proof Z89_impl Z89_group_operations .
+(*   Axiom WitnessToFieldAdd : forall x y, WitnessToField (Zp_add x y) = is_pure (f_add (ret_both (WitnessToField x)) (ret_both (WitnessToField y))). *)
+(*   Axiom WitnessToFieldMul : forall x y, WitnessToField (Zp_mul x y) = is_pure (f_mul (ret_both (WitnessToField x)) (ret_both (WitnessToField y))). *)
+
+(*   Axiom randomness_sample_is_bijective : *)
+(*     bijective *)
+(*     (λ x : 'I_(2 ^ 32), *)
+(*        fto *)
+(*          (FieldToWitness *)
+(*             (is_pure *)
+(*                (f_random_field_elem (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord x)))))))). *)
+
+(*   Axiom hash_is_psudorandom : *)
+(*     forall {A B} i (H : Positive i) f pre post (c0 : _ -> raw_code A) (c1 : _ -> raw_code B) l, *)
+(*             bijective f *)
+(*             → (∀ x1 : Arit (uniform i), ⊢ ⦃ pre ⦄ c0 x1 ≈ c1 (f x1) ⦃ post ⦄) -> *)
+(*             ⊢ ⦃ pre ⦄ *)
+(*           e ← sample uniform i ;; *)
+(*           c0 e ≈ *)
+(*           x ← is_state *)
+(*             (f_hash (t_Group := v_G_t_Group) *)
+(*                (impl__into_vec *)
+(*                   (unsize *)
+(*                      (box_new *)
+(*                         (array_from_list l))))) ;; c1 x ⦃ post ⦄. *)
+
+(*   Axiom conversion_is_true : *)
+(*     forall (b : both (v_G_t_Group.(f_Z))), StatementToGroup *)
+(*     (HacspecGroup.g ^+ FieldToWitness (is_pure b)) = is_pure (f_g_pow b). *)
+
+(* End OVN_schnorr_proof_params_Z89. *)
+
+(* Module OVN_schnorr_proof_Z89 := OVN_schnorr_proof Z89_impl Z89_group_operations . *)
 
 (* Schnorr_Z89.Sigma.RUN_interactive *)
 
