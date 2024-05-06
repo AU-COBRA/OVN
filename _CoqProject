@@ -9,6 +9,7 @@ theories/hacspec/Hacspec_helpers.v
 theories/hacspec/Hacspec_ovn_Ovn_traits.v
 theories/hacspec/Hacspec_ovn_Ovn_z_89_.v
 theories/hacspec/Hacspec_ovn.v
+theories/hacspec/Hacspec_ovn_to_sigma.v
 
 theories/boardroomVoting/Egcd.v
 theories/boardroomVoting/Euler.v

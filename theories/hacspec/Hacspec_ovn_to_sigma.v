@@ -620,7 +620,7 @@ Module OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupO
   Export proof_args.
 
   Include Misc.
-  
+
   Transparent OVN.schnorr_zkp.
 
   Definition run_code (ab : src (RUN, (choiceStatement × choiceWitness, choiceTranscript))) : code fset0 [interface
@@ -725,7 +725,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
   Module HacspecGroup := HacspecGroupParam OVN_impl GOP SG.
   Include HacspecGroup.
   Export HacspecGroup.
-  
+
   (* order of g *)
   Definition q : nat := #[HacspecGroup.g].
 
@@ -767,7 +767,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
       rewrite card_prod.
       now apply Positive_prod.
     Defined.
-    
+
     Instance Witness_pos : Positive #|Witness| := _.
     Definition Statement_pos : Positive #|Statement| := _.
     Definition Message_pos : Positive #|Message| := _.
@@ -883,7 +883,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
       (z : choiceResponse)  (z' : choiceResponse) : 'option choiceWitness :=
       Some _ (* (fto ((otf z - otf z') / (otf e - otf e'))) *).
     Admit Obligations.
-    
+
     Definition KeyGen (xv : choiceWitness) :=
       let (xi, vi) := otf xv in
       fto (g ^+ xi).
@@ -970,7 +970,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
 
   (* Transparent OVN.or_zkp. *)
   Transparent run.
-      
+
   Definition or_run_post_cond :
     tgt (RUN, (choiceStatement × choiceWitness, choiceTranscript))
     → OVN.t_OrZKPCommit → Prop.
@@ -1176,7 +1176,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     remove_solve_lift ; simpl ;
     get_both_sides H_lhs H_rhs ; subst H_lhs ;
     pull_up_side H_rhs.
- 
+
   Ltac normalize_equation :=
     normalize_lhs ; normalize_rhs.
   (* Ltac compute_normal_form := *)
@@ -1186,9 +1186,9 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
   (*   rewrite <- both_equivalence_is_pure_eq. *)
 
   Ltac cancel_operations :=
-    try apply both_eq_fun_ext ; 
+    try apply both_eq_fun_ext ;
       try apply both_eq_fun_ext2 ;
-      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_add_mul ]) ; 
+      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_add_mul ]) ;
       try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel ]) ;
       try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel2 ]) ;
       try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_pow ]) ;
@@ -1196,7 +1196,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
 
   Axiom pow_base : forall x, f_g_pow x ≈both f_pow (ret_both g) x.
   Axiom div_is_prod_inv : forall x y, f_div x y ≈both f_prod x (f_inv y).
-  
+
  Lemma or_run_eq  (pre : precond) :
     forall (b : Witness) c,
       Some c = lookup_op RUN_interactive (RUN, ((chProd choiceStatement choiceWitness), choiceTranscript)) ->
@@ -1216,13 +1216,6 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
           ⦃ fun '(x,_) '(y,_) => or_run_post_cond x y  ⦄.
   Proof.
     intros.
-      (* Set Printing Coercions. *)
-      (* assert (H_prod : forall A B, (Choice.sort (chElement A) -× Choice.sort (chElement B)) = Choice.sort (chElement (A × B))) by reflexivity. *)
-      (* set (Q := fun '(_,_) '(_,_) => or_run_post_cond _ _). *)
-      (* Opaque t_OrZKPCommit. *)
-
-
-      
 
     cbn in H.
     destruct choice_type_eqP ; [ | discriminate ].
@@ -1287,7 +1280,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       set (f_random_field_elem _).
       set (f_random_field_elem _).
       set (f_random_field_elem _).
-      
+
       repeat split ; clear ; simpl ; repeat setoid_rewrite <- expgnE ; push_down_sides.
       + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
         rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
@@ -1339,7 +1332,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       set (f_random_field_elem _).
       set (f_random_field_elem _).
       set (f_random_field_elem _).
-      
+
       repeat split ; clear ; simpl ; repeat setoid_rewrite <- expgnE ; push_down_sides.
       + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
         now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
@@ -1420,7 +1413,7 @@ Module Z89_group_operations <: GroupOperationProperties Z89_impl.
     repeat (try unfold lift2_both at 1 ; try unfold lift1_both at 1 ; simpl).
 
 (* (a + b) + c = a + (b + c) *)
-  
+
   Corollary both_equivalence_bind_comm : forall {A} {a : both A} {b : both A} {f : A -> A -> both A},
       bind_both a (fun x =>
       bind_both b (fun y => f x y))
@@ -1433,14 +1426,14 @@ Module Z89_group_operations <: GroupOperationProperties Z89_impl.
     unfold both_equivalence.
     now rewrite <- both_pure.
   Qed.
-      
+
   Lemma f_opp_by_sub : forall x y, f_sub x y ≈both f_add x (f_sub f_field_zero y).
   Proof. Admitted.
   (*   intros. *)
   (*   simpl. *)
 
   (*   repeat unfold Build_t_z_89_ at 1. *)
-    
+
   (*   repeat unfold f_z_val at 1. *)
   (*   repeat unfold ".-" at 1. *)
   (*   repeat unfold ".+" at 1. *)
@@ -1448,25 +1441,25 @@ Module Z89_group_operations <: GroupOperationProperties Z89_impl.
   (*   unfold_both_eq. *)
 
   (*   Set Printing Coercions. *)
-    
+
   (*   set (x' := is_pure _). *)
   (*   set (y' := is_pure _). *)
 
   (*   set (int_xO _); change (Hacspec_Lib_Pre.int_sub (int_xI s) _) with (@int_xO U8 s); subst s. *)
   (*   set (n88 := int_xO _). *)
-    
+
   (*   replace (wrepr U8 0) with (Hacspec_Lib_Pre.zero (WS := U8)). *)
   (*   2: admit. *)
   (*   rewrite add_zero_l. *)
 
-    
-    
+
+
   (*   rewrite !add_repr. *)
-    
+
 
   (*   replace (Hacspec_Lib_Pre.int_sub 89 1) with *)
   (*     (88). *)
-    
+
   (*   unfold Hacspec_Lib_Pre.int_sub. *)
   (*   unfold Hacspec_Lib_Pre.int_add. *)
   (*   unfold Hacspec_Lib_Pre.int_mod. *)
@@ -1476,7 +1469,7 @@ Module Z89_group_operations <: GroupOperationProperties Z89_impl.
   (*   (* set (unsigned _ mod _) at 2 ; fold (wrepr U8 z) ; subst z. *) *)
 
   (*   assert (forall x, wrepr U8 (urepr x) = x) by apply ureprK. *)
-    
+
   (*   unfold unsigned. *)
   (*   unfold sub_word. *)
 
@@ -1733,7 +1726,7 @@ Module OVN_schnorr_proof_params_Z89 <: OVN_schnorr_proof_preconditions Z89_impl 
 
   Lemma in_equality : forall v u, is_true (0 <= v < u)%R <-> is_true (Z.to_nat v < Z.to_nat u)%N.
   Admitted.
-    
+
   Lemma WitnessToFieldCancel : forall x, WitnessToField (FieldToWitness x) = x.
   Proof.
     intros.
@@ -1757,7 +1750,7 @@ Module OVN_schnorr_proof_params_Z89 <: OVN_schnorr_proof_preconditions Z89_impl 
     }
     apply word_ext.
     rewrite modn_mod.
-    rewrite modnZE ; [ |  now rewrite group_size_is_q]. 
+    rewrite modnZE ; [ |  now rewrite group_size_is_q].
     rewrite Z2Nat.id ; [ | now destruct toword ].
     cbn.
 
@@ -1769,24 +1762,24 @@ Module OVN_schnorr_proof_params_Z89 <: OVN_schnorr_proof_preconditions Z89_impl 
     set (Z.pos _).
     rewrite (Z.mod_small z).
     - rewrite Z.mod_small.
-      
-    
+
+
 
     assert (forall p b x, Z.pos p <= b -> x mod (Z.pos p) mod b = x mod (Z.pos p)).
     {
       intros.
       rewrite Z.mod_small_iff.
-      
+
       epose (Znumtheory.Zmod_div_mod b (Z.pos p) xa).
       rewrite <- e.
-        
+
       induction p.
       -
         cbn.
   Admitted.
 
 
-  
+
   Lemma FieldToWitnessCancel :
     forall x, FieldToWitness (WitnessToField x) = x.
   Proof.
@@ -1800,11 +1793,11 @@ Module OVN_schnorr_proof_params_Z89 <: OVN_schnorr_proof_preconditions Z89_impl 
       destruct x.
       cbn.
       rewrite Schnorr.order_ge1 in i.
-      
+
     rewrite Nat2Z.id.
     now rewrite inord_val.
   Qed.
-  
+
   Axiom WitnessToFieldAdd : forall x y, WitnessToField (Zp_add x y) = is_pure (f_add (ret_both (WitnessToField x)) (ret_both (WitnessToField y))).
   Axiom WitnessToFieldMul : forall x y, WitnessToField (Zp_mul x y) = is_pure (f_mul (ret_both (WitnessToField x)) (ret_both (WitnessToField y))).
 
