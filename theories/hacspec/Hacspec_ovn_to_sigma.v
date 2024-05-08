@@ -389,6 +389,198 @@ Module Misc.
   Proof. reflexivity. Qed.
 
 
+  Ltac pattern_lhs_approx :=
+    match goal with | |- context [ ⊢ ⦃ _ ⦄ ?lhs ≈ ?rhs ⦃ _ ⦄ ] => let H_lhs := fresh in set (H_lhs := lhs) end.
+
+  Ltac pattern_lhs_approx_pat pat :=
+    match goal with | |- context [ ⊢ ⦃ _ ⦄ ?lhs ≈ ?rhs ⦃ _ ⦄ ] => let H_lhs := fresh in set (H_lhs := lhs) ; pattern pat in H_lhs ; subst H_lhs end.
+
+  Ltac pattern_lhs_both_pat pat :=
+    match goal with | |- context [ ?lhs ≈both ?rhs ] => let H_lhs := fresh in set (H_lhs := lhs) ; pattern pat in H_lhs ; subst H_lhs end.
+
+  Ltac pattern_rhs_approx :=
+    match goal with | |- context [ ⊢ ⦃ _ ⦄ ?lhs ≈ ?rhs ⦃ _ ⦄ ] => let H_rhs := fresh in set (H_rhs := rhs) end.
+
+  Ltac pattern_rhs_approx_pat pat :=
+    match goal with | |- context [ ⊢ ⦃ _ ⦄ ?lhs ≈ ?rhs ⦃ _ ⦄ ] => let H_rhs := fresh in set (H_rhs := rhs) ; pattern pat in H_rhs ; subst H_rhs end.
+
+  Ltac pattern_rhs_both_pat pat :=
+    match goal with | |- context [ ?lhs ≈both ?rhs ] => let H_rhs := fresh in set (H_rhs := rhs) ; pattern pat in H_rhs ; subst H_rhs end.
+
+  Lemma both_eta : forall {A : choice_type} (a : both A), a =
+      {|
+        both_prog := {| is_pure := is_pure a ; is_state := is_state a |};
+        both_prog_valid := ValidBoth_eta (both_prog_valid a)
+          ;
+        p_eq := p_eq a;
+      |}.
+  Proof. now intros ? [[] [] ?]. Qed.
+
+  Lemma valid_both_ext : forall {A : choice_type} {a b : both A},
+      a ≈both b ->
+      ValidBoth a = ValidBoth b.
+  Proof.
+    intros ? [[a_pure a_state] [a_code a_both] a_eq] [[b_pure b_state] [b_code b_both] b_eq] ?.
+    inversion H ; simpl in *.
+    subst.
+    rewrite boolp.propeqE.
+    split ; intros ; now refine {|
+          ChoiceEquality.is_valid_code := _;
+          is_valid_both := _
+        |}.
+  Qed.
+
+  Lemma unfold_both : (forall {A B : choice_type} (f : both A -> both B) (a : both A),
+      f a ≈both
+        {|
+             both_prog :=
+               {|
+                 is_pure := is_pure (f (ret_both (is_pure a)));
+                 is_state := x ← ret (is_pure a) ;;
+                   is_state (f (ret_both x))
+               |};
+             both_prog_valid := ValidBoth_eta (both_prog_valid (f (ret_both (is_pure a))));
+             p_eq := p_eq (f (ret_both (is_pure a)))
+        |}).
+  Proof.
+    intros.
+    setoid_rewrite <- both_eta.
+    apply both_eq_fun_ext.
+    apply ret_both_is_pure_cancel.
+  Qed.
+
+  Lemma prod_both_pure_eta_11 : forall {A B C D E F G H I J K} (a : both A) (b : both B) (c : both C) (d : both D) (e : both E) (f : both F) (g : both G) (h : both H) (i : both I) (j : both J) (k : both K),
+      ((is_pure (both_prog a) : A,
+           is_pure (both_prog b) : B,
+           is_pure (both_prog c) : C,
+           is_pure (both_prog d) : D,
+           is_pure (both_prog e) : E,
+           is_pure (both_prog f) : F,
+           is_pure (both_prog g) : G,
+           is_pure (both_prog h) : H,
+           is_pure (both_prog i) : I,
+           is_pure (both_prog j) : J,
+           is_pure (both_prog k) : K)) =
+        is_pure (both_prog (prod_b( a , b, c, d, e, f, g, h, i, j, k ))).
+  Proof. reflexivity. Qed.
+
+  Ltac get_both_sides H_lhs H_rhs :=
+    match goal with
+    | [ |- context [?lhs ≈both ?rhs ] ] =>
+        set (H_lhs := lhs) at 1 ;
+        set (H_rhs := rhs) at 1
+    | [ |- context [?lhs = ?rhs ] ] =>
+        set (H_lhs := lhs) at 1 ;
+        set (H_rhs := rhs) at 1
+   end.
+
+  Ltac apply_to_pure_sides H H_lhs H_rhs :=
+    match goal with
+    | [ |- context [ _ ≈both _ ] ] =>
+        rewrite both_equivalence_is_pure_eq ;
+        get_both_sides H_lhs H_rhs ;
+        H ;
+        rewrite <- both_equivalence_is_pure_eq
+    | [ |- context [ _ = _ ] ] =>
+        get_both_sides H_lhs H_rhs ;
+        H
+   end.
+
+  Ltac push_down :=
+    match goal with
+    | H := is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))) (ret_both (is_pure (both_prog ?b))))) : _ |- _  =>
+      subst H ;
+      set (is_pure a) ;
+      push_down ;
+      set (is_pure b) ;
+      push_down
+    | H := is_pure (both_prog (?f ?a ?b)) |- _  =>
+      subst H ;
+      rewrite (hacspec_function_guarantees2 f a b) ;
+      set (is_pure a) ;
+      push_down ;
+      set (is_pure b) ;
+      push_down
+    | H := is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))))) : _ |- _  =>
+      subst H ;
+      set (is_pure a) ;
+      push_down
+    | H := is_pure (both_prog (?f ?a)) : _ |- _  =>
+      subst H ;
+      rewrite (hacspec_function_guarantees f a) ;
+      set (is_pure a) ;
+      push_down
+   | H : _ |- _ => subst H
+    end ; simpl.
+
+  Ltac push_down_sides :=
+    let H_lhs := fresh in
+    let H_rhs := fresh in
+    get_both_sides H_lhs H_rhs ; subst H_rhs ;
+    push_down ; simpl ;
+
+    let H_lhs := fresh in
+    let H_rhs := fresh in
+    get_both_sides H_lhs H_rhs ; subst H_lhs ;
+    push_down ; simpl.
+
+   Ltac pull_up_assert :=
+     match goal with
+    | |- is_pure (both_prog (?f
+        (ret_both (is_pure (both_prog ?a)))
+        (ret_both (is_pure (both_prog ?b))))) = _ =>
+        let H_a := fresh in
+        let H_b := fresh in
+        eassert (H_a : (is_pure a) = _) ;
+        [ |
+          eassert (H_b : (is_pure b) = _) ;
+          [ | rewrite H_a ; rewrite H_b ; rewrite <- (hacspec_function_guarantees2 f) ; reflexivity ]
+          ]
+   | |- is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))))) = _ =>
+       let H_a := fresh in
+       eassert (H_a : (is_pure a) = _) ;
+       [ | rewrite H_a ; rewrite <- (hacspec_function_guarantees f) ; reflexivity ]
+    end.
+
+   Ltac pull_up H :=
+     let H_rewrite := fresh in
+     eassert (H_rewrite : H = _) by repeat (pull_up_assert ; reflexivity) ; rewrite H_rewrite ; clear H_rewrite.
+
+   Ltac pull_up_side H :=
+     let H_rewrite := fresh in
+     eassert (H_rewrite : H = _) ; subst H ; [ repeat pull_up_assert ; reflexivity | ] ; rewrite H_rewrite ; clear H_rewrite.
+
+  Ltac remove_solve_lift :=
+    repeat progress (rewrite (hacspec_function_guarantees2 _ (solve_lift _)) ; simpl) ;
+    repeat progress (rewrite (hacspec_function_guarantees2 _ _ (solve_lift _)) ; simpl) ;
+    repeat progress (rewrite (hacspec_function_guarantees _ (solve_lift _)) ; simpl).
+
+  Ltac normalize_lhs :=
+    let H_lhs := fresh in
+    let H_rhs := fresh in
+    get_both_sides H_lhs H_rhs ; subst H_rhs ;
+    push_down ; simpl ;
+    remove_solve_lift ; simpl ;
+    get_both_sides H_lhs H_rhs ; subst H_rhs ;
+    pull_up_side H_lhs.
+
+  Ltac normalize_rhs :=
+    let H_lhs := fresh in
+    let H_rhs := fresh in
+    get_both_sides H_lhs H_rhs ; subst H_lhs ;
+    push_down ; simpl ;
+    remove_solve_lift ; simpl ;
+    get_both_sides H_lhs H_rhs ; subst H_lhs ;
+    pull_up_side H_rhs.
+
+  Ltac normalize_equation :=
+    normalize_lhs ; normalize_rhs.
+  (* Ltac compute_normal_form := *)
+  (*   push_computation_down; simpl ; *)
+  (*   rewrite both_equivalence_is_pure_eq ; *)
+  (*   push_computation_up ; *)
+  (*   rewrite <- both_equivalence_is_pure_eq. *)
+
 End Misc.
 
 Definition lower1 {A B : choice_type} (f : both A -> both B) : A -> B :=
@@ -401,14 +593,14 @@ Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
   Include OVN_impl.
   Export OVN_impl.
 
-  Axiom f_opp_by_sub : forall x y, f_sub x y ≈both f_add x (f_sub f_field_zero y).
+  Axiom f_sub_by_opp : forall x y, f_sub x y ≈both f_add x (f_opp y).
 
   Axiom f_addA : forall x y z, f_add x (f_add y z) ≈both f_add (f_add x y) z.
   Axiom f_addC: forall x y, f_add x y ≈both f_add y x.
   (* Axiom f_mul_addr: right_distributive (f_mul) (f_add). *)
   (* Axiom f_mul_addl: left_distributive (f_mul) (f_add). *)
   Axiom f_add0z: forall x, f_add f_field_zero x ≈both x.
-  Axiom f_addNz: forall x, f_add ((f_sub f_field_zero x) (* f_opp *)) x ≈both f_field_zero.
+  Axiom f_addNz: forall x, f_add (f_opp x) x ≈both f_field_zero.
 
   (* Definition hacspec_group_type : Type := (Choice.sort (chElement v_G)). *)
   Axiom prod_pow_add_mul : forall x y z, f_prod (f_g_pow x) (f_pow (f_g_pow z) y) ≈both f_g_pow (f_add x (f_mul z y)).
@@ -450,7 +642,11 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
   Definition add_sub_cancel : forall a b, f_add a (f_sub b a) ≈both b.
   Proof.
     intros.
-    eapply both_eq_trans ; [ apply both_eq_fun_ext; apply (f_opp_by_sub _ _) | ].
+    (* apply both_equivalence_is_pure_eq. *)
+    (* Misc.push_down_sides. *)
+    (* rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opps _ _)). *)
+
+    eapply both_eq_trans ; [ apply both_eq_fun_ext; apply (f_sub_by_opp _ _) | ].
     eapply both_eq_trans ; [ apply f_addC | ].
     eapply both_eq_trans ; [ apply both_eq_symmetry ; apply f_addA | ].
     eapply both_eq_trans ; [ apply both_eq_fun_ext ; apply f_addNz | ].
@@ -507,6 +703,7 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
         BaseFinGroup.eqtype_hasDecEq_mixin := v_G_Finite;
         BaseFinGroup.fintype_isFinite_mixin := v_G_Finite
       |}.
+
   Lemma inv_mul_inverse : left_inverse (T := v_G_BaseFinGroup) (R := v_G) (oneg v_G_BaseFinGroup) invg mulg.
   Proof.
     unfold invg, mulg ; change 1%g with (is_pure f_group_one) ; simpl.
@@ -523,6 +720,15 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
           {| BaseFinGroup_isGroup.mulVg_subproof := inv_mul_inverse |} |}.
 
   (* prime_cyclic *)
+
+  Ltac cancel_operations :=
+    try apply both_eq_fun_ext ;
+      try apply both_eq_fun_ext2 ;
+      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_add_mul ]) ;
+      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel ]) ;
+      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel2 ]) ;
+      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_pow ]) ;
+      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply div_prod_cancel ]).
 
 End HacspecGroup.
 
@@ -733,7 +939,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
 
     Definition Witness : finType :=  prod (Finite.clone _ 'Z_q) 'bool.
     Definition Statement : finType := gT.
-    Definition Message : finType := prod (prod (prod (prod (prod (prod (prod gT gT) gT) gT) (Finite.clone _ 'Z_q)) (Finite.clone _ 'Z_q)) gT) gT.
+    Definition Message : finType :=  prod (prod (prod (prod (prod gT gT) gT) gT) gT) gT.
     Definition Challenge : finType := Finite.clone _ 'Z_q.
     Definition Response : finType :=  (prod (prod (prod (Finite.clone _ 'Z_q) (Finite.clone _ 'Z_q)) (Finite.clone _ 'Z_q)) (Finite.clone _ 'Z_q)).
     Definition Transcript : finType :=
@@ -798,7 +1004,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
     Definition HIDING : nat := 0.
     Definition SOUNDNESS : nat := 1.
 
-    Definition commit_loc : Location := (('fin #|Finite.clone _ 'Z_q| : choice_type); 2%N).
+    Definition commit_loc : Location := (('fin #|Finite.clone _ 'Z_q| × 'fin #|Finite.clone _ 'Z_q| × 'fin #|Finite.clone _ 'Z_q| : choice_type); 2%N).
 
     Definition Sigma_locs : {fset Location} := fset [:: commit_loc].
     Definition Simulator_locs : {fset Location} := fset0.
@@ -809,7 +1015,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
          w ← sample uniform i_witness ;;
          r ← sample uniform i_witness ;;
          d ← sample uniform i_witness ;;
-         #put commit_loc := w ;;
+         #put commit_loc := (w, r, d) ;;
          let '(xi, vi) := (otf xv) in
          let x := (g ^+ xi) in
          if vi
@@ -825,7 +1031,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
 
              let a2 := (g ^+ (otf w : 'Z_q)) in
              let b2 := (otf h ^+ (otf w : 'Z_q)) in
-             ret (fto (a1, b1, a2, b2, (otf r1 : 'Z_q), (otf d1 : 'Z_q), x, y)))
+             ret (fto (a1, b1, a2, b2, x, y)))
          else
            (let r2 := r in
             let d2 := d in
@@ -838,7 +1044,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
             let a2 := (g ^+ (otf r2 : 'Z_q) * x ^+ (otf d2 : 'Z_q)) in
             let b2 := (otf h ^+ (otf r2 : 'Z_q) * (y * g^-1) ^+ (otf d2 : 'Z_q)) in
 
-            ret (fto (a1, b1, a2, b2, (otf r2 : 'Z_q), (otf d2 : 'Z_q), x, y)))
+            ret (fto (a1, b1, a2, b2, x, y)))
       }.
     (* x, e *)
     (* a, e, z *)
@@ -846,31 +1052,51 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
     Definition Response (h : choiceStatement) (xv : choiceWitness) (a : choiceMessage) (c : choiceChallenge) :
       code Sigma_locs [interface] choiceResponse :=
       {code
-         w ← get commit_loc ;;
+         '(w, r, d) ← get commit_loc ;;
          let '(xi, vi) := (otf xv) in
-         let '(a1, b1, a2, b2, r, d, _, _) := (otf a) in
+         let '(a1, b1, a2, b2) := (otf a) in
          if vi
          then
-           (let d2 := otf c - d in
+           (let d2 := otf c - otf d in
             let r2 := otf w - (xi * d2) in
-            ret (fto (r, d, r2, d2)))
+            ret (fto (otf r, otf d, r2, d2)))
          else
-           (let d1 := otf c - d in
+           (let d1 := otf c - otf d in
             let r1 := otf w - (xi * d1) in
-            ret (fto (r1, d1, r, d)))
+            ret (fto (r1, d1, otf r, otf d)))
       }.
 
-    Program Definition Simulate (h : choiceStatement) (e : choiceChallenge) :
+    Program Definition Simulate (h : choiceStatement) (c : choiceChallenge) :
       code Simulator_locs [interface] choiceTranscript :=
       {code
-         z ← sample uniform i_witness ;;
+         r1 ← sample uniform i_witness ;;
+         r2 ← sample uniform i_witness ;;
+         z1 ← sample uniform i_witness ;;
+         z2 ← sample uniform i_witness ;;
          ret _ (* (h, fto (g ^+ (otf z) * (otf h ^- (otf e))), e, z) *)
       }.
-    Admit Obligations.
+    Next Obligation.
+      pose (otf h).
+      pose (otf c).
+
+      epose (xi := ((otf z1 + otf r1) + (otf z2 + otf r2)) * (otf c) ^-1).
+      epose (d1 := (otf z1 - otf r1) * xi ^-1).
+      epose (d2 := (otf z2 - otf r2) * xi ^-1).
+
+      epose (x := (g ^+ z1) ).
+      epose (y := (otf h ^+ xi)).
+
+      epose (a1 := (g ^+ r1) * (x ^+ d1)).
+      epose (b1 := (otf h ^+ r1) * (y ^+ d1)).
+      epose (a2 := (g ^+ r2) * (x ^+ d2)).
+      epose (b2 := (otf h ^+ r2) * (y * g^-1) ^+ d2).
+
+      refine (fto x, fto (a1, b1, a2, b2, x, y), c, fto (otf r1, d1, otf r2, d2)).
+    Defined.
 
     Definition Verify (h : choiceStatement) (a : choiceMessage)
       (c : choiceChallenge) (z : choiceResponse) : choiceBool :=
-          let '(a1, b1, a2, b2, _, _, x, y) := (otf a) in
+          let '(a1, b1, a2, b2, x, y) := (otf a) in
           let '(r1, d1, r2, d2) := (otf z) in
           fto ((otf c == d1 + d2) &&
                (a1 == (g ^+ r1) * (x ^+ d1)) &&
@@ -878,19 +1104,26 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
                (a2 == (g ^+ r2) * (x ^+ d2)) &&
                (b2 == (otf h ^+ r2) * ((y * (g ^-1)) ^+ d2))).
 
-    Program Definition Extractor (h : choiceStatement) (a : choiceMessage)
+    Definition Extractor (h : choiceStatement) (a : choiceMessage)
       (e : choiceChallenge) (e' : choiceChallenge)
-      (z : choiceResponse)  (z' : choiceResponse) : 'option choiceWitness :=
-      Some _ (* (fto ((otf z - otf z') / (otf e - otf e'))) *).
-    Admit Obligations.
+      (z : choiceResponse)  (z' : choiceResponse) : 'option choiceWitness.
+    Proof.
+      destruct (otf a) as [[[[[a1 b1] a2] b2] x] y].
+      destruct (otf z) as [[[lr1 ld1] lr2] ld2].
+      destruct (otf z') as [[[rr1 rd1] rr2] rd2].
+      refine (Some (fto (_, _))).
+      (* Some (fto ((otf z - otf z') / (otf e - otf e'))). *)
+    Admitted.
 
     Definition KeyGen (xv : choiceWitness) :=
       let (xi, vi) := otf xv in
       fto (g ^+ xi).
 
   End MyAlg.
+  
 
   Module Sigma := SigmaProtocol MyParam MyAlg.
+  Check Sigma.run_interactive_shvzk.
 
   Import MyParam.
   Import MyAlg.
@@ -943,6 +1176,13 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
     forall (h : gT) (b : 'Z_q),
       (h ^+ b = is_pure (f_pow (ret_both h) (ret_both (WitnessToField b)))).
 
+  Axiom pow_base : forall x, f_g_pow x ≈both f_pow (ret_both g) x.
+  Axiom div_is_prod_inv : forall x y, f_div x y ≈both f_prod x (f_inv y).
+          
+  Axiom FieldToWitnessAdd : forall x y, (Zp_add (FieldToWitness x) (FieldToWitness y)) = FieldToWitness (is_pure (f_add (ret_both x) (ret_both y))).
+  Axiom FieldToWitnessMul : forall x y, (Zp_mul (FieldToWitness x) (FieldToWitness y)) = FieldToWitness (is_pure (f_mul (ret_both x) (ret_both y))).
+  Axiom FieldToWitnessOpp : (forall (b : both _), Zp_opp (FieldToWitness (is_pure b)) = FieldToWitness (is_pure (f_opp b))).
+
 End OVN_or_proof_preconditions.
 
 Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl) (SG : SecureGroup OVN_impl GOP) (proof_args : OVN_or_proof_preconditions OVN_impl GOP SG).
@@ -970,239 +1210,44 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
 
   (* Transparent OVN.or_zkp. *)
   Transparent run.
+          (* let '(h,w) := hw in *)
+          (* #assert (R (otf h) (otf w)) ;; *)
+          (* a ← Commit h w ;; *)
+          (* e ← sample uniform i_random ;; *)
+          (* z ← Response h w a e ;; *)
+          (* @ret choiceTranscript (h,a,e,z) *)
+  Definition hacspec_ret_to_or_sigma_ret : OVN.t_OrZKPCommit -> choiceTranscript.
+  Proof.
+    intros [[[[[[[[[[r1x r2y] r3a1] r4b1] r5a2] r6b2] r7c] r8d1] r9d2] r10r1] r11r2].
+    refine (fto _, fto _, fto _, fto _).
+    (* choiceStatement *)
+    - refine r1x.
+
+    (* choiceMessage *)
+    - refine (r3a1, r4b1, r5a2, r6b2, r1x, r2y).
+
+    (* choiceChallenge = hash *)
+    - refine (FieldToWitness r7c).
+
+    (* choiceResponse *)
+    - refine (FieldToWitness r10r1, FieldToWitness r8d1, FieldToWitness r11r2, FieldToWitness r9d2).
+  Defined.
 
   Definition or_run_post_cond :
     tgt (RUN, (choiceStatement × choiceWitness, choiceTranscript))
     → OVN.t_OrZKPCommit → Prop.
   Proof.
-    intros [[[l1 x2] l10] x4] [[[[[[[[[[r1x r2y] r3a1] r4b1] r5a2] r6b2] r7c] r8d1] r9d2] r10r1] r11r2].
-    destruct (otf x2) as [[[[[[[l2a1 l3b1] l4a2] l5b2] l6] l7] l8x] l9y] ; clear x2.
-    destruct (otf x4) as [[[l11r1 l12d1] l13r2] l14d2] ; clear x4.
-    cbn in *.
-    (* refine (((otf l1) = _) /\ _). *)
-    refine ((l2a1 = r3a1) /\ _).
-    refine ((l3b1 = r4b1) /\ _).
-    refine ((l4a2 = r5a2) /\ _).
-    refine ((l5b2 = r6b2) /\ _).
-    refine ((l8x = r1x) /\ _).
-    refine ((l9y = r2y)).
-    (* refine ((WitnessToField (otf l10) = r7) /\ _). *)
-    (* refine ((WitnessToField l11 = r8) /\ _). *)
-    (* refine ((WitnessToField l12 = r9) /\ _). *)
-    (* refine ((WitnessToField l13 = r10) /\ _). *)
-    (* refine ((WitnessToField l14 = r11)) *)
+    intros a b.
+    refine (a = hacspec_ret_to_or_sigma_ret b).
   Defined.
 
-  Ltac pattern_lhs_approx :=
-    match goal with | |- context [ ⊢ ⦃ _ ⦄ ?lhs ≈ ?rhs ⦃ _ ⦄ ] => let H_lhs := fresh in set (H_lhs := lhs) end.
-
-  Ltac pattern_lhs_approx_pat pat :=
-    match goal with | |- context [ ⊢ ⦃ _ ⦄ ?lhs ≈ ?rhs ⦃ _ ⦄ ] => let H_lhs := fresh in set (H_lhs := lhs) ; pattern pat in H_lhs ; subst H_lhs end.
-
-  Ltac pattern_lhs_both_pat pat :=
-    match goal with | |- context [ ?lhs ≈both ?rhs ] => let H_lhs := fresh in set (H_lhs := lhs) ; pattern pat in H_lhs ; subst H_lhs end.
-
-  Ltac pattern_rhs_approx :=
-    match goal with | |- context [ ⊢ ⦃ _ ⦄ ?lhs ≈ ?rhs ⦃ _ ⦄ ] => let H_rhs := fresh in set (H_rhs := rhs) end.
-
-  Ltac pattern_rhs_approx_pat pat :=
-    match goal with | |- context [ ⊢ ⦃ _ ⦄ ?lhs ≈ ?rhs ⦃ _ ⦄ ] => let H_rhs := fresh in set (H_rhs := rhs) ; pattern pat in H_rhs ; subst H_rhs end.
-
-  Ltac pattern_rhs_both_pat pat :=
-    match goal with | |- context [ ?lhs ≈both ?rhs ] => let H_rhs := fresh in set (H_rhs := rhs) ; pattern pat in H_rhs ; subst H_rhs end.
-
-  Lemma both_eta : forall {A : choice_type} (a : both A), a =
-      {|
-        both_prog := {| is_pure := is_pure a ; is_state := is_state a |};
-        both_prog_valid := ValidBoth_eta (both_prog_valid a)
-          ;
-        p_eq := p_eq a;
-      |}.
-  Proof. now intros ? [[] [] ?]. Qed.
-
-  Lemma valid_both_ext : forall {A : choice_type} {a b : both A},
-      a ≈both b ->
-      ValidBoth a = ValidBoth b.
-  Proof.
-    intros ? [[a_pure a_state] [a_code a_both] a_eq] [[b_pure b_state] [b_code b_both] b_eq] ?.
-    inversion H ; simpl in *.
-    subst.
-    rewrite boolp.propeqE.
-    split ; intros ; now refine {|
-          ChoiceEquality.is_valid_code := _;
-          is_valid_both := _
-        |}.
-  Qed.
-
-  Lemma unfold_both : (forall {A B : choice_type} (f : both A -> both B) (a : both A),
-      f a ≈both
-        {|
-             both_prog :=
-               {|
-                 is_pure := is_pure (f (ret_both (is_pure a)));
-                 is_state := x ← ret (is_pure a) ;;
-                   is_state (f (ret_both x))
-               |};
-             both_prog_valid := ValidBoth_eta (both_prog_valid (f (ret_both (is_pure a))));
-             p_eq := p_eq (f (ret_both (is_pure a)))
-        |}).
-  Proof.
-    intros.
-    setoid_rewrite <- both_eta.
-    apply both_eq_fun_ext.
-    apply ret_both_is_pure_cancel.
-  Qed.
-
-  Lemma prod_both_pure_eta_11 : forall {A B C D E F G H I J K} (a : both A) (b : both B) (c : both C) (d : both D) (e : both E) (f : both F) (g : both G) (h : both H) (i : both I) (j : both J) (k : both K),
-      ((is_pure (both_prog a) : A,
-           is_pure (both_prog b) : B,
-           is_pure (both_prog c) : C,
-           is_pure (both_prog d) : D,
-           is_pure (both_prog e) : E,
-           is_pure (both_prog f) : F,
-           is_pure (both_prog g) : G,
-           is_pure (both_prog h) : H,
-           is_pure (both_prog i) : I,
-           is_pure (both_prog j) : J,
-           is_pure (both_prog k) : K)) =
-        is_pure (both_prog (prod_b( a , b, c, d, e, f, g, h, i, j, k ))).
-  Proof. reflexivity. Qed.
-
-  Ltac get_both_sides H_lhs H_rhs :=
-    match goal with
-    | [ |- context [?lhs ≈both ?rhs ] ] =>
-        set (H_lhs := lhs) at 1 ;
-        set (H_rhs := rhs) at 1
-    | [ |- context [?lhs = ?rhs ] ] =>
-        set (H_lhs := lhs) at 1 ;
-        set (H_rhs := rhs) at 1
-   end.
-
-  Ltac apply_to_pure_sides H H_lhs H_rhs :=
-    match goal with
-    | [ |- context [ _ ≈both _ ] ] =>
-        rewrite both_equivalence_is_pure_eq ;
-        get_both_sides H_lhs H_rhs ;
-        H ;
-        rewrite <- both_equivalence_is_pure_eq
-    | [ |- context [ _ = _ ] ] =>
-        get_both_sides H_lhs H_rhs ;
-        H
-   end.
-
-  Ltac push_down :=
-    match goal with
-    | H := is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))) (ret_both (is_pure (both_prog ?b))))) : _ |- _  =>
-      subst H ;
-      set (is_pure a) ;
-      push_down ;
-      set (is_pure b) ;
-      push_down
-    | H := is_pure (both_prog (?f ?a ?b)) |- _  =>
-      subst H ;
-      rewrite (hacspec_function_guarantees2 f a b) ;
-      set (is_pure a) ;
-      push_down ;
-      set (is_pure b) ;
-      push_down
-    | H := is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))))) : _ |- _  =>
-      subst H ;
-      set (is_pure a) ;
-      push_down
-    | H := is_pure (both_prog (?f ?a)) : _ |- _  =>
-      subst H ;
-      rewrite (hacspec_function_guarantees f a) ;
-      set (is_pure a) ;
-      push_down
-   | H : _ |- _ => subst H
-    end ; simpl.
-
-  Ltac push_down_sides :=
-    let H_lhs := fresh in
-    let H_rhs := fresh in
-    get_both_sides H_lhs H_rhs ; subst H_rhs ;
-    push_down ; simpl ;
-
-    let H_lhs := fresh in
-    let H_rhs := fresh in
-    get_both_sides H_lhs H_rhs ; subst H_lhs ;
-    push_down ; simpl.
-
-   Ltac pull_up_assert :=
-     match goal with
-    | |- is_pure (both_prog (?f
-        (ret_both (is_pure (both_prog ?a)))
-        (ret_both (is_pure (both_prog ?b))))) = _ =>
-        let H_a := fresh in
-        let H_b := fresh in
-        eassert (H_a : (is_pure a) = _) ;
-        [ |
-          eassert (H_b : (is_pure b) = _) ;
-          [ | rewrite H_a ; rewrite H_b ; rewrite <- (hacspec_function_guarantees2 f) ; reflexivity ]
-          ]
-   | |- is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))))) = _ =>
-       let H_a := fresh in
-       eassert (H_a : (is_pure a) = _) ;
-       [ | rewrite H_a ; rewrite <- (hacspec_function_guarantees f) ; reflexivity ]
-    end.
-
-   Ltac pull_up H :=
-     let H_rewrite := fresh in
-     eassert (H_rewrite : H = _) by repeat (pull_up_assert ; reflexivity) ; rewrite H_rewrite ; clear H_rewrite.
-
-   Ltac pull_up_side H :=
-     let H_rewrite := fresh in
-     eassert (H_rewrite : H = _) ; subst H ; [ repeat pull_up_assert ; reflexivity | ] ; rewrite H_rewrite ; clear H_rewrite.
-
-  Ltac remove_solve_lift :=
-    repeat progress (rewrite (hacspec_function_guarantees2 _ (solve_lift _)) ; simpl) ;
-    repeat progress (rewrite (hacspec_function_guarantees2 _ _ (solve_lift _)) ; simpl) ;
-    repeat progress (rewrite (hacspec_function_guarantees _ (solve_lift _)) ; simpl).
-
-  Ltac normalize_lhs :=
-    let H_lhs := fresh in
-    let H_rhs := fresh in
-    get_both_sides H_lhs H_rhs ; subst H_rhs ;
-    push_down ; simpl ;
-    remove_solve_lift ; simpl ;
-    get_both_sides H_lhs H_rhs ; subst H_rhs ;
-    pull_up_side H_lhs.
-
-  Ltac normalize_rhs :=
-    let H_lhs := fresh in
-    let H_rhs := fresh in
-    get_both_sides H_lhs H_rhs ; subst H_lhs ;
-    push_down ; simpl ;
-    remove_solve_lift ; simpl ;
-    get_both_sides H_lhs H_rhs ; subst H_lhs ;
-    pull_up_side H_rhs.
-
-  Ltac normalize_equation :=
-    normalize_lhs ; normalize_rhs.
-  (* Ltac compute_normal_form := *)
-  (*   push_computation_down; simpl ; *)
-  (*   rewrite both_equivalence_is_pure_eq ; *)
-  (*   push_computation_up ; *)
-  (*   rewrite <- both_equivalence_is_pure_eq. *)
-
-  Ltac cancel_operations :=
-    try apply both_eq_fun_ext ;
-      try apply both_eq_fun_ext2 ;
-      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_add_mul ]) ;
-      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel ]) ;
-      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel2 ]) ;
-      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_pow ]) ;
-      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply div_prod_cancel ]).
-
-  Axiom pow_base : forall x, f_g_pow x ≈both f_pow (ret_both g) x.
-  Axiom div_is_prod_inv : forall x y, f_div x y ≈both f_prod x (f_inv y).
-
  Lemma or_run_eq  (pre : precond) :
-    forall (b : Witness) c,
+    forall (b : Statement * Witness) c,
       Some c = lookup_op RUN_interactive (RUN, ((chProd choiceStatement choiceWitness), choiceTranscript)) ->
-      ⊢ ⦃ pre ⦄
-        c (fto (HacspecGroup.g ^+ fst b), fto b)
+      ⊢ ⦃ fun '(h₁, h₀) => heap_ignore Sigma_locs (h₀, h₁) ⦄
+        c (fto (fst b), fto (snd b))
         ≈
+        #assert b.1 == g ^+ b.2.1 ;;
         wr ← sample uniform (2^32) ;;
         rr ← sample uniform (2^32) ;;
         dr ← sample uniform (2^32) ;;
@@ -1210,10 +1255,10 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
                     (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord wr))))
                     (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord rr))))
                     (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord dr))))
-                    (ret_both (HacspecGroup.g ^+ fst b))
-                    (ret_both (WitnessToField (fst b)))
-                    (ret_both (snd b : 'bool)))
-          ⦃ fun '(x,_) '(y,_) => or_run_post_cond x y  ⦄.
+                    (ret_both (fst b))
+                    (ret_both (WitnessToField (fst (snd b))))
+                    (ret_both (snd (snd b) : 'bool)))
+          ⦃ fun '(x,h0) '(y,h1) => or_run_post_cond x y ∧ heap_ignore Sigma_locs (h0, h1) ⦄.
   Proof.
     intros.
 
@@ -1226,8 +1271,13 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
 
     unfold OVN.zkp_one_out_of_two.
 
-    rewrite !otf_fto; unfold R; rewrite eqxx; unfold assertD.
-
+    rewrite !otf_fto; unfold R.
+    (* unfold assertD. *)
+    apply r_assertD ; [ reflexivity | ].
+    intros _ ?.
+    apply reflection_nonsense in e₁.
+    rewrite e₁. clear e₁.
+    
     pose (bij_f := randomness_sample_is_bijective).
     set (f_rand := fun _ => _) in bij_f.
 
@@ -1246,6 +1296,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       end.
     subst f_rand f_rand_inner.
 
+    destruct b as [? b].
     destruct b as [? []] eqn:bo.
     {
       simpl.
@@ -1254,7 +1305,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       simpl.
       Transparent Build_t_OrZKPCommit.
       unfold Build_t_OrZKPCommit; hnf.
-
+      
       eapply (r_transR_both (B := t_OrZKPCommit)) ; [ set (H_hash := f_hash _); pattern_lhs_both_pat H_hash ; apply (bind_both_eta) |  hnf ; unfold bind_both at 1, bind_raw_both, both_prog at 1, is_state at 1; set (f_or := fun _ => is_state (bind_both _ _)) ].
 
       (* TODO : connect hash to random sample value ! *)
@@ -1274,6 +1325,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       intros.
 
       unfold or_run_post_cond.
+      unfold hacspec_ret_to_or_sigma_ret.
       rewrite !otf_fto.
       unfold lower2 ; simpl.
 
@@ -1281,22 +1333,84 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       set (f_random_field_elem _).
       set (f_random_field_elem _).
 
-      repeat split ; clear ; simpl ; repeat setoid_rewrite <- expgnE ; push_down_sides.
-      + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-        rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+      repeat rewrite pair_equal_spec ; repeat split.
+      (* Statement *)
+      {
+        (* g ^ s = f_g_pow s *)
         rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-        rewrite pow_witness_to_field.
-        now normalize_equation.
-      + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-        rewrite (pow_witness_to_field (is_pure (f_prod _ _))) ; rewrite WitnessToFieldCancel.
-        rewrite !pow_witness_to_field.
-        now push_down_sides.
-      + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-        now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-      + now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-      + rewrite pow_witness_to_field.
-        now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-      + now rewrite pow_witness_to_field.
+        now rewrite pow_witness_to_field.
+      }
+      (* Commit *)
+      {
+        apply f_equal.
+        repeat rewrite pair_equal_spec ; repeat split.
+        all: clear ; simpl; push_down_sides.
+        all: repeat setoid_rewrite <- expgnE.
+        
+        - (* g ^ r * g ^ s ^ d = f_prod (f_g_pow r) (f_pow (f_g_pow s) d) *)
+          rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+          rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+          rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+          rewrite pow_witness_to_field.
+          now normalize_equation.
+        - rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+          rewrite (pow_witness_to_field (is_pure (f_prod _ _))) ; rewrite WitnessToFieldCancel.
+          rewrite !pow_witness_to_field.
+          now push_down_sides.
+        - rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+          now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+        - now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+        - rewrite pow_witness_to_field.
+          now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+        - now rewrite pow_witness_to_field.
+      }
+      (* Challenges *)
+      {
+        now rewrite FieldToWitnessCancel ; rewrite fto_otf.
+      }
+      (* Response *)
+      {
+        apply f_equal.
+        repeat (rewrite pair_equal_spec ; split).
+        all: clear ; simpl; push_down_sides.
+        all: repeat setoid_rewrite <- expgnE.
+        - reflexivity.
+        - reflexivity.
+        -
+            
+
+
+  rewrite FieldToWitnessOpp.
+  setoid_rewrite <- (FieldToWitnessCancel (otf x2)) ; rewrite FieldToWitnessAdd ; rewrite FieldToWitnessCancel.
+  setoid_rewrite <- (FieldToWitnessCancel s0) ; rewrite FieldToWitnessMul ; rewrite FieldToWitnessCancel.
+  rewrite FieldToWitnessOpp.
+  rewrite FieldToWitnessAdd.
+  f_equal.
+  push_down_sides.
+
+  rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
+  now repeat (push_down_sides ; f_equal).
+        - rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
+
+          rewrite FieldToWitnessOpp.
+          setoid_rewrite <- (FieldToWitnessCancel (otf x2)) ; rewrite FieldToWitnessAdd ; rewrite FieldToWitnessCancel.
+          f_equal.
+
+          now push_down_sides.
+      }
+      {
+        clear -H.
+        destruct H.
+        destruct H.
+        subst.
+        unfold heap_ignore.
+        intros.
+        unfold heap_ignore in H.
+
+        rewrite H ; [ | assumption ].
+        unfold Sigma_locs in H0 ; rewrite <- fset1E in H0 ; rewrite in_fset1 in H0.
+        now rewrite <- get_heap_set_heap.
+      }
     }
     {
       Opaque Build_t_OrZKPCommit.
@@ -1333,29 +1447,265 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       set (f_random_field_elem _).
       set (f_random_field_elem _).
 
-      repeat split ; clear ; simpl ; repeat setoid_rewrite <- expgnE ; push_down_sides.
-      + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-        now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-      + now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-      + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-        rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+      repeat rewrite pair_equal_spec ; repeat split.
+      (* Statement *)
+      {
+        (* g ^ s = f_g_pow s *)
         rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-        rewrite pow_witness_to_field.
-        now normalize_equation.
-      + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-        repeat progress f_equal.
-        rewrite pow_witness_to_field.
-        unfold lower1.
-        rewrite (proj1 both_equivalence_is_pure_eq (div_is_prod_inv _ _)).
-        push_down_sides.
-        now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-      + rewrite pow_witness_to_field.
-        now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-      + now rewrite pow_witness_to_field.
-    }
-    Time Qed.
-End OVN_or_proof.
+        now rewrite pow_witness_to_field.
+      }
+      (* Commit *)
+      {
+        apply f_equal.
+        repeat rewrite pair_equal_spec ; repeat split.
+        all: clear ; simpl; push_down_sides.
+        all: repeat setoid_rewrite <- expgnE.
 
+        + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+          now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+        + now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+        + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+          rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+          rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+          rewrite pow_witness_to_field.
+          now normalize_equation.
+        + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+          repeat progress f_equal.
+          rewrite pow_witness_to_field.
+          unfold lower1.
+          rewrite (proj1 both_equivalence_is_pure_eq (div_is_prod_inv _ _)).
+          push_down_sides.
+          now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+        + rewrite pow_witness_to_field.
+          now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+        + now rewrite pow_witness_to_field.
+      }
+      (* Challenges *)
+      {
+        now rewrite FieldToWitnessCancel ; rewrite fto_otf.
+      }
+      (* Response *)
+      {
+        apply f_equal.
+        repeat (rewrite pair_equal_spec ; split).
+        all: clear ; simpl; push_down_sides.
+        all: repeat setoid_rewrite <- expgnE.
+        - rewrite FieldToWitnessOpp.
+  setoid_rewrite <- (FieldToWitnessCancel (otf x2)) ; rewrite FieldToWitnessAdd ; rewrite FieldToWitnessCancel.
+  setoid_rewrite <- (FieldToWitnessCancel s0) ; rewrite FieldToWitnessMul ; rewrite FieldToWitnessCancel.
+  rewrite FieldToWitnessOpp.
+  rewrite FieldToWitnessAdd.
+  f_equal.
+  push_down_sides.
+
+  rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
+  now repeat (push_down_sides ; f_equal).
+        - rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
+
+          rewrite FieldToWitnessOpp.
+          setoid_rewrite <- (FieldToWitnessCancel (otf x2)) ; rewrite FieldToWitnessAdd ; rewrite FieldToWitnessCancel.
+          f_equal.
+
+          now push_down_sides.
+        - reflexivity.
+        - reflexivity.
+      }
+      {
+        clear -H.
+        destruct H.
+        destruct H.
+        subst.
+        unfold heap_ignore.
+        intros.
+        unfold heap_ignore in H.
+
+        rewrite H ; [ | assumption ].
+        unfold Sigma_locs in H0 ; rewrite <- fset1E in H0 ; rewrite in_fset1 in H0.
+        now rewrite <- get_heap_set_heap.
+      }
+    }
+    Fail Timeout 5 Qed. Admitted. (* SLOW: 525.61 sec *)
+
+  Program Definition hacspec_or_run :
+    package Sigma_locs
+        [interface]
+        [interface
+          #val #[ RUN ] : chRelation → chTranscript
+        ]
+    :=
+      [package
+         #def #[ RUN ] (b : chRelation) : chTranscript
+        {
+          #assert otf b.1 == g ^+ (otf b.2).1 ;;
+          wr ← sample uniform (2^32) ;;
+          rr ← sample uniform (2^32) ;;
+          dr ← sample uniform (2^32) ;;
+          v ← is_state (OVN.zkp_one_out_of_two
+                      (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord wr))))
+                      (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord rr))))
+                      (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord dr))))
+                      (ret_both (otf (fst b)))
+                      (ret_both (WitnessToField (fst (otf (snd b)))))
+                      (ret_both (snd (otf (snd b)) : 'bool))) ;;
+          ret (hacspec_ret_to_or_sigma_ret v)
+      }].
+  Next Obligation.
+    eapply (valid_package_cons _ _ _ _ _ _ [] []).
+    - apply valid_empty_package.
+    - intros.
+      ssprove_valid.
+      set (zkp_one_out_of_two _ _ _ _ _ _).
+      apply valid_scheme.
+      rewrite <- fset0E.
+      apply (ChoiceEquality.is_valid_code (both_prog_valid b)).
+    - try (rewrite <- fset0E ; setoid_rewrite @imfset0 ; rewrite in_fset0 ; reflexivity).
+  Qed.
+  Fail Next Obligation.
+  
+  Lemma compute_in_post_cond_R :
+    forall {A B C : choice_type} (a : raw_code A) (b : raw_code B) (f : B -> C) pre post,
+    ⊢ ⦃ pre ⦄ a ≈ b ⦃ fun '(x,h0) '(y,h1) => post (x, h0) (f y, h1) ⦄ ->
+    ⊢ ⦃ pre ⦄ a ≈ v ← b ;; ret (f v) ⦃ post ⦄.
+  Proof.
+    intros.
+    eapply r_transL.
+    2:{
+      eapply r_bind.
+      + apply H. 
+      + intros.
+        apply r_ret.
+        intros.
+        apply H0.
+    }
+    rewrite bind_ret.
+    apply rreflexivity_rule.
+  Qed.
+
+  Lemma hacspec_vs_RUN_interactive :
+    ∀ LA A,
+      ValidPackage LA [interface
+                         #val #[ RUN ] : chRelation → chTranscript
+        ] A_export A →
+      fdisjoint LA Sigma_locs →
+      AdvantageE hacspec_or_run RUN_interactive A = 0.
+  Proof.
+    intros LA A Va Hdisj.
+    eapply eq_rel_perf_ind_ignore.
+    6,7: apply Hdisj.
+    5: apply Va.
+    2:{
+      unfold RUN_interactive.
+      eapply valid_package_inject_export.
+      2:{
+        eapply (valid_package_cons).
+        + eapply (valid_package_cons).
+          * apply valid_empty_package.
+          * intros.
+            ssprove_valid ; apply prog_valid.
+          * try (rewrite <- fset0E ; setoid_rewrite @imfset0 ; rewrite in_fset0 ; reflexivity).
+        + intros.
+          ssprove_valid ; apply prog_valid.
+        + rewrite <- fset1E.
+          rewrite imfset1.
+          reflexivity.
+      }
+      - rewrite !fset_cons.
+        apply fsubsetUr.
+    }
+    {
+      apply hacspec_or_run.
+    }
+    {
+      apply fsubsetUl.
+    }
+    unfold eq_up_to_inv.
+    intros.
+    unfold get_op_default.
+
+    set (match _ with | Option_Some _ => _ | None => _ end) at 2.
+    rewrite <- fset1E in H.
+    apply (ssrbool.elimT (fset1P _ _)) in H.
+    inversion H.
+    Opaque zkp_one_out_of_two.
+    simpl (lookup_op _ _).
+    destruct choice_type_eqP ; [ | subst ; contradiction ].
+    destruct choice_type_eqP ; [ | subst ; contradiction ].
+    subst.
+    rewrite cast_fun_K.
+    (* rewrite cast_fun_K. *)
+    apply rsymmetry.
+
+    destruct x.
+
+    set (pkg_core_definition.sampler _ _).
+
+    eassert (r =
+              (v ← (wr ← sample uniform (2 ^ 32) ;;
+                    rr ← sample uniform (2 ^ 32) ;;
+                    dr ← sample uniform (2 ^ 32) ;;
+                    is_state
+                      (zkp_one_out_of_two _
+                         _
+                         _
+                         (ret_both ((otf (s, s0).1)))
+                         (ret_both (WitnessToField (otf (s, s0).2).1))
+                         _)) ;;
+               ret (hacspec_ret_to_or_sigma_ret v))) by (now subst r ; simpl) ; rewrite H0 ; clear H0.
+    clear.
+
+    eapply r_transR ; [ apply r_bind_assertD | hnf ].
+    apply compute_in_post_cond_R.
+    eapply rpost_weaken_rule.
+    1:{
+      eapply r_transL.
+      2:{
+        eapply (or_run_eq (λ '(h₁, h₀), heap_ignore Sigma_locs (h₀, h₁)) (otf s, otf s0) y).
+        subst y.
+        simpl.
+        destruct choice_type_eqP ; [ | subst ; contradiction ].
+        destruct choice_type_eqP ; [ | subst ; contradiction ].
+        subst.
+        rewrite cast_fun_K.
+        reflexivity.
+      }
+      {
+        rewrite !fto_otf.
+        apply rreflexivity_rule.        
+      }
+    }
+    {
+      intros.
+      destruct a₀.
+      destruct a₁.
+      destruct H.
+      unfold or_run_post_cond in H.
+      rewrite H.
+      split ; [ reflexivity | ].
+      unfold heap_ignore in H0.
+      unfold heap_ignore.
+      intros.
+      specialize (H0 ℓ H1).
+      easy.
+    }
+  Qed.
+
+  Lemma run_interactive_or_shvzk :
+    ∀ LA A,
+      ValidPackage LA [interface
+                         #val #[ RUN ] : chRelation → chTranscript
+        ] A_export A →
+      fdisjoint LA Sigma_locs →
+      AdvantageE hacspec_or_run (SHVZK_real_aux ∘ SHVZK_real) A = 0.
+  Proof.
+    intros.
+    apply (AdvantageE_le_0 _ _ _ ).
+    eapply Order.le_trans ; [ eapply (Advantage_triangle _ _ RUN_interactive _) | ].
+    rewrite (run_interactive_shvzk Simulator_locs (fun x => {code r ← sample uniform #|Challenge| ;; Simulate x r }) LA A H H0).
+    rewrite GRing.addr0.
+    now rewrite hacspec_vs_RUN_interactive.
+  Qed.
+
+End OVN_or_proof.
 
 (*** Example (Z89) *)
 
@@ -1427,7 +1777,7 @@ Module Z89_group_operations <: GroupOperationProperties Z89_impl.
     now rewrite <- both_pure.
   Qed.
 
-  Lemma f_opp_by_sub : forall x y, f_sub x y ≈both f_add x (f_sub f_field_zero y).
+  Lemma f_sub_by_opp : forall x y, f_sub x y ≈both f_add x (f_opp y).
   Proof. Admitted.
   (*   intros. *)
   (*   simpl. *)
@@ -1520,7 +1870,7 @@ Module Z89_group_operations <: GroupOperationProperties Z89_impl.
   (*   now rewrite Zp_add0z. *)
   (* Qed. *)
 
-  Lemma f_addNz: forall x, f_add ((f_sub f_field_zero x) (* f_opp *)) x ≈both f_field_zero.
+  Lemma f_addNz: forall x, f_add (f_opp x) x ≈both f_field_zero.
   Proof. Admitted.
   (* Proof. *)
   (*   unfold_both_eq. *)
