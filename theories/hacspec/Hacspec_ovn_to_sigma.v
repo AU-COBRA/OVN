@@ -1081,10 +1081,14 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
       destruct (otf z) as [[[lr1 ld1] lr2] ld2].
       destruct (otf z') as [[[rr1 rd1] rr2] rd2].
 
-      pose (xl := ((lr2 - rr2) * (ld2 - rd2)^-1)).
-      pose (xr := ((lr1 - rr1) * (ld1 - rd1)^-1)).
+      refine (Some (fto (((lr2 - rr2) * (rd2 - ld2)^-1), false (* TODO *)))).
 
-      refine (Some (fto (if otf h == g ^+ xl then (xl, true) else (xr, false)))).
+      (* pose (xl := ((lr2 - rr2) * (rd2 - ld2)^-1)). *)
+      (* pose (xr := ((lr1 - rr1) * (rd1 - ld1)^-1)). *)
+
+      (* refine (if otf h == g ^+ xl *)
+      (*         then Some (fto (xl, true)) *)
+      (*         else Some (fto (xr, false))). *)
     Defined.
 
     Definition KeyGen (xv : choiceWitness) :=
@@ -1677,140 +1681,56 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
   (* Proof. *)
   (*   intros. *)
   (*   apply run_interactive_or_shvzk. *)
-    
-(* Lemma proving that the output of the extractor defined for Schnorr's
+
+
+  (* Lemma proving that the output of the extractor defined for Schnorr's
   protocol is perfectly indistinguishable from real protocol execution.
-*)
-Lemma extractor_success:
-  ∀ LA A,
-    ValidPackage LA [interface
-      #val #[ SOUNDNESS ] : chSoundness → 'bool
-    ] A_export A →
-    ɛ_soundness A = 0.
-Proof.
-  intros LA A VA.
-  apply: eq_rel_perf_ind_eq.
-  2,3: apply fdisjoints0.
-  simplify_eq_rel h.
-  destruct h as [h [a [[e z] [e' z']]]].
-  unfold Extractor ; simpl.
-  destruct (otf a) as [[[[[a1 b1] a2] b2] x] y].
-  destruct (otf z) as [[[lr1 ld1] lr2] ld2].
-  destruct (otf z') as [[[rr1 rd1] rr2] rd2].
-  simpl.
-  rewrite !otf_fto.
-  destruct ([ && _ , _ & _ ]) ; apply r_ret ; [ | easy ].
-  intros.
-  split ; [ clear | easy ].
-  unfold R.
-  simpl.
-  symmetry.
-  
-  unfold "&&" in rel.
-  inversion rel.
-  repeat match goal with
-  | |- context [ if ?b then _ else _ ] => case b eqn:?
-  end.
-  2,3: discriminate.
-  rewrite otf_fto in Heqs4.
-  rewrite otf_fto in rel.
-  apply reflection_nonsense in rel.
-  apply reflection_nonsense in Heqs4.
-  rewrite H0.
-  rewrite otf_fto expg_mod.
-  2: rewrite order_ge1 ; apply expg_order.
-  rewrite expgM expg_mod.
-  2: rewrite order_ge1 ; apply expg_order.
-  rewrite expgD -FinRing.zmodVgE expg_zneg.
-  2: apply cycle_id.
-  rewrite Heqs4 rel !expgMn.
-  2-3: apply group_prodC.
-  rewrite invMg !expgMn.
-  2: apply group_prodC.
-  rewrite !group_prodA.
-  rewrite group_prodC 2!group_prodA -expgMn.
-  2: apply group_prodC.
-  rewrite mulVg expg1n mul1g -expg_zneg.
-  2:{
-    have Hx : exists ix, otf h = g ^+ ix.
-    { apply /cycleP. rewrite -g_gen. apply: in_setT. }
-    destruct Hx as [ix ->].
-    apply mem_cycle.
-  }
-  rewrite expgAC.
-  rewrite [otf h ^+ (- otf s1) ^+ _] expgAC.
-  rewrite -expgD -expgM.
-  have <- := @expg_mod _ q.
-  2:{
-    have Hx : exists ix, otf h = g ^+ ix.
-    { apply /cycleP. rewrite -g_gen. apply: in_setT. }
-    destruct Hx as [ix ->].
-    rewrite expgAC /q.
-    rewrite expg_order.
-    apply expg1n.
-  }
-  rewrite -modnMmr.
-  have -> :
-    (modn
-       (addn (@nat_of_ord (S (S (Zp_trunc q))) (@otf Challenge s0))
-             (@nat_of_ord (S (S (Zp_trunc q)))
-                          (GRing.opp (@otf Challenge s1)))) q) =
-    (@nat_of_ord (S (S (Zp_trunc q)))
-                   (@Zp_add (S (Zp_trunc q)) (@otf Challenge s0) (@Zp_opp (S (Zp_trunc q)) (@otf Challenge s1)))).
-  { simpl.
-    rewrite modnDmr.
-    destruct (otf s1) as [a Ha].
-    destruct a as [| Pa].
-    - simpl.
-      rewrite subn0 modnn addn0 modnDr.
-      rewrite -> order_ge1 at 3.
-      rewrite modn_small.
-      + reflexivity.
-      + rewrite <- order_ge1 at 2. apply ltn_ord.
-    - simpl.
-      rewrite <- order_ge1 at 4.
-      rewrite modnDmr.
-      reflexivity.
-  }
-  have -> :
-    (modn
-       (muln (@nat_of_ord (S (S (Zp_trunc q)))
-                          (GRing.inv
-                                      (GRing.add
-                                                  (@otf Challenge s0)
-                                                  (GRing.opp
-                                                              (@otf Challenge s1)))))
-             (@nat_of_ord (S (S (Zp_trunc q)))
-                          (@Zp_add (S (Zp_trunc q)) (@otf Challenge s0) (@Zp_opp (S (Zp_trunc q)) (@otf Challenge s1))))) q) =
-    (Zp_mul
-       (GRing.inv
-                   (GRing.add
-                               (@otf Challenge s0)
-                               (GRing.opp
-                                           (@otf Challenge s1))))
-       (@Zp_add (S (Zp_trunc q)) (@otf Challenge s0) (@Zp_opp (S (Zp_trunc q)) (@otf Challenge s1)))).
-  { simpl.
-    rewrite modnDmr.
-    rewrite <- order_ge1 at 9.
-    rewrite modnMmr.
+   *)
+  Lemma extractor_success:
+    ∀ LA A,
+      ValidPackage LA [interface
+                         #val #[ SOUNDNESS ] : chSoundness → 'bool
+        ] A_export A →
+      ɛ_soundness A = 0.
+  Proof.
+    intros LA A VA.
+    apply: eq_rel_perf_ind_eq.
+    2,3: apply fdisjoints0.
+    simplify_eq_rel h.
+    destruct h as [h [a [[e z] [e' z']]]].
+
+    destruct (otf (Verify h a e z)) eqn:verify_haez ; [ | now rewrite Bool.andb_false_r ; apply r_ret ].
+    destruct (otf (Verify h a e' z')) eqn:verify_haez' ; [ | now simpl ; rewrite Bool.andb_false_r ; apply r_ret ].
+    destruct (_ == _) eqn:e_eq ; [ now simpl ; apply r_ret | ].
+    simpl ([&& _ , _ & _]) ; hnf.
+
+    unfold Extractor. unfold Verify in verify_haez, verify_haez'.
+    destruct (otf a) as [[[[[a1 b1] a2] b2] x] y].
+    destruct (otf z) as [[[lr1 ld1] lr2] ld2].
+    destruct (otf z') as [[[rr1 rd1] rr2] rd2].
+    rewrite !otf_fto in verify_haez, verify_haez'.
+    rewrite <- !Bool.andb_assoc in verify_haez, verify_haez'.
+    apply (ssrbool.elimT and5P) in verify_haez, verify_haez'.
+    rewrite !boolp.eq_opE in verify_haez, verify_haez'.
+    destruct verify_haez, verify_haez'.
+    rewrite otf_fto.
+    unfold R, fst.
+    apply r_ret.
+    intros.
+    split ; [ clear H9 | apply H9 ].
+
+    subst.
+    clear -H7.
+    assert (x = otf h) by admit.
+    rewrite H in H7.
+    assert (g ^+ (lr2 - rr2) = otf h ^+ (rd2 - ld2)) by admit.
+    assert ((g ^+ (lr2 - rr2)) ^- (rd2 - ld2) = otf h) by admit.
+    assert ((g ^+ (lr2 - rr2)) ^- (rd2 - ld2) = (g ^+ ((lr2 - rr2) * (rd2 - ld2) ^-1 )%g)) by admit.
+    rewrite <- H1.
+    rewrite H2.
+    rewrite eqxx.
     reflexivity.
-  }
-  rewrite Zp_mulVz.
-  1: cbn ; by rewrite eq_refl.
-  rewrite -> order_ge1 at 1.
-  apply otf_neq in Heqb.
-  rewrite prime_coprime.
-  2: apply prime_order.
-  rewrite gtnNdvd.
-  - done.
-  - rewrite lt0n.
-    apply neq_pos.
-    assumption.
-  - destruct (otf s0 - otf s1) as [k Hk].
-    simpl.
-    rewrite order_ge1 in Hk.
-    apply Hk.
-Qed.
+  Admitted.
 
 End OVN_or_proof.
 
