@@ -909,19 +909,39 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
   Module MyParam <: SigmaProtocolParams.
 
     Definition Witness : finType :=  prod (Finite.clone _ 'Z_q) 'bool.
-    Definition Statement : finType := gT.
+    Definition Statement : finType := prod (prod gT gT) gT.
     Definition Message : finType :=  prod (prod (prod (prod (prod gT gT) gT) gT) gT) gT.
     Definition Challenge : finType := Finite.clone _ 'Z_q.
     Definition Response : finType :=  (prod (prod (prod (Finite.clone _ 'Z_q) (Finite.clone _ 'Z_q)) (Finite.clone _ 'Z_q)) (Finite.clone _ 'Z_q)).
-    Definition Transcript : finType :=
-      prod (prod Message Challenge) Response.
 
     Definition w0 : Witness := 0.
     Definition e0 : Challenge := 0.
     Definition z0 : Response := 0.
 
     Definition R : Statement -> Witness -> bool :=
-      (λ (h : Statement) (w : Witness), h == (HacspecGroup.g ^+ (fst w))).
+      (λ (xhy : Statement) (xv : Witness),
+        let '(m,v) := xv in
+        let '(x,h,y) := xhy in
+        (x == g ^+ m) && (y == h^+m * (if v then g else 1))).
+
+    Lemma relation_valid_left:
+      ∀ (x : 'Z_q) (gy : gT),
+        R (g ^+x, gy, gy^+x * g) (x, true).
+    Proof.
+      intros x gy.
+      unfold R.
+      now rewrite !eqxx.
+    Qed.
+
+    Lemma relation_valid_right:
+      ∀ (x : 'Z_q) (gy : gT),
+        R (g ^+ x, gy, gy^+x) (x, false).
+    Proof.
+      intros x gy.
+      unfold R.
+      rewrite mulg1.
+      now rewrite !eqxx.
+    Qed.
 
     #[export] Instance positive_gT : Positive #|HacspecGroup.gT|.
     Proof.
@@ -980,120 +1000,100 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
     Definition Sigma_locs : {fset Location} := fset [:: commit_loc].
     Definition Simulator_locs : {fset Location} := fset0.
 
-    Definition Commit (h : choiceStatement) (xv : choiceWitness):
+    Definition Commit (hy : choiceStatement) (xv : choiceWitness):
       code Sigma_locs [interface] choiceMessage :=
       {code
          w ← sample uniform i_witness ;;
-         r ← sample uniform i_witness ;;
          d ← sample uniform i_witness ;;
+         r ← sample uniform i_witness ;;
          #put commit_loc := (w, r, d) ;;
-         let '(xi, vi) := (otf xv) in
-         let x := (g ^+ xi) in
+         let '(x, h, y) := (otf hy) in
+         let '(m, vi) := (otf xv) in
          if vi
          then
            (
              let r1 := r in
              let d1 := d in
 
-             let y := (otf h ^+ xi * g) in
-
              let a1 := (g ^+ (otf r1 : 'Z_q) * x ^+ (otf d1 : 'Z_q)) in
-             let b1 := (otf h ^+ (otf r1 : 'Z_q) * y ^+ (otf d1 : 'Z_q)) in
+             let b1 := (h ^+ (otf r1 : 'Z_q) * y ^+ (otf d1 : 'Z_q)) in
 
              let a2 := (g ^+ (otf w : 'Z_q)) in
-             let b2 := (otf h ^+ (otf w : 'Z_q)) in
+             let b2 := (h ^+ (otf w : 'Z_q)) in
              ret (fto (a1, b1, a2, b2, x, y)))
          else
            (let r2 := r in
             let d2 := d in
 
-            let y := (otf h ^+ xi) in
-
             let a1 := (g ^+ (otf w : 'Z_q)) in
-            let b1 := (otf h ^+ (otf w : 'Z_q)) in
+            let b1 := (h ^+ (otf w : 'Z_q)) in
 
             let a2 := (g ^+ (otf r2 : 'Z_q) * x ^+ (otf d2 : 'Z_q)) in
-            let b2 := (otf h ^+ (otf r2 : 'Z_q) * (y * g^-1) ^+ (otf d2 : 'Z_q)) in
+            let b2 := (h ^+ (otf r2 : 'Z_q) * (y * g^-1) ^+ (otf d2 : 'Z_q)) in
 
             ret (fto (a1, b1, a2, b2, x, y)))
       }.
 
-    Definition Response (h : choiceStatement) (xv : choiceWitness) (a : choiceMessage) (c : choiceChallenge) :
+    Definition Response (hy : choiceStatement) (xv : choiceWitness) (_ : choiceMessage) (c : choiceChallenge) :
       code Sigma_locs [interface] choiceResponse :=
       {code
          '(w, r, d) ← get commit_loc ;;
-         let '(xi, vi) := (otf xv) in
-         let '(a1, b1, a2, b2) := (otf a) in
+         let '(m, vi) := (otf xv) in
+         (* let '(a1, b1, a2, b2) := (otf a) in *)
          if vi
          then
-           (let d2 := otf c - otf d in
-            let r2 := otf w - (xi * d2) in
+           (let d2 := (otf c - otf d) in
+            let r2 := (otf w - (m * d2)) in
             ret (fto (otf r, otf d, r2, d2)))
          else
-           (let d1 := otf c - otf d in
-            let r1 := otf w - (xi * d1) in
+           (let d1 := (otf c - otf d) in
+            let r1 := (otf w - (m * d1)) in
             ret (fto (r1, d1, otf r, otf d)))
       }.
 
-    Program Definition Simulate (h : choiceStatement) (c : choiceChallenge) :
+    Definition Simulate (hy : choiceStatement) (c : choiceChallenge) :
       code Simulator_locs [interface] choiceTranscript :=
       {code
-         r1 ← sample uniform i_witness ;;
-         r2 ← sample uniform i_witness ;;
-         z1 ← sample uniform i_witness ;;
-         z2 ← sample uniform i_witness ;;
-         ret _
+         d ← sample uniform i_witness ;;
+         r ← sample uniform i_witness ;;
+         r_other ← sample uniform i_witness ;;
+         let '(x, h, y) := otf hy in
+         let d2 := otf d in
+         let r2 := otf r in
+         let r1 := otf r_other in
+
+         let d1 := otf c - d2 in
+
+         let a1 := g ^+ r1 * x ^+ d1 in
+         let b1 := h ^+ r1 * y ^+ d1 in
+
+         let a2 := g ^+ r2 * x ^+ d2 in
+         let b2 := h ^+ r2 * (y * invg g) ^+ d2 in
+
+         ret (hy , fto (a1,b1,a2,b2, x, y), c , fto (r1,d1,r2,d2))
       }.
-    Next Obligation.
-      pose (otf h).
-      pose (otf c).
 
-      epose (xi := ((otf z1 + otf r1) + (otf z2 + otf r2)) * (otf c) ^-1).
-      epose (d1 := (otf z1 - otf r1) * xi ^-1).
-      epose (d2 := (otf z2 - otf r2) * xi ^-1).
-
-      epose (x := (g ^+ z1) ).
-      epose (y := (otf h ^+ xi)).
-
-      epose (a1 := (g ^+ r1) * (x ^+ d1)).
-      epose (b1 := (otf h ^+ r1) * (y ^+ d1)).
-      epose (a2 := (g ^+ r2) * (x ^+ d2)).
-      epose (b2 := (otf h ^+ r2) * (y * g^-1) ^+ d2).
-
-      refine (fto x, fto (a1, b1, a2, b2, x, y), c, fto (otf r1, d1, otf r2, d2)).
-    Defined.
-
-    Definition Verify (h : choiceStatement) (a : choiceMessage)
+    Definition Verify (xhy : choiceStatement) (a : choiceMessage)
       (c : choiceChallenge) (z : choiceResponse) : choiceBool :=
+          let '(x, h, y) := otf xhy in
           let '(a1, b1, a2, b2, x, y) := (otf a) in
           let '(r1, d1, r2, d2) := (otf z) in
           fto ((otf c == d1 + d2) &&
                (a1 == (g ^+ r1) * (x ^+ d1)) &&
-               (b1 == (otf h ^+ r1) * (y ^+ d1)) &&
+               (b1 == (h ^+ r1) * (y ^+ d1)) &&
                (a2 == (g ^+ r2) * (x ^+ d2)) &&
-               (b2 == (otf h ^+ r2) * ((y * (g ^-1)) ^+ d2))).
+               (b2 == (h ^+ r2) * ((y * (g ^-1)) ^+ d2))).
 
     Definition Extractor (h : choiceStatement) (a : choiceMessage)
       (e : choiceChallenge) (e' : choiceChallenge)
-      (z : choiceResponse)  (z' : choiceResponse) : 'option choiceWitness.
-    Proof.
-      destruct (otf a) as [[[[[a1 b1] a2] b2] x] y].
-      destruct (otf z) as [[[lr1 ld1] lr2] ld2].
-      destruct (otf z') as [[[rr1 rd1] rr2] rd2].
-
-      refine (Some (fto (((lr2 - rr2) * (rd2 - ld2)^-1), false (* TODO *)))).
-
-      (* pose (xl := ((lr2 - rr2) * (rd2 - ld2)^-1)). *)
-      (* pose (xr := ((lr1 - rr1) * (rd1 - ld1)^-1)). *)
-
-      (* refine (if otf h == g ^+ xl *)
-      (*         then Some (fto (xl, true)) *)
-      (*         else Some (fto (xr, false))). *)
-    Defined.
+      (z : choiceResponse)  (z' : choiceResponse) : 'option choiceWitness :=
+      let '((a1, b1, a2, b2),(lr1,ld1,lr2,ld2),(rr1,rd1,rr2,rd2)) := (otf a, otf z, otf z') in
+      Some (fto (((lr2 - rr2) / (rd2 - ld2)), false)).
 
     Definition KeyGen (xv : choiceWitness) :=
-      let (xi, vi) := otf xv in
-      fto (g ^+ xi).
+      let (m, vi) := otf xv in
+      fto (g ^+ m, g ^+ m, g ^+ m * (if vi then g else 1)).
+    (* TODO: should be g ^+ yi, g ^+ (yi * mi * nat vi) *)
 
   End MyAlg.
 
@@ -1181,12 +1181,12 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
               ret x) }.
 
   Transparent run.
-  Definition hacspec_ret_to_or_sigma_ret : OVN.t_OrZKPCommit -> choiceTranscript.
+  Definition hacspec_ret_to_or_sigma_ret : Statement -> OVN.t_OrZKPCommit -> choiceTranscript.
   Proof.
-    intros [[[[[[[[[[r1x r2y] r3a1] r4b1] r5a2] r6b2] r7c] r8d1] r9d2] r10r1] r11r2].
+    intros hy [[[[[[[[[[r1x r2y] r3a1] r4b1] r5a2] r6b2] r7c] r8d1] r9d2] r10r1] r11r2].
     refine (fto _, fto _, fto _, fto _).
     (* choiceStatement *)
-    - refine r1x.
+    - refine hy.
 
     (* choiceMessage *)
     - refine (r3a1, r4b1, r5a2, r6b2, r1x, r2y).
@@ -1199,11 +1199,12 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
   Defined.
 
   Definition or_run_post_cond :
+    choiceStatement ->
     tgt (RUN, (choiceStatement × choiceWitness, choiceTranscript))
     → OVN.t_OrZKPCommit → Prop.
   Proof.
-    intros a b.
-    refine (a = hacspec_ret_to_or_sigma_ret b).
+    intros stmt a b.
+    refine (a = hacspec_ret_to_or_sigma_ret (otf stmt) b).
   Defined.
 
  Lemma or_run_eq  (pre : precond) :
@@ -1212,24 +1213,24 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       ⊢ ⦃ fun '(h₁, h₀) => heap_ignore Sigma_locs (h₀, h₁) ⦄
         c (fto (fst b), fto (snd b))
         ≈
-        #assert b.1 == g ^+ b.2.1 ;;
+        #assert R (b.1) (b.2) ;;
         wr ← sample uniform (2^32) ;;
-        rr ← sample uniform (2^32) ;;
         dr ← sample uniform (2^32) ;;
+        rr ← sample uniform (2^32) ;;
         is_state (OVN.zkp_one_out_of_two
                     (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord wr))))
                     (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord rr))))
                     (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord dr))))
-                    (ret_both (fst b))
+                    (ret_both (snd (fst (fst b))))
                     (ret_both (WitnessToField (fst (snd b))))
                     (ret_both (snd (snd b) : 'bool)))
-          ⦃ fun '(x,h0) '(y,h1) => or_run_post_cond x y ∧ heap_ignore Sigma_locs (h0, h1) ⦄.
+          ⦃ fun '(x,h0) '(y,h1) => or_run_post_cond (fto (fst b)) x y ∧ heap_ignore Sigma_locs (h0, h1) ⦄.
   Proof.
-    intros.
+    intros [[[x h] y] [m v]] c H.
 
     cbn in H.
-    destruct choice_type_eqP ; [ | discriminate ].
-    destruct choice_type_eqP ; [ | discriminate ].
+    destruct choice_type_eqP as [ e | ] ; [ | discriminate ].
+    destruct choice_type_eqP as [ e1 | ] ; [ | discriminate ].
     rewrite cast_fun_K in H.
     clear e e1.
     inversion_clear H.
@@ -1240,15 +1241,20 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     (* unfold assertD. *)
     apply r_assertD ; [ reflexivity | ].
     intros _ ?.
-    apply reflection_nonsense in e₁.
-    rewrite e₁. clear e₁.
+    simpl in e₁.
+    apply andb_prop in e₁.
+    destruct e₁ as [e2 e3].
+    apply reflection_nonsense in e2.
+    apply reflection_nonsense in e3.
+    rewrite e2.
+    rewrite e3.
 
     pose (bij_f := randomness_sample_is_bijective).
     set (f_rand := fun _ => _) in bij_f.
 
-    eapply rsymmetry ; eapply r_uniform_bij with (f := fun x => _) ; [ apply bij_f | intros ] ; apply rsymmetry ; apply better_r.
-    eapply rsymmetry ; eapply r_uniform_bij with (f := fun x => _) ; [ apply bij_f | intros ] ; apply rsymmetry ; apply better_r.
-    eapply rsymmetry ; eapply r_uniform_bij with (f := fun x => _) ; [ apply bij_f | intros ] ; apply rsymmetry ; apply better_r.
+    eapply rsymmetry ; eapply r_uniform_bij with (f := fun x => _) ; [ apply bij_f | intros x0 ] ; apply rsymmetry ; apply better_r.
+    eapply rsymmetry ; eapply r_uniform_bij with (f := fun x => _) ; [ apply bij_f | intros x1 ] ; apply rsymmetry ; apply better_r.
+    eapply rsymmetry ; eapply r_uniform_bij with (f := fun x => _) ; [ apply bij_f | intros x2] ; apply rsymmetry ; apply better_r.
 
     apply better_r_put_lhs.
 
@@ -1261,11 +1267,10 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       end.
     subst f_rand f_rand_inner.
 
-    destruct b as [? b].
-    destruct b as [? []] eqn:bo.
+    destruct v eqn:vo.
     {
       simpl.
-      rewrite otf_fto.
+      (* rewrite otf_fto. *)
       repeat unfold let_both at 1.
       simpl.
       Transparent Build_t_OrZKPCommit.
@@ -1281,90 +1286,85 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
         -- now intros n ; rewrite FieldToWitnessCancel ; rewrite fto_otf.
         -- now intros n; rewrite otf_fto ; rewrite WitnessToFieldCancel.
       }
-      intros.
+      intros x3.
 
       apply getr_set_lhs.
       apply make_pure ; simpl.
 
       apply r_ret.
-      intros.
+      intros ? ? ?.
 
       unfold or_run_post_cond.
       unfold hacspec_ret_to_or_sigma_ret.
       rewrite !otf_fto.
       unfold lower2 ; simpl.
+      (* rewrite !mulg1. *)
 
       set (f_random_field_elem _).
       set (f_random_field_elem _).
       set (f_random_field_elem _).
 
-      repeat rewrite pair_equal_spec ; repeat split.
-      (* Statement *)
-      {
-        (* g ^ s = f_g_pow s *)
-        rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-        now rewrite pow_witness_to_field.
-      }
-      (* Commit *)
-      {
-        apply f_equal.
-        repeat rewrite pair_equal_spec ; repeat split.
-        all: clear ; simpl; push_down_sides.
-        all: repeat setoid_rewrite <- expgnE.
+      split.
+      - repeat (rewrite pair_equal_spec ; split).
+        (* Statement *)
+        {
+          reflexivity.
+        }
+        (* Commit *)
+        {
+          apply f_equal.
+          repeat rewrite pair_equal_spec ; repeat split.
+          all: clear ; simpl; push_down_sides.
+          all: repeat setoid_rewrite <- expgnE.
 
-        - (* g ^ r * g ^ s ^ d = f_prod (f_g_pow r) (f_pow (f_g_pow s) d) *)
-          rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-          rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-          rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-          rewrite pow_witness_to_field.
-          now normalize_equation.
-        - rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-          rewrite (pow_witness_to_field (is_pure (f_prod _ _))) ; rewrite WitnessToFieldCancel.
-          rewrite !pow_witness_to_field.
-          now push_down_sides.
-        - rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-          now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-        - now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-        - rewrite pow_witness_to_field.
-          now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-        - now rewrite pow_witness_to_field.
-      }
-      (* Challenges *)
-      {
-        now rewrite FieldToWitnessCancel ; rewrite fto_otf.
-      }
-      (* Response *)
-      {
-        apply f_equal.
-        repeat (rewrite pair_equal_spec ; split).
-        all: clear ; simpl; push_down_sides.
-        all: repeat setoid_rewrite <- expgnE.
-        - reflexivity.
-        - reflexivity.
-        -
+          - (* g ^ r * g ^ s ^ d = f_prod (f_g_pow r) (f_pow (f_g_pow s) d) *)
+            rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+            rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+            rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+            rewrite pow_witness_to_field.
+            now normalize_equation.
+          - rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+            rewrite (pow_witness_to_field (is_pure (f_prod _ _))) ; rewrite WitnessToFieldCancel.
+            rewrite !pow_witness_to_field.
+            now push_down_sides.
+          - rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+            now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+          - now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+          - rewrite pow_witness_to_field.
+            now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+          - now rewrite pow_witness_to_field.
+        }
+        (* Challenges *)
+        {
+          now rewrite FieldToWitnessCancel ; rewrite fto_otf.
+        }
+        (* Response *)
+        {
+          apply f_equal.
+          repeat (rewrite pair_equal_spec ; split).
+          all: clear ; simpl; push_down_sides.
+          all: repeat setoid_rewrite <- expgnE.
+          - reflexivity.
+          - reflexivity.
+          - rewrite FieldToWitnessOpp.
+            setoid_rewrite <- (FieldToWitnessCancel (otf x3)) ; rewrite FieldToWitnessAdd ; rewrite FieldToWitnessCancel.
+            setoid_rewrite <- (FieldToWitnessCancel m) ; rewrite FieldToWitnessMul ; rewrite FieldToWitnessCancel.
+            rewrite FieldToWitnessOpp.
+            rewrite FieldToWitnessAdd.
+            f_equal.
+            push_down_sides.
 
+            rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
+            now repeat (push_down_sides ; f_equal).
+          - rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
 
+            rewrite FieldToWitnessOpp.
+            setoid_rewrite <- (FieldToWitnessCancel (otf x3)) ; rewrite FieldToWitnessAdd ; rewrite FieldToWitnessCancel.
+            f_equal.
 
-  rewrite FieldToWitnessOpp.
-  setoid_rewrite <- (FieldToWitnessCancel (otf x2)) ; rewrite FieldToWitnessAdd ; rewrite FieldToWitnessCancel.
-  setoid_rewrite <- (FieldToWitnessCancel s0) ; rewrite FieldToWitnessMul ; rewrite FieldToWitnessCancel.
-  rewrite FieldToWitnessOpp.
-  rewrite FieldToWitnessAdd.
-  f_equal.
-  push_down_sides.
-
-  rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
-  now repeat (push_down_sides ; f_equal).
-        - rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
-
-          rewrite FieldToWitnessOpp.
-          setoid_rewrite <- (FieldToWitnessCancel (otf x2)) ; rewrite FieldToWitnessAdd ; rewrite FieldToWitnessCancel.
-          f_equal.
-
-          now push_down_sides.
-      }
-      {
-        clear -H.
+            now push_down_sides.
+        }
+      - clear -H.
         destruct H.
         destruct H.
         subst.
@@ -1375,12 +1375,11 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
         rewrite H ; [ | assumption ].
         unfold Sigma_locs in H0 ; rewrite <- fset1E in H0 ; rewrite in_fset1 in H0.
         now rewrite <- get_heap_set_heap.
-      }
     }
     {
       Opaque Build_t_OrZKPCommit.
       simpl.
-      rewrite otf_fto.
+      (* rewrite otf_fto. *)
       repeat unfold let_both at 1.
       simpl.
       Transparent Build_t_OrZKPCommit.
@@ -1396,13 +1395,13 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
         -- now intros n ; rewrite FieldToWitnessCancel ; rewrite fto_otf.
         -- now intros n; rewrite otf_fto ; rewrite WitnessToFieldCancel.
       }
-      intros.
+      intros x3.
 
       apply getr_set_lhs.
       apply make_pure ; simpl.
 
       apply r_ret.
-      intros.
+      intros ? ? ?.
 
       unfold or_run_post_cond.
       rewrite !otf_fto.
@@ -1412,71 +1411,71 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       set (f_random_field_elem _).
       set (f_random_field_elem _).
 
-      repeat rewrite pair_equal_spec ; repeat split.
-      (* Statement *)
-      {
-        (* g ^ s = f_g_pow s *)
-        rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-        now rewrite pow_witness_to_field.
-      }
-      (* Commit *)
-      {
-        apply f_equal.
-        repeat rewrite pair_equal_spec ; repeat split.
-        all: clear ; simpl; push_down_sides.
-        all: repeat setoid_rewrite <- expgnE.
+      rewrite !mulg1.
+      
+      split.
+      - repeat (rewrite pair_equal_spec ; split).
+        (* Statement *)
+        {
+          reflexivity.
+        }
+        (* Commit *)
+        {
+          apply f_equal.
+          repeat rewrite pair_equal_spec ; repeat split.
+          all: clear ; simpl; push_down_sides.
+          all: repeat setoid_rewrite <- expgnE.
 
-        + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-          now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-        + now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-        + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-          rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-          rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-          rewrite pow_witness_to_field.
-          now normalize_equation.
-        + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-          repeat progress f_equal.
-          rewrite pow_witness_to_field.
-          unfold lower1.
-          rewrite (proj1 both_equivalence_is_pure_eq (div_is_prod_inv _ _)).
-          push_down_sides.
-          now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-        + rewrite pow_witness_to_field.
-          now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-        + now rewrite pow_witness_to_field.
-      }
-      (* Challenges *)
-      {
-        now rewrite FieldToWitnessCancel ; rewrite fto_otf.
-      }
-      (* Response *)
-      {
-        apply f_equal.
-        repeat (rewrite pair_equal_spec ; split).
-        all: clear ; simpl; push_down_sides.
-        all: repeat setoid_rewrite <- expgnE.
-        - rewrite FieldToWitnessOpp.
-  setoid_rewrite <- (FieldToWitnessCancel (otf x2)) ; rewrite FieldToWitnessAdd ; rewrite FieldToWitnessCancel.
-  setoid_rewrite <- (FieldToWitnessCancel s0) ; rewrite FieldToWitnessMul ; rewrite FieldToWitnessCancel.
-  rewrite FieldToWitnessOpp.
-  rewrite FieldToWitnessAdd.
-  f_equal.
-  push_down_sides.
+          + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+            now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+          + now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+          + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+            rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+            rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+            rewrite pow_witness_to_field.
+            now normalize_equation.
+          + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+            repeat progress f_equal.
+            rewrite pow_witness_to_field.
+            unfold lower1.
+            rewrite (proj1 both_equivalence_is_pure_eq (div_is_prod_inv _ _)).
+            push_down_sides.
+            now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+          + rewrite pow_witness_to_field.
+            now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+          + now rewrite pow_witness_to_field.
+        }
+        (* Challenges *)
+        {
+          now rewrite FieldToWitnessCancel ; rewrite fto_otf.
+        }
+        (* Response *)
+        {
+          apply f_equal.
+          repeat (rewrite pair_equal_spec ; split).
+          all: clear ; simpl; push_down_sides.
+          all: repeat setoid_rewrite <- expgnE.
+          - rewrite FieldToWitnessOpp.
+            setoid_rewrite <- (FieldToWitnessCancel (otf x3)) ; rewrite FieldToWitnessAdd ; rewrite FieldToWitnessCancel.
+            setoid_rewrite <- (FieldToWitnessCancel m) ; rewrite FieldToWitnessMul ; rewrite FieldToWitnessCancel.
+            rewrite FieldToWitnessOpp.
+            rewrite FieldToWitnessAdd.
+            f_equal.
+            push_down_sides.
 
-  rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
-  now repeat (push_down_sides ; f_equal).
-        - rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
+            rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
+            now repeat (push_down_sides ; f_equal).
+          - rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
 
-          rewrite FieldToWitnessOpp.
-          setoid_rewrite <- (FieldToWitnessCancel (otf x2)) ; rewrite FieldToWitnessAdd ; rewrite FieldToWitnessCancel.
-          f_equal.
+            rewrite FieldToWitnessOpp.
+            setoid_rewrite <- (FieldToWitnessCancel (otf x3)) ; rewrite FieldToWitnessAdd ; rewrite FieldToWitnessCancel.
+            f_equal.
 
-          now push_down_sides.
-        - reflexivity.
-        - reflexivity.
-      }
-      {
-        clear -H.
+            now push_down_sides.
+          - reflexivity.
+          - reflexivity.
+        }
+      - clear -H.
         destruct H.
         destruct H.
         subst.
@@ -1487,7 +1486,6 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
         rewrite H ; [ | assumption ].
         unfold Sigma_locs in H0 ; rewrite <- fset1E in H0 ; rewrite in_fset1 in H0.
         now rewrite <- get_heap_set_heap.
-      }
     }
     Fail Timeout 5 Qed. Admitted. (* SLOW: 525.61 sec *)
 
@@ -1501,18 +1499,18 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       [package
          #def #[ RUN ] (b : chRelation) : chTranscript
         {
-          #assert otf b.1 == g ^+ (otf b.2).1 ;;
+          #assert R (otf b.1) (otf b.2) ;;
           wr ← sample uniform (2^32) ;;
-          rr ← sample uniform (2^32) ;;
           dr ← sample uniform (2^32) ;;
+          rr ← sample uniform (2^32) ;;
           v ← is_state (OVN.zkp_one_out_of_two
                       (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord wr))))
                       (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord rr))))
                       (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord dr))))
-                      (ret_both (otf (fst b)))
+                      (ret_both (snd (fst (otf (fst b)))))
                       (ret_both (WitnessToField (fst (otf (snd b)))))
                       (ret_both (snd (otf (snd b)) : 'bool))) ;;
-          ret (hacspec_ret_to_or_sigma_ret v)
+          ret (hacspec_ret_to_or_sigma_ret (otf b.1) v)
       }].
   Next Obligation.
     eapply (valid_package_cons _ _ _ _ _ _ [] []).
@@ -1606,16 +1604,16 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
 
     eassert (r =
               (v ← (wr ← sample uniform (2 ^ 32) ;;
-                    rr ← sample uniform (2 ^ 32) ;;
                     dr ← sample uniform (2 ^ 32) ;;
+                    rr ← sample uniform (2 ^ 32) ;;
                     is_state
                       (zkp_one_out_of_two _
                          _
                          _
-                         (ret_both ((otf (s, s0).1)))
+                         (ret_both ((snd (fst (otf (s, s0).1)))))
                          (ret_both (WitnessToField (otf (s, s0).2).1))
                          _)) ;;
-               ret (hacspec_ret_to_or_sigma_ret v))) by (now subst r ; simpl) ; rewrite H0 ; clear H0.
+               ret (hacspec_ret_to_or_sigma_ret (otf (s, s0).1) v))) by (now subst r ; simpl) ; rewrite H0 ; clear H0.
     clear.
 
     eapply r_transR ; [ apply r_bind_assertD | hnf ].
@@ -1645,6 +1643,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       destruct H.
       unfold or_run_post_cond in H.
       rewrite H.
+      rewrite fto_otf.
       split ; [ reflexivity | ].
       unfold heap_ignore in H0.
       unfold heap_ignore.
@@ -1671,17 +1670,370 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     now rewrite hacspec_vs_RUN_interactive.
   Qed.
 
+  Lemma order_ge1 : succn (succn (Zp_trunc q)) = q.
+  Proof.
+    apply Zp_cast, prime_gt1, prime_order.
+  Qed.
 
-  (* Lemma shvzk_success: *)
-  (*   ∀ LA A, *)
-  (*     ValidPackage LA [interface *)
-  (*                        #val #[ SOUNDNESS ] : chSoundness → 'bool *)
-  (*       ] A_export A → *)
-  (*     ɛ_SHVZK A = 0. *)
-  (* Proof. *)
-  (*   intros. *)
-  (*   apply run_interactive_or_shvzk. *)
+  Lemma trunc_pow : forall (h : gT) x, h ^+ (x %% (Zp_trunc q).+2) = h ^+ x.
+    intros.
+    destruct (ssrbool.elimT (cycleP g h)) ; [ | subst ].
+    - unfold g.
+      setoid_rewrite <- v_G_g_gen.
+      simpl.
+      apply in_setT.
+    - rewrite expgAC.
+      rewrite (expgAC _ x0).
+      f_equal.
+      epose (@expg_mod_order gT g x).
+      fold q in e.
+      rewrite <- order_ge1 in e.
+      intros.
+      apply e ; clear e.
+  Qed.
 
+  Definition f_d2r2_to_wd : 'Z_q -> 'I_MyAlg.i_witness -> Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)) → Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)).
+  Proof.
+    intros m c dr.
+    destruct (ch2prod dr) as [d2 r2].
+    refine (prod2ch _). (* w, d1 *)
+    simpl.
+    refine (fto ((otf r2) + (m * (otf d2))), fto (otf c - otf d2)).
+  Defined.
+
+  Lemma f_d2r2_to_wd_bij : forall m c, bijective (f_d2r2_to_wd m c). Admitted.
+  
+  Definition f_d1r1_to_wd : 'Z_q -> 'I_MyAlg.i_witness -> Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)) → Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)).
+  Proof.
+    intros m c dr.
+    destruct (ch2prod dr) as [d2 r1].
+    refine (prod2ch _). (* w, d1 *)
+    simpl.
+    refine (fto ((otf r1) + (m * (otf c - otf d2))), fto (otf d2)).
+  Defined.
+
+  Lemma f_d1r1_to_wd_bij : forall m c, bijective (f_d1r1_to_wd m c). Admitted.
+
+  Lemma swap_samples :
+    forall {n m : nat} {C} `{Positive n} `{Positive m} (c : 'I_n -> 'I_m -> raw_code C),
+      ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
+      a0 ← sample uniform n ;;
+      a1 ← sample uniform m ;;
+      c a0 a1 ≈
+      a1 ← sample uniform m ;;
+      a0 ← sample uniform n ;;
+      c a0 a1
+     ⦃ Logic.eq ⦄.
+  Proof.
+    intros.
+
+    eapply r_transR.
+    {
+      apply r_uniform_prod.
+      intros.
+      apply rreflexivity_rule.
+    }
+    apply r_nice_swap_rule ; [ easy | easy | ].
+    eapply r_transR.
+    {
+      apply r_uniform_prod.
+      intros.
+      apply rreflexivity_rule.
+    }
+    eapply r_uniform_bij with (f := fun x => let '(a,b) := ch2prod x in prod2ch (b,a)).
+    {
+      clear.
+      econstructor.
+      Unshelve.
+      3: refine (fun x => let '(a,b) := ch2prod x in prod2ch (b,a)).
+      all: intros x ; rewrite <- (prod2ch_ch2prod x) ; destruct (ch2prod x) ; now rewrite !ch2prod_prod2ch.
+    }
+    intros.
+    destruct (ch2prod x).
+    rewrite (ch2prod_prod2ch).
+
+    apply rreflexivity_rule.
+  Qed.
+
+  Lemma shvzk_success:
+    ∀ LA A,
+      ValidPackage LA [interface
+                         #val #[ TRANSCRIPT ] : chInput → chTranscript
+        ] A_export A →
+      fdisjoint LA Sigma_locs →
+      ɛ_SHVZK A = 0.
+  Proof.
+    intros.
+    unfold ɛ_SHVZK.
+    unfold SHVZK_real.
+    unfold SHVZK_ideal.
+    (* eq_rel_perf_ind. *)
+    apply: eq_rel_perf_ind.
+    all: ssprove_valid.
+    1:{ instantiate (1 := heap_ignore Sigma_locs).
+        ssprove_invariant.
+        apply fsubsetUl. }
+    2: apply fdisjoints0.
+    clear H0.
+    1:{
+      unfold eq_up_to_inv.
+      intros.
+      unfold get_op_default.
+
+      rewrite <- fset1E in H0.
+      apply (ssrbool.elimT (fset1P _ _)) in H0.
+      inversion H0.
+
+      subst.
+
+      Opaque Simulate Commit Response.
+      
+      simpl (lookup_op _ _).
+
+      
+      destruct choice_type_eqP ; [ | subst ; contradiction ].
+      destruct choice_type_eqP ; [ | subst ; contradiction ].
+      subst.
+      rewrite !cast_fun_K.
+
+      clear e e1.
+
+      
+
+      destruct x as [[hy mv] c].
+      ssprove_sync_eq. intros.
+
+      Transparent Simulate.
+      unfold Simulate.
+      Transparent Commit.
+      unfold Commit.
+      Transparent Response.
+      unfold Response.
+      unfold prog. rewrite bind_ret.
+
+      destruct (otf mv) as [m vi] eqn:mvo.
+      destruct (otf hy) as [[x h] y] eqn:hyo.
+
+      simpl bind.
+      
+      unfold R in e.
+      simpl in e.
+      apply andb_prop in e.
+      destruct e as [e2 e3].
+      apply reflection_nonsense in e2.
+      apply reflection_nonsense in e3.
+      rewrite <- (fto_otf hy).
+      rewrite hyo.
+      rewrite e2.
+      rewrite e3.
+      (* rewrite !fto_otf. *)
+
+      destruct vi eqn:ovi.
+      {
+        (* r = r1, d = d1, (w = z1?) *)
+        (* lhs: w, d, r *)
+        (* rhs: d1, r1, r2 *)
+
+        (* apply rsymmetry. *)
+        (* eapply r_transR. *)
+        (* { *)
+        (*   ssprove_sync_eq. intros. *)
+        (*   apply swap_samples. *)
+        (* } *)
+        (* hnf. *)
+
+        apply rsymmetry.
+        eapply r_transR ; [ apply r_uniform_prod ; intros ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros ; apply rreflexivity_rule ] | ].
+
+        apply rsymmetry.
+        eapply r_transR.
+        {
+          apply r_uniform_prod ; intros ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros; apply rreflexivity_rule ].
+        }
+
+        apply rsymmetry.
+        eapply r_uniform_bij with (f := f_d2r2_to_wd m c).
+        1: apply f_d2r2_to_wd_bij.
+        intros dr.
+        unfold f_d2r2_to_wd.
+        apply rsymmetry.
+        destruct (ch2prod dr) as [d2 r2].
+        rewrite ch2prod_prod2ch.
+
+        eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros r1 ].
+
+        apply better_r_put_lhs.
+        rewrite bind_rewrite.
+        apply getr_set_lhs (* rewrite otf_fto *).
+        rewrite !otf_fto.
+        rewrite bind_rewrite.
+        apply r_ret.
+        intros.
+
+        simpl.
+        rewrite !(trunc_pow _ (otf r2 + (m * otf d2) %% (Zp_trunc q).+2)).
+        rewrite !(expgD _ (otf r2) ((m * otf d2) %% (Zp_trunc q).+2)).
+        rewrite !(trunc_pow _ (m * otf d2)).
+        rewrite !(expgM _ m (otf d2)).
+
+        split.
+        1:{
+          repeat (rewrite pair_equal_spec ; split).
+          (* Statement *)
+          {
+            reflexivity.
+          }
+          (* Message (r3a1, r4b1, r5a2, r6b2, r1x, r2y) *)
+          {
+            f_equal.
+            repeat (rewrite pair_equal_spec ; split).
+            - reflexivity.
+            - reflexivity.
+            - reflexivity.
+            - f_equal.
+              f_equal.
+              rewrite <- mulgA.
+              rewrite mulgV.
+              rewrite mulg1.
+              reflexivity.
+            - reflexivity.
+            - reflexivity.
+          }
+          (* Challenge *)
+          {
+            reflexivity.
+          }
+          (* Response *)
+          {
+            f_equal.
+            repeat (rewrite pair_equal_spec ; split).
+            - reflexivity.
+            - reflexivity.
+            - rewrite subKr.
+              rewrite addrK.
+              reflexivity.
+            - rewrite subKr.
+              reflexivity.
+          }
+        }          
+        {
+          destruct H1 as [? []].
+          subst.
+          unfold heap_ignore in H1.
+          unfold heap_ignore.
+          intros.
+          specialize (H1 ℓ H2).
+          rewrite <- H1.
+
+          unfold Sigma_locs in H2.
+          rewrite <- fset1E in H2.
+          rewrite in_fset1 in H2.
+
+          now rewrite get_set_heap_neq.
+        }
+      }
+      {
+        (* r = r1, d = d1, (w = z1?) *)
+        (* lhs: w, d, r *)
+        (* rhs: d1, r1, r2 *)
+
+        eapply r_transR.
+        {
+          ssprove_sync_eq. intros.
+          apply swap_samples.
+        }
+        hnf.
+
+        apply rsymmetry.
+        eapply r_transR ; [ apply r_uniform_prod ; intros ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros ; apply rreflexivity_rule ] | ].
+
+        apply rsymmetry.
+        eapply r_transR.
+        {
+          apply r_uniform_prod ; intros ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros; apply rreflexivity_rule ].
+        }
+
+        apply rsymmetry.
+        eapply r_uniform_bij with (f := f_d1r1_to_wd m c).
+        1: apply f_d1r1_to_wd_bij.
+        intros dr.
+        unfold f_d1r1_to_wd.
+        apply rsymmetry.
+        destruct (ch2prod dr) as [d2 r1].
+        rewrite ch2prod_prod2ch.
+
+        eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros r2 ].
+
+        apply better_r_put_lhs.
+        rewrite bind_rewrite.
+        apply getr_set_lhs (* rewrite otf_fto *).
+        rewrite !otf_fto.
+        rewrite bind_rewrite.
+        apply r_ret.
+        intros.
+
+        simpl.
+        rewrite !(trunc_pow).
+        rewrite !(expgD).
+        rewrite !(trunc_pow).
+        rewrite !(expgM).
+        rewrite !(trunc_pow).
+        rewrite !(expgD).
+        rewrite !(trunc_pow).
+
+        rewrite !mulg1.
+
+        split.
+        1:{
+          repeat (rewrite pair_equal_spec ; split).
+          (* Statement *)
+          {
+            reflexivity.
+          }
+          (* Message (r3a1, r4b1, r5a2, r6b2, r1x, r2y) *)
+          {
+            apply f_equal.
+            repeat (rewrite pair_equal_spec ; split).
+            - reflexivity.
+            - reflexivity.
+            - reflexivity.
+            - reflexivity.
+            - reflexivity.
+            - reflexivity.
+          }
+          (* Challenge *)
+          {
+            reflexivity.
+          }
+          (* Response *)
+          {
+            f_equal.
+            repeat (rewrite pair_equal_spec ; split).
+            - rewrite addrK.
+              reflexivity.
+            - reflexivity.
+            - reflexivity.
+            - reflexivity.
+          }
+        }
+        {
+          destruct H1 as [? []].
+          subst.
+          unfold heap_ignore in H1.
+          unfold heap_ignore.
+          intros.
+          specialize (H1 ℓ H2).
+          rewrite <- H1.
+
+          unfold Sigma_locs in H2.
+          rewrite <- fset1E in H2.
+          rewrite in_fset1 in H2.
+
+          now rewrite get_set_heap_neq.
+        }
+      }
+    }
+  Qed.
 
   (* Lemma proving that the output of the extractor defined for Schnorr's
   protocol is perfectly indistinguishable from real protocol execution.
@@ -1698,38 +2050,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     2,3: apply fdisjoints0.
     simplify_eq_rel h.
     destruct h as [h [a [[e z] [e' z']]]].
-
-    destruct (otf (Verify h a e z)) eqn:verify_haez ; [ | now rewrite Bool.andb_false_r ; apply r_ret ].
-    destruct (otf (Verify h a e' z')) eqn:verify_haez' ; [ | now simpl ; rewrite Bool.andb_false_r ; apply r_ret ].
-    destruct (_ == _) eqn:e_eq ; [ now simpl ; apply r_ret | ].
-    simpl ([&& _ , _ & _]) ; hnf.
-
-    unfold Extractor. unfold Verify in verify_haez, verify_haez'.
-    destruct (otf a) as [[[[[a1 b1] a2] b2] x] y].
-    destruct (otf z) as [[[lr1 ld1] lr2] ld2].
-    destruct (otf z') as [[[rr1 rd1] rr2] rd2].
-    rewrite !otf_fto in verify_haez, verify_haez'.
-    rewrite <- !Bool.andb_assoc in verify_haez, verify_haez'.
-    apply (ssrbool.elimT and5P) in verify_haez, verify_haez'.
-    rewrite !boolp.eq_opE in verify_haez, verify_haez'.
-    destruct verify_haez, verify_haez'.
-    rewrite otf_fto.
-    unfold R, fst.
-    apply r_ret.
-    intros.
-    split ; [ clear H9 | apply H9 ].
-
-    subst.
-    clear -H7.
-    assert (x = otf h) by admit.
-    rewrite H in H7.
-    assert (g ^+ (lr2 - rr2) = otf h ^+ (rd2 - ld2)) by admit.
-    assert ((g ^+ (lr2 - rr2)) ^- (rd2 - ld2) = otf h) by admit.
-    assert ((g ^+ (lr2 - rr2)) ^- (rd2 - ld2) = (g ^+ ((lr2 - rr2) * (rd2 - ld2) ^-1 )%g)) by admit.
-    rewrite <- H1.
-    rewrite H2.
-    rewrite eqxx.
-    reflexivity.
+    
   Admitted.
 
 End OVN_or_proof.
