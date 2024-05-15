@@ -910,7 +910,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
 
     Definition Witness : finType :=  prod (Finite.clone _ 'Z_q) 'bool.
     Definition Statement : finType := prod (prod gT gT) gT.
-    Definition Message : finType :=  prod (prod (prod (prod (prod gT gT) gT) gT) gT) gT.
+    Definition Message : finType :=  prod (prod (prod gT gT) gT) gT.
     Definition Challenge : finType := Finite.clone _ 'Z_q.
     Definition Response : finType :=  (prod (prod (prod (Finite.clone _ 'Z_q) (Finite.clone _ 'Z_q)) (Finite.clone _ 'Z_q)) (Finite.clone _ 'Z_q)).
 
@@ -1020,7 +1020,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
 
              let a2 := (g ^+ (otf w : 'Z_q)) in
              let b2 := (h ^+ (otf w : 'Z_q)) in
-             ret (fto (a1, b1, a2, b2, x, y)))
+             ret (fto (a1, b1, a2, b2)))
          else
            (let r2 := r in
             let d2 := d in
@@ -1031,7 +1031,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
             let a2 := (g ^+ (otf r2 : 'Z_q) * x ^+ (otf d2 : 'Z_q)) in
             let b2 := (h ^+ (otf r2 : 'Z_q) * (y * g^-1) ^+ (otf d2 : 'Z_q)) in
 
-            ret (fto (a1, b1, a2, b2, x, y)))
+            ret (fto (a1, b1, a2, b2)))
       }.
 
     Definition Response (hy : choiceStatement) (xv : choiceWitness) (_ : choiceMessage) (c : choiceChallenge) :
@@ -1051,13 +1051,13 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
             ret (fto (r1, d1, otf r, otf d)))
       }.
 
-    Definition Simulate (hy : choiceStatement) (c : choiceChallenge) :
+    Definition Simulate (xhy : choiceStatement) (c : choiceChallenge) :
       code Simulator_locs [interface] choiceTranscript :=
       {code
          d ← sample uniform i_witness ;;
          r ← sample uniform i_witness ;;
          r_other ← sample uniform i_witness ;;
-         let '(x, h, y) := otf hy in
+         let '(x, h, y) := otf xhy in
          let d2 := otf d in
          let r2 := otf r in
          let r1 := otf r_other in
@@ -1070,13 +1070,13 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
          let a2 := g ^+ r2 * x ^+ d2 in
          let b2 := h ^+ r2 * (y * invg g) ^+ d2 in
 
-         ret (hy , fto (a1,b1,a2,b2, x, y), c , fto (r1,d1,r2,d2))
+         ret (xhy , fto (a1,b1,a2,b2), c , fto (r1,d1,r2,d2))
       }.
 
     Definition Verify (xhy : choiceStatement) (a : choiceMessage)
       (c : choiceChallenge) (z : choiceResponse) : choiceBool :=
           let '(x, h, y) := otf xhy in
-          let '(a1, b1, a2, b2, x, y) := (otf a) in
+          let '(a1, b1, a2, b2) := (otf a) in
           let '(r1, d1, r2, d2) := (otf z) in
           fto ((otf c == d1 + d2) &&
                (a1 == (g ^+ r1) * (x ^+ d1)) &&
@@ -1084,11 +1084,47 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
                (a2 == (g ^+ r2) * (x ^+ d2)) &&
                (b2 == (h ^+ r2) * ((y * (g ^-1)) ^+ d2))).
 
-    Definition Extractor (h : choiceStatement) (a : choiceMessage)
-      (e : choiceChallenge) (e' : choiceChallenge)
-      (z : choiceResponse)  (z' : choiceResponse) : 'option choiceWitness :=
-      let '((a1, b1, a2, b2),(lr1,ld1,lr2,ld2),(rr1,rd1,rr2,rd2)) := (otf a, otf z, otf z') in
-      Some (fto (((lr2 - rr2) / (rd2 - ld2)), false)).
+    Definition Extractor (xhy : choiceStatement) (a : choiceMessage)
+      (c : choiceChallenge) (c' : choiceChallenge)
+      (z : choiceResponse)  (z' : choiceResponse) : 'option choiceWitness.
+      Proof.
+      refine (Some _).
+      refine (fto _).
+      refine (let '(
+                      (x, h, y),
+                      (a1, b1, a2, b2),
+                      (r1,d1,r2,d2),
+                      (r1',d1',r2',d2')
+                    ) :=
+                (otf xhy, otf a, otf z, otf z') in _) ;
+        clear p p0 s s0 s1 s2 s3 s4 s5 s6 s7 s8 s9.
+      clear z z' a xhy.
+
+      (* assert (otf c = d1 + d2) by admit. *)
+      (* assert (a1 = (g ^+ r1) * (x ^+ d1)) by admit. *)
+      (* assert (b1 = (h ^+ r1) * (y ^+ d1)) by admit. *)
+      (* assert (a2 = (g ^+ r2) * (x ^+ d2)) by admit. *)
+      (* assert (b2 = (h ^+ r2) * ((y * (g ^-1)) ^+ d2)) by admit. *)
+
+      (* assert (otf c' = d1' + d2') by admit. *)
+      (* assert (a1 = (g ^+ r1') * (x ^+ d1')) by admit. *)
+      (* assert (b1 = (h ^+ r1') * (y ^+ d1')) by admit. *)
+      (* assert (a2 = (g ^+ r2') * (x ^+ d2')) by admit. *)
+      (* assert (b1 = (h ^+ r1') * (y ^+ d1')) by admit. *)
+      (* assert (b2 = (h ^+ r2') * ((y * (g ^-1)) ^+ d2')) by admit. *)
+
+      (* subst. *)
+
+      (* assert ( *)
+      (*     (g ^+ r1 * x ^+ d1) * (g ^+ r2 * x ^+ d2) = (g ^+ r1' * x ^+ d1') * (g ^+ r2' * x ^+ d2')) by (now rewrite H5 H7) ; clear H5 H7. *)
+
+      (* assert (x = g ^+ (((r1 + r2) - (r1' + r2')) / ((d1' + d2') - (d1 + d2)))) by admit. *)
+
+      (* assert (b1 = (h ^+ r1') * (y ^+ d1')) by admit. *)
+      (* assert (b2 = (h ^+ r2') * ((y * (g ^-1)) ^+ d2')) by admit. *)
+
+      refine (((r1 - r1') + (r2 - r2')) / ((d1' - d1) + (d2' - d2)), false).
+    Defined.
 
     Definition KeyGen (xv : choiceWitness) :=
       let (m, vi) := otf xv in
@@ -1189,7 +1225,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     - refine hy.
 
     (* choiceMessage *)
-    - refine (r3a1, r4b1, r5a2, r6b2, r1x, r2y).
+    - refine (r3a1, r4b1, r5a2, r6b2).
 
     (* choiceChallenge = hash *)
     - refine (FieldToWitness r7c).
@@ -1330,9 +1366,9 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
           - rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
             now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
           - now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-          - rewrite pow_witness_to_field.
-            now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-          - now rewrite pow_witness_to_field.
+          (* - rewrite pow_witness_to_field. *)
+          (*   now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)). *)
+          (* - now rewrite pow_witness_to_field. *)
         }
         (* Challenges *)
         {
@@ -1441,9 +1477,9 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
             rewrite (proj1 both_equivalence_is_pure_eq (div_is_prod_inv _ _)).
             push_down_sides.
             now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-          + rewrite pow_witness_to_field.
-            now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-          + now rewrite pow_witness_to_field.
+          (* + rewrite pow_witness_to_field. *)
+          (*   now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)). *)
+          (* + now rewrite pow_witness_to_field. *)
         }
         (* Challenges *)
         {
@@ -1896,8 +1932,6 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
               rewrite mulgV.
               rewrite mulg1.
               reflexivity.
-            - reflexivity.
-            - reflexivity.
           }
           (* Challenge *)
           {
@@ -1998,8 +2032,6 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
             - reflexivity.
             - reflexivity.
             - reflexivity.
-            - reflexivity.
-            - reflexivity.
           }
           (* Challenge *)
           {
@@ -2035,6 +2067,216 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     }
   Qed.
 
+  Lemma prod_swap : (forall a b (x : gT) y, a * x ^+ y = b -> a = b * x ^- y).
+  Proof.
+    intros.
+    generalize dependent b.
+    generalize dependent a.
+    generalize dependent x.
+    induction y ; intros.
+    + rewrite expg0 in H |- *.
+      rewrite invg1.
+      now rewrite !mulg1 in H |- *.
+    + (* specialize (IHy x (a * x) b). *)
+      (* rewrite expgS in H. *)
+      (* rewrite mulgA in H. *)
+      (* specialize (IHy H) ; clear H. *)
+      rewrite expgSr.
+      rewrite invMg.
+      rewrite mulgA.
+      apply IHy.
+      rewrite <- H.
+      rewrite expgSr.
+      rewrite mulgA.
+      rewrite <- mulgA.
+      rewrite <- mulgA.
+      rewrite (mulgA (x ^+ y)).
+      rewrite mulgK.
+      reflexivity.
+  Qed.
+
+  Lemma mulg_invg_cancel_r : (forall (x : gT) y, x ^+ y * x ^- y = 1).
+  Proof.
+    intros.
+    generalize dependent x.
+    induction y ; intros.
+    + rewrite expg0.
+      rewrite invg1.
+      now rewrite mulg1.
+    + rewrite expgSr.
+      rewrite invMg.
+      rewrite mulgA.
+      rewrite mulgK.
+      rewrite IHy.
+      reflexivity.
+  Qed.
+
+  Lemma mulg_invg_cancel_l : (forall (x : gT) y, x ^- y * x ^+ y = 1).
+  Proof.
+    intros.
+    generalize dependent x.
+    induction y ; intros.
+    + rewrite expg0.
+      rewrite invg1.
+      now rewrite mulg1.
+    + rewrite expgS.
+      rewrite invMg.
+      rewrite <- mulgA.
+      rewrite mulKg.
+      rewrite IHy.
+      reflexivity.
+  Qed.
+
+  Lemma prod_swap_iff : (forall a b (x : gT) y, a * x ^+ y = b <-> a = b * x ^- y).
+  Proof.
+    split ; intros.
+    - erewrite <- prod_swap.
+      + reflexivity.
+      + apply H.
+    - rewrite H.
+      rewrite <- mulgA.
+      rewrite mulg_invg_cancel_l.
+      now rewrite mulg1.
+  Qed.
+
+  Lemma prod_swap_left : (forall a b (x : gT) y, x ^+ y * a = b -> a = x ^- y * b).
+  Proof.
+    intros.
+    generalize dependent b.
+    generalize dependent a.
+    generalize dependent x.
+    induction y ; intros.
+    + rewrite expg0 in H |- *.
+      rewrite invg1.
+      now rewrite !mul1g in H |- *.
+    + rewrite expgSr.
+      rewrite invMg.
+      rewrite <- mulgA.
+      rewrite <- IHy with (a := x * a).
+      1: now rewrite mulKg.
+      rewrite mulgA.
+      rewrite <- expgSr.
+      apply H.
+  Qed.
+
+  Lemma prod_swap_left_iff : (forall a b (x : gT) y, x ^+ y * a = b <-> a = x ^- y * b).
+  Proof.
+    split ; intros.
+    - erewrite <- prod_swap_left.
+      + reflexivity.
+      + apply H.
+    - rewrite H.
+      rewrite mulgA.
+      rewrite mulg_invg_cancel_r.
+      now rewrite mul1g.
+  Qed.
+
+  Lemma invg_id : (forall (x : gT), x ^-1 = x ^- 1).
+  Proof. reflexivity. Qed.
+
+  Lemma trunc_extra : forall (h : gT), h ^+ (Zp_trunc q).+2 = 1.
+    intros.
+    rewrite <- trunc_pow.
+    now rewrite modnn.
+  Qed.
+
+  (* Lemma expg_neg : (forall (x : gT) (n : 'Z_q), x ^- n = x ^+ ((Zp_trunc q).+2 - n)). *)
+  (* Proof. *)
+  (*   intros. *)
+  (*   destruct n0 ; simpl. *)
+  (*   induction m. *)
+  (*   + rewrite subn0. *)
+  (*     rewrite trunc_extra. *)
+  (*     rewrite expg0. *)
+  (*     rewrite invg1. *)
+  (*     reflexivity. *)
+  (*   +  *)
+  (* Qed. *)
+
+  Lemma mulg_invg : (forall (x : gT) (y : 'Z_q), x ^+ y * x ^- 1 = x ^+ nat_of_ord (y - 1)).
+  Proof.
+    intros.
+    symmetry.
+    apply prod_swap.
+
+    simpl.
+
+    rewrite trunc_pow.
+    rewrite expgD.
+    rewrite trunc_pow.
+    rewrite modn_small.
+    2: easy.
+    rewrite <- expgD.
+    rewrite <- expgD.
+    rewrite <- addnA.
+    rewrite expgD.
+
+    rewrite addn1.
+    rewrite (trunc_extra).
+    rewrite mulg1.
+    reflexivity.
+  Qed.
+
+  Lemma mulg_invg_sub : (forall (x : gT) (y z : 'Z_q), (* (0 < y - z)%N -> *) x ^+ y * x ^- z = x ^+ nat_of_ord (y - z)).
+  Proof.
+    intros.
+    destruct z as [z ?]. simpl in *.
+
+    symmetry.
+    apply prod_swap_iff.
+    rewrite !trunc_pow.
+    rewrite !expgD.
+    rewrite !trunc_pow.
+    rewrite <- !expgD.
+    rewrite <- addnA.
+    rewrite subnK.
+    2: easy.
+    rewrite !expgD.
+    rewrite trunc_extra.
+    rewrite mulg1.
+    reflexivity.
+  Qed.
+
+  Lemma mulg_invg_left_sub : (forall (x : gT) (y z : 'Z_q), (* (0 < y - z)%N -> *) x ^- y * x ^+ z = x ^+ nat_of_ord (z - y)).
+  Proof.
+    intros.
+    destruct z as [z ?]. simpl in *.
+
+    symmetry.
+    apply prod_swap_left_iff.
+    rewrite !trunc_pow.
+    rewrite !expgD.
+    rewrite !trunc_pow.
+    rewrite <- !expgD.
+    rewrite addnC.
+    rewrite <- addnA.
+    rewrite subnK.
+    2: easy.
+    rewrite !expgD.
+    rewrite trunc_extra.
+    rewrite mulg1.
+    reflexivity.
+  Qed.
+  
+
+  Lemma expg_sub : (forall (x : gT) (y : 'Z_q), (* (0 < y - z)%N -> *) x ^- y = x ^+ nat_of_ord (0 - y)).
+  Proof.
+    intros.
+    simpl.
+    rewrite !trunc_pow.
+
+    rewrite <- mul1g.
+    symmetry.
+    apply prod_swap_iff.
+    symmetry.
+    rewrite <- expgD.
+    rewrite subnK.
+    2: easy.
+    rewrite trunc_extra.
+    reflexivity.
+  Qed.
+
+
   (* Lemma proving that the output of the extractor defined for Schnorr's
   protocol is perfectly indistinguishable from real protocol execution.
    *)
@@ -2048,9 +2290,125 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     intros LA A VA.
     apply: eq_rel_perf_ind_eq.
     2,3: apply fdisjoints0.
-    simplify_eq_rel h.
-    destruct h as [h [a [[e z] [e' z']]]].
-    
+    simplify_eq_rel temp.
+    destruct temp as [xhy [a [[e z] [e' z']]]].
+    unfold Verify.
+    unfold Extractor.
+    destruct (otf xhy) as [[x h] y].
+    destruct (otf a) as [[[la1 lb1] la2] lb2].
+    destruct (otf z) as [[[lr1 ld1] lr2] ld2].
+    rewrite !otf_fto.
+    destruct (otf z') as [[[rr1 rd1] rr2] rd2].
+    rewrite !otf_fto.
+
+    unfold R.
+    (* rewrite mulg1. *)
+
+    destruct [&& _, _, _ & _] eqn:ando ; [ | now apply r_ret ; intros ; clear -H].
+    apply (ssrbool.elimT and4P) in ando.
+    destruct ando.
+    repeat (apply (ssrbool.elimT andP) in H0 ; destruct H0).
+    repeat (apply (ssrbool.elimT andP) in H1 ; destruct H1).
+    apply reflection_nonsense in H0, H6, H5, H4, H3, H1, H9, H8, H7, H2.
+    subst.
+
+    apply r_ret ; intros;  split ; [ | assumption ].
+    rewrite andb_true_intro ; [ easy | ].
+    split.
+    - rewrite !(trunc_pow).
+
+      clear -H7 H9.
+
+      apply prod_swap in H9, H7.
+      rewrite <- mulgA in H9, H7.
+
+      rewrite !mulg_invg_sub in H9, H7.
+      symmetry in H9, H7.
+      apply prod_swap_left_iff in H9, H7.
+      rewrite !mulg_invg_left_sub in H9, H7.
+      assert (x ^+ ((rd1 - ld1) + (rd2 - ld2))%R = g ^+ ((lr1 - rr1) + (lr2 - rr2))%R).
+      {
+        simpl.
+        rewrite !trunc_pow.
+        rewrite !expgD.
+        rewrite !trunc_pow.
+        rewrite !expgD.
+        rewrite !trunc_pow.
+
+        simpl in H7, H9.
+        rewrite !trunc_pow in H7, H9.
+        rewrite !expgD in H7, H9.
+        rewrite !trunc_pow in H7, H9.
+        rewrite H7 H9.
+        reflexivity.
+      }
+      
+      assert (forall (y : 'Z_q), x = x ^+ (y * (y ^-1)%R)).
+      {
+        by admit.
+      }
+      Set Printing Coercions.
+      
+
+      rewrite !expgM.
+      rewrite <- H.
+      rewrite <- !expgM.
+
+      set (rd1 - ld1 + (rd2 - ld2)).
+      
+      rewrite <- H0.
+      rewrite eqxx.
+      reflexivity.
+    - rewrite !(trunc_pow).
+
+      clear -H8 H2.
+      rename H8 into H9.
+      rename H2 into H7.
+
+      apply prod_swap in H9, H7.
+      rewrite <- mulgA in H9, H7.
+
+      rewrite !mulg_invg_sub in H9, H7.
+      symmetry in H9, H7.
+      apply prod_swap_left_iff in H9, H7.
+      rewrite !mulg_invg_left_sub in H9, H7.
+      assert (y ^+ nat_of_ord (rd1 - ld1) * (y * g^-1) ^+ nat_of_ord (rd2 - ld2) = h ^+ nat_of_ord (lr1 - rr1) * h ^+ nat_of_ord (lr2 - rr2)).
+      {
+        rewrite !trunc_pow.
+        rewrite !expgD.
+        rewrite !trunc_pow.
+
+        simpl in H7, H9.
+        rewrite !trunc_pow in H7, H9.
+        rewrite !expgD in H7, H9.
+        rewrite !trunc_pow in H7, H9.
+        rewrite H7 H9.
+        reflexivity.
+      }
+      clear H7 H9.
+
+      rewrite expgM.
+      rewrite !trunc_pow.
+      rewrite expgD.
+      rewrite <- H.
+      rewrite mulg1.
+
+      rewrite expgAC.
+      rewrite !trunc_pow in H7, H9.
+
+
+      rewrite 
+      
+      assert (forall (x : gT) (y : 'Z_q), x = x ^+ (y * (y ^-1)%R)).
+      {
+        by admit.
+      }
+      Set Printing Coercions.
+
+      rewrite !expgM.
+      rewrite <- H.
+      rewrite <- !expgM.
+ 
   Admitted.
 
 End OVN_or_proof.
