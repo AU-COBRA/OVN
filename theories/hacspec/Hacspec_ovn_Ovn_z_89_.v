@@ -107,7 +107,7 @@ Hint Unfold t_z_89__t_Field.
       solve_lift (f_prod result g) : (both t_g_z_89_))) result in
   solve_lift result : both t_g_z_89_ in
   let f_g_pow := fun  (x : both t_z_89_) => solve_lift (f_pow f_g x) : both t_g_z_89_ in
-  let f_inv := fun  (x : both t_g_z_89_) => solve_lift (run (letb _ := foldi_both_list (f_into_iter (Build_t_Range (f_start := ret_both (0 : int8)) (f_end := ret_both (89 : int8)))) (fun j =>
+  let f_group_inv := fun  (x : both t_g_z_89_) => solve_lift (run (letb _ := foldi_both_list (f_into_iter (Build_t_Range (f_start := ret_both (0 : int8)) (f_end := ret_both (89 : int8)))) (fun j =>
     ssp (fun _ =>
       letb g_value := Build_t_g_z_89_ (f_g_val := j) in
       solve_lift (ifb (f_prod x g_value) =.? f_group_one
@@ -119,7 +119,7 @@ Hint Unfold t_z_89__t_Field.
   (* else ret_both (tt : 'unit) in *)
   letm[choice_typeMonad.result_bind_code t_g_z_89_] hoist30 := v_Break x in
   ControlFlow_Continue (never_to_any hoist30))) : both t_g_z_89_ in
-  let f_div := fun  (x : both t_g_z_89_) (y : both t_g_z_89_) => solve_lift (f_prod x (f_inv y)) : both t_g_z_89_ in
+  let f_div := fun  (x : both t_g_z_89_) (y : both t_g_z_89_) => solve_lift (f_prod x (f_group_inv y)) : both t_g_z_89_ in
   {| f_Z := (@f_Z);
   f_g := (@f_g);
   f_hash := (@f_hash);
@@ -127,7 +127,7 @@ Hint Unfold t_z_89__t_Field.
   f_pow := (@f_pow);
   f_group_one := (@f_group_one);
   f_prod := (@f_prod);
-  f_inv := (@f_inv);
+  f_group_inv := (@f_inv);
   f_div := (@f_div)|}.
 Fail Next Obligation.
 Hint Unfold t_g_z_89__t_Group.

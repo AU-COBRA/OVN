@@ -606,13 +606,20 @@ Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
   Axiom f_prodA : associative (lower2 f_prod).
   Axiom f_prod1 : associative (lower2 f_prod).
   Axiom f_prod_left_id : left_id (is_pure f_group_one) (lower2 f_prod).
-  Axiom f_invK : involutive (lower1 f_inv).
-  Axiom f_invM : {morph (lower1 f_inv)  : x y / (lower2 f_prod) x y >-> (lower2 f_prod)  y x}.
+  Axiom f_invK : involutive (lower1 f_group_inv).
+  Axiom f_invM : {morph (lower1 f_group_inv)  : x y / (lower2 f_prod) x y >-> (lower2 f_prod)  y x}.
 
   Axiom v_Z_Field : GRing.Field (v_G_t_Group.(f_Z)).
+  
+  Axiom prod_inv_cancel : forall x, f_prod (f_group_inv x) x ≈both f_group_one.
 
-  Axiom prod_inv_cancel : forall x, f_prod (f_inv x) x ≈both f_group_one.
-
+  Axiom f_mul1 : forall x, f_mul f_field_one x ≈both x.
+  Axiom f_mulA : forall x y z, f_mul x (f_mul y z) ≈both f_mul (f_mul x y) z.
+  Axiom f_mul_addr : forall x y z, f_mul (f_add x y) z ≈both f_add (f_mul x z) (f_mul y z).
+  Axiom f_one_not_zero : ¬ (f_field_one ≈both f_field_zero).
+  Axiom mul_inv_cancel1 : forall x, ¬ (x ≈both f_field_zero) -> f_mul (f_inv x) x ≈both f_field_one.
+  Axiom mul_inv_cancel : forall x, f_mul x (f_inv x) ≈both f_field_one.
+  
 End GroupOperationProperties.
 
 Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl).
@@ -667,7 +674,7 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     {|
       isMulBaseGroup.mulg_subdef := lower2 f_prod;
       isMulBaseGroup.oneg_subdef := is_pure f_group_one;
-      isMulBaseGroup.invg_subdef := lower1 f_inv;
+      isMulBaseGroup.invg_subdef := lower1 f_group_inv;
       isMulBaseGroup.mulgA_subproof := f_prodA;
       isMulBaseGroup.mul1g_subproof := f_prod_left_id;
       isMulBaseGroup.invgK_subproof := f_invK;
@@ -708,6 +715,158 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_pow ]) ;
       try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply div_prod_cancel ]).
 
+  Definition v_Z_is_field : fieldType := {| GRing.Field.sort := f_Z; GRing.Field.class := v_Z_Field |}.
+
+
+  Require Import Field.
+  Check Field_theory.field_theory.
+
+  Definition hacspec_ring_theory :
+    ring_theory (is_pure f_field_zero) (is_pure f_field_one) 
+      (lower2 f_add) (lower2 f_mul)
+      (lower2 (fun x y => f_add x (f_opp y)))
+      (lower1 f_opp) eq_op.
+  Proof.
+    apply (mk_rt (is_pure f_field_zero) (is_pure f_field_one)
+      (lower2 f_add)
+      (lower2 f_mul)
+      (lower2 (fun x y => f_add x (f_opp y)))
+      (lower1 f_opp)
+      eq_op).
+    all: intros.
+    all: apply (ssrbool.introT eqP).
+    {
+      intros.
+      pose proof (proj1 both_equivalence_is_pure_eq (f_add0z (ret_both x))).
+      rewrite hacspec_function_guarantees2 in H.
+      apply H.
+    }
+    {
+      apply (proj1 both_equivalence_is_pure_eq (f_addC (ret_both x)  (ret_both y))).
+    }
+    {
+      pose proof (proj1 both_equivalence_is_pure_eq (f_addA (ret_both x)  (ret_both y) (ret_both z))).
+      rewrite (hacspec_function_guarantees2) in H.
+      rewrite (hacspec_function_guarantees2 _ (f_add _ _)) in H.
+      apply H.
+    }
+    {
+      pose proof (proj1 both_equivalence_is_pure_eq (f_mul1 (ret_both x))).
+      rewrite (hacspec_function_guarantees2) in H.
+      apply H.
+    }
+    {
+      apply (proj1 both_equivalence_is_pure_eq (mul_comm (ret_both x) (ret_both y))).
+    }
+    {
+      pose proof (proj1 both_equivalence_is_pure_eq (f_mulA (ret_both x) (ret_both y) (ret_both z))).
+      rewrite hacspec_function_guarantees2 in H.
+      rewrite (hacspec_function_guarantees2 _ (f_mul _ _)) in H.
+      apply H.
+    }
+    {
+      pose proof (proj1 both_equivalence_is_pure_eq (f_mul_addr (ret_both x) (ret_both y) (ret_both z))).
+      rewrite hacspec_function_guarantees2 in H.
+      rewrite (hacspec_function_guarantees2 _ (f_mul _ _)) in H.
+      apply H.
+    }
+    {
+      unfold lower2.
+      unfold lower1.
+      now rewrite hacspec_function_guarantees2.
+    }
+    {
+      pose proof (proj1 both_equivalence_is_pure_eq (f_addC (ret_both x) (f_opp (ret_both x))  )).
+      unfold lower2.
+      unfold lower1.
+      rewrite hacspec_function_guarantees2 in H.
+      rewrite H ; clear H.
+      apply (proj1 both_equivalence_is_pure_eq (f_addNz (ret_both x)  )).
+    }
+  Defined.
+
+  Definition hacspec_field_theory :
+    field_theory (is_pure f_field_zero) (is_pure f_field_one) (lower2 f_add)
+             (lower2 f_mul) (lower2 (fun x y => f_add x (f_opp y)))
+             (lower1 f_opp) (lower2 (fun x y => f_mul x (f_inv y)))
+             (lower1 f_inv) eq_op.
+  Proof.
+    apply (mk_field
+             (lower2 (fun x y => f_mul x (f_inv y)))
+             (lower1 f_inv)
+             hacspec_ring_theory
+          ).
+    {
+      intros x.
+      apply f_one_not_zero.
+      apply (ssrbool.elimT eqP) in x.
+      apply both_equivalence_is_pure_eq.
+      easy.
+    }
+    {
+      intros.
+      apply (ssrbool.introT eqP).
+      unfold lower2.
+      unfold lower1.
+      now rewrite hacspec_function_guarantees2.
+    }
+    {
+      intros.
+      apply (ssrbool.introT eqP).
+      unfold lower2.
+      unfold lower1.
+      epose proof (proj1 both_equivalence_is_pure_eq (mul_inv_cancel1 (ret_both p) _)).
+      rewrite hacspec_function_guarantees2 in H0.
+      refine H0.
+      Unshelve.
+      intros x.
+      apply H.
+      apply (ssrbool.introT eqP).
+      epose proof (proj1 both_equivalence_is_pure_eq x).
+      apply H0.
+    }
+  Defined.
+
+  Lemma setoid_structure : forall (A : eqType), Setoid.Setoid_Theory A eq_op.
+  Proof.
+    constructor.
+    - intros x.
+      apply eqxx.
+    - intros x y H.
+      now rewrite eq_sym.
+    - intros x y z H0 H1.
+      apply (ssrbool.introT eqP).
+      apply (ssrbool.elimT eqP) in H0, H1.
+      easy.
+  Qed.
+
+  Lemma ring_eq_ext : Ring_theory.ring_eq_ext
+      (lower2 f_add) (lower2 f_mul)
+      (lower1 f_opp) eq_op.
+  Proof.
+    constructor.
+    - intros x y H.
+      intros z w H0.
+      apply (ssrbool.introT eqP).
+      apply (ssrbool.elimT eqP) in H , H0.
+      subst.
+      reflexivity.
+    - intros x y H.
+      intros z w H0.
+      apply (ssrbool.introT eqP).
+      apply (ssrbool.elimT eqP) in H , H0.
+      subst.
+      reflexivity.
+    - intros x y H.
+      apply (ssrbool.introT eqP).
+      apply (ssrbool.elimT eqP) in H.
+      subst.
+      reflexivity.
+  Qed.
+
+  Add Ring v_Z_ring : hacspec_ring_theory ( setoid (setoid_structure f_Z) ring_eq_ext ).
+  (* Add Field v_Z_field : hacspec_field_theory ( setoid (setoid_structure _) ring_eq_ext ). *)
+
 End HacspecGroup.
 
 Module Type SecureGroup  (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl).
@@ -729,6 +888,7 @@ Module HacspecGroupParam (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupO
 
   Definition g_gen : ζ = <[g]> := v_G_g_gen.
   Definition prime_order : prime #[g] := v_G_prime_order.
+
 End HacspecGroupParam.
 
 Module Type OVN_schnorr_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl) (SG : SecureGroup OVN_impl GOP).
@@ -1123,7 +1283,8 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
       (* assert (b1 = (h ^+ r1') * (y ^+ d1')) by admit. *)
       (* assert (b2 = (h ^+ r2') * ((y * (g ^-1)) ^+ d2')) by admit. *)
 
-      refine (((r1 - r1') + (r2 - r2')) / ((d1' - d1) + (d2' - d2)), false).
+      refine (let xi := ((r1 - r1') + (r2 - r2')) / ((d1' - d1) + (d2' - d2)) in _).
+      refine (xi, y == h ^+ nat_of_ord xi * g).
     Defined.
 
     Definition KeyGen (xv : choiceWitness) :=
@@ -1185,11 +1346,15 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
       (h ^+ b = is_pure (f_pow (ret_both h) (ret_both (WitnessToField b)))).
 
   Axiom pow_base : forall x, f_g_pow x ≈both f_pow (ret_both g) x.
-  Axiom div_is_prod_inv : forall x y, f_div x y ≈both f_prod x (f_inv y).
+  Axiom div_is_prod_inv : forall x y, f_div x y ≈both f_prod x (f_group_inv y).
 
   Axiom FieldToWitnessAdd : forall x y, (Zp_add (FieldToWitness x) (FieldToWitness y)) = FieldToWitness (is_pure (f_add (ret_both x) (ret_both y))).
   Axiom FieldToWitnessMul : forall x y, (Zp_mul (FieldToWitness x) (FieldToWitness y)) = FieldToWitness (is_pure (f_mul (ret_both x) (ret_both y))).
   Axiom FieldToWitnessOpp : (forall (b : both _), Zp_opp (FieldToWitness (is_pure b)) = FieldToWitness (is_pure (f_opp b))).
+  Axiom FieldToWitnessInv : (forall (b : both (v_G_t_Group.(f_Z))), Zp_inv (FieldToWitness (is_pure b)) = FieldToWitness (is_pure (f_inv b))).
+
+  Axiom WitnessToField_f_inv : forall s, (f_inv (ret_both (WitnessToField s)) = ret_both (WitnessToField (Zp_inv s))).
+  Axiom FieldToWitnessOne : FieldToWitness (is_pure f_field_one) = 1%R.
 
 End OVN_or_proof_preconditions.
 
@@ -2276,6 +2441,84 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     reflexivity.
   Qed.
 
+  Lemma cyclic_always_commute : forall (x y : gT), commute x y.
+  Proof.
+    intros.
+    destruct (ssrbool.elimT (cycleP g x)) ; [ | subst ].
+    {
+      unfold gT in x.
+      unfold g.
+      setoid_rewrite <- v_G_g_gen.
+      simpl.
+      apply in_setT.
+    }
+
+    destruct (ssrbool.elimT (cycleP g y)) ; [ | subst ].
+    {
+      unfold g.
+      setoid_rewrite <- v_G_g_gen.
+      simpl.
+      apply in_setT.
+    }
+
+    apply commuteX2.
+    apply commute_refl.
+  Qed.
+
+  Lemma div_cancel : forall (x : gT) (s : 'Z_q), x ^+ nat_of_ord (s / s)%R = x.
+  Proof.
+    clear ; intros.
+    (* Set Printing Coercions. *)
+    (* epose proof (@mulrV _ s) ; simpl in H. *)
+    rewrite <- (FieldToWitnessCancel s).
+    setoid_rewrite (FieldToWitnessInv (ret_both (WitnessToField s))).
+    setoid_rewrite (FieldToWitnessMul).
+    rewrite WitnessToField_f_inv.
+    simpl.
+    rewrite <- WitnessToField_f_inv.
+    rewrite !(proj1 both_equivalence_is_pure_eq (mul_inv_cancel _)).
+    rewrite FieldToWitnessOne.
+    now rewrite expg1.
+  Qed.
+
+  Lemma expg_div : (forall (x : gT) (y z : 'Z_q), x ^+ y ^- z = x ^+ (y / z)%R).
+  Proof.
+    intros.
+    destruct y.
+    induction m ; simpl (nat_of_ord (Ordinal _)).
+    - set (_ ^+ _).
+      rewrite expg_sub.
+      rewrite expgAC.
+      rewrite expg0.
+      unfold "/" ; simpl GRing.Nmodule_isSemiRing.mul.
+      simpl.
+      rewrite mul0n.
+      rewrite modn_small.
+      2: easy.
+      now rewrite expg0.
+    - rewrite expg_sub.
+      rewrite expgAC.
+      rewrite expgS.
+      rewrite <- expgAC.
+      rewrite <- !expg_sub.
+      rewrite IHm.
+      1: easy.
+      intros.
+      (* symmetry. *)
+      (* apply prod_swap_left_iff. *)
+      (* symmetry. *)
+      (* rewrite <- expgD. *)
+
+      rewrite !trunc_pow.
+      rewrite !expgD.
+      rewrite !expgM.
+      simpl.
+      f_equal.
+
+      rewrite expg_sub.
+      simpl.
+      rewrite !trunc_pow.
+  Admitted.
 
   (* Lemma proving that the output of the extractor defined for Schnorr's
   protocol is perfectly indistinguishable from real protocol execution.
@@ -2342,26 +2585,20 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
         rewrite H7 H9.
         reflexivity.
       }
-      
-      assert (forall (y : 'Z_q), x = x ^+ (y * (y ^-1)%R)).
-      {
-        by admit.
-      }
-      Set Printing Coercions.
-      
 
       rewrite !expgM.
       rewrite <- H.
       rewrite <- !expgM.
 
-      set (rd1 - ld1 + (rd2 - ld2)).
+      set ( _ + _).
       
-      rewrite <- H0.
-      rewrite eqxx.
-      reflexivity.
-    - rewrite !(trunc_pow).
+      replace (x ^+ _)
+        with (x ^+ ((s / s)%R)) by now rewrite !trunc_pow.
 
-      clear -H8 H2.
+      (* Set Printing Coercions. *)
+      rewrite div_cancel.
+      apply eqxx.
+    - clear -H8 H2.
       rename H8 into H9.
       rename H2 into H7.
 
@@ -2387,28 +2624,48 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       }
       clear H7 H9.
 
-      rewrite expgM.
-      rewrite !trunc_pow.
-      rewrite expgD.
-      rewrite <- H.
-      rewrite mulg1.
+      change (y == _ * g) with (y == h ^+ nat_of_ord ((lr1 - rr1 + (lr2 - rr2)) / (rd1 - ld1 + (rd2 - ld2))) * g).
 
-      rewrite expgAC.
-      rewrite !trunc_pow in H7, H9.
+      destruct (y == h ^+ nat_of_ord ((lr1 - rr1 + (lr2 - rr2)) / (rd1 - ld1 + (rd2 - ld2))) * g) eqn:yhg.
+      + apply reflection_nonsense in yhg.
+        rewrite yhg.
+        apply eqxx.
+      + exfalso.
+        refine (Bool.eq_true_false_abs _ _ yhg) ; clear yhg.
+        rewrite !(trunc_pow).
+        rewrite !expgM.
+        
+        rewrite !(trunc_pow).
+        rewrite !expgD.
+        rewrite <- H.
+        do 3 rewrite (expgMn _ (cyclic_always_commute _ _)).
+        rewrite mulgA.
+        rewrite expgVn.
+        rewrite <- !expgM.
+        rewrite <- expgD.
+        
+        replace (y ^+ ((_ * _)%R + (_ * _)%R)) with (y
+   ^+ nat_of_ord ((rd1 - ld1) * ((rd1 - ld1 + (rd2 - ld2))^-1)%R +
+                    (rd2 - ld2) * ((rd1 - ld1 + (rd2 - ld2))^-1)%R)).
+        2:{
+          rewrite !(trunc_pow).
+          rewrite !expgD.
+          rewrite !(trunc_pow).
+          reflexivity.
+        }
+        replace (y ^+ _) with y.
+        2:{
+          setoid_rewrite <- (GRing.mulrDl (rd1 - ld1) (rd2 - ld2) (GRing.inv (rd1 - ld1 + (rd2 - ld2)))).
+          now rewrite div_cancel.
+        }
 
+        rewrite <- (expg1 y) at 2.
+        apply (ssrbool.introT eqP).
+        symmetry.
+        rewrite <- mulgA.
+        apply prod_swap_left_iff.
+        rewrite mulVg.
 
-      rewrite 
-      
-      assert (forall (x : gT) (y : 'Z_q), x = x ^+ (y * (y ^-1)%R)).
-      {
-        by admit.
-      }
-      Set Printing Coercions.
-
-      rewrite !expgM.
-      rewrite <- H.
-      rewrite <- !expgM.
- 
   Admitted.
 
 End OVN_or_proof.
