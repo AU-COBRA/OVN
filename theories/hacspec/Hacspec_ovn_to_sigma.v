@@ -1638,7 +1638,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
       let m := if d1 - d1' != 0
                then ((r1' - r1) / (d1 - d1'))
                else ((r2' - r2) / ((d2 - d2'))) in
-      let v := y == h ^+ m * g in
+      let v := ~~ (d1 - d1' != 0) (* y == h ^+ m * g *) in
       let n := 1 in
       Some (fto (m, v, n)).
       (* let n := 0 (* (v + m) * ((d1 - d1') / (r1' - r1)) *) in *)
@@ -2344,6 +2344,172 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     now rewrite hacspec_vs_RUN_interactive.
   Qed.
 
+  Lemma card_prod_iprod3 :
+    ∀ i j k,
+      #|Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (fintype_ordinal__canonical__fintype_Finite i) (fintype_ordinal__canonical__fintype_Finite j)) (fintype_ordinal__canonical__fintype_Finite k)| = (i * j * k)%N.
+  Proof.
+    intros i j k.
+    rewrite !card_prod. simpl. rewrite !card_ord. reflexivity.
+  Qed.
+
+  Definition ch3prod {i j k} `{Positive i} `{Positive j} `{Positive k}
+    (xyz : Arit (uniform (i * j * k))) :
+    Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (Arit (uniform i)) (Arit (uniform j))) (Arit (uniform k)) :=
+    let '(xy,z) := ch2prod xyz in
+    let '(x,y) := ch2prod xy in
+    (x,y,z).
+
+  Definition prod3ch {i j k} `{Positive i} `{Positive j} `{Positive k}
+    (xyz : Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (Arit (uniform i)) (Arit (uniform j))) (Arit (uniform k))) :
+    Arit (uniform (i * j * k)) :=
+    prod2ch (prod2ch (fst xyz),snd xyz).
+
+  Definition ch3prod_prod3ch :
+    ∀ {i j k} `{Positive i} `{Positive j} `{Positive k}
+      (x : Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (Arit (uniform i)) (Arit (uniform j))) (Arit (uniform k))),
+      ch3prod (prod3ch x) = x.
+  Proof.
+    intros i j k hi hj hk xyz.
+    unfold ch3prod, prod3ch.
+    destruct xyz as [[]].
+    now rewrite !ch2prod_prod2ch.
+  Qed.
+
+  Definition prod3ch_ch3prod :
+    ∀ {i j k} `{Positive i} `{Positive j} `{Positive k} (x : Arit (uniform (i * j * k))),
+      prod3ch (ch3prod x) = x.
+  Proof.
+    intros i j k hi hj hk xyz.
+    unfold ch3prod, prod3ch in *.
+    rewrite -[RHS](prod2ch_ch2prod xyz).
+    destruct (ch2prod xyz) as [xy z].
+    set (s := xy) at 1 ; rewrite -(prod2ch_ch2prod xy) ; subst s.
+    destruct (ch2prod xy) as [x y].
+    rewrite ch2prod_prod2ch.
+    reflexivity.
+  Qed.
+
+  Lemma r_uniform_triple :
+    ∀ {A : ord_choiceType} i j k `{H : Positive i} `{H0 : Positive j} `{H1 : Positive k}
+      (r : fin_family (mkpos (cond_pos := H) i) → fin_family (mkpos (cond_pos := H0) j) → fin_family (mkpos (cond_pos := H1) k) → raw_code A),
+      (∀ x y z, ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ r x y z ≈ r x y z ⦃ Logic.eq ⦄) →
+      ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
+        xyz ← sample uniform (i * j * k) ;;
+      let '(x,y,z) := ch3prod xyz in r x y z
+                                       ≈
+                                       x ← sample uniform i ;;
+                                     y ← sample uniform j ;;
+                                     z ← sample uniform k ;;
+                                     r x y z
+                                       ⦃ Logic.eq ⦄.
+  Proof.
+    intros A i j k pi pj pk r h.
+    eapply r_transR.
+    1:{
+      eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros ].
+      apply r_uniform_prod.
+      intros ; apply rreflexivity_rule.
+    }
+    simpl.
+    eapply r_transR.
+    1:{
+      apply r_uniform_prod.
+      intros ; apply rreflexivity_rule.
+    }
+    simpl.
+    eapply r_uniform_bij with (f := fun (xyz : Arit (uniform (i * j * k))) =>
+                                      let '(x,y,z) := ch3prod xyz in
+                                      (prod2ch (x,prod2ch(y,z))) : Arit (uniform (i * (j * k)))).
+    {
+      apply Bijective with (g :=  fun (xyz : Arit (uniform (i * (j * k)))) =>
+                                    let '(x,yz) := ch2prod xyz in
+                                    let '(y,z) := ch2prod yz in
+                                    prod3ch (x,y,z) : Arit (uniform (i * j * k))).
+      {
+        intros xyz.
+        rewrite -[RHS](prod3ch_ch3prod xyz).
+        destruct (ch3prod xyz) as [[x y] z].
+        now rewrite !ch2prod_prod2ch.
+      }
+      {
+        intros xyz.
+        rewrite -[RHS](prod2ch_ch2prod xyz).
+        destruct (ch2prod xyz) as [x yz].
+        set (s := yz) at 1 ; rewrite <- (prod2ch_ch2prod yz) ; subst s.
+        destruct (ch2prod yz) as [y z].
+        now rewrite !ch3prod_prod3ch.
+      }
+    }
+    {
+      intros xyz.
+      unfold ch3prod.
+      destruct ch2prod.
+      destruct ch2prod.
+      rewrite ch2prod_prod2ch.
+      rewrite ch2prod_prod2ch.
+      apply rreflexivity_rule.
+    }
+  Qed.
+
+  Lemma if_bind : forall {A B} (k : A -> B) (a c : A) b,
+      (let 'x :=
+         if b
+         then a
+         else c
+       in
+       k x)
+      =
+        (if b then k a else k c).
+  Proof. now intros ? ? ? ? ? []. Qed.
+
+  Lemma if_then_if : forall {A} (a c e : A) b,
+      (if b
+       then
+         if b
+         then a
+         else c
+       else
+         e)
+      =
+        (if b
+         then a
+         else e).
+  Proof. now intros ? ? ? ? []. Qed.
+
+  Lemma if_else_if : forall {A} (a c d : A) b,
+      (if b
+       then
+         a
+       else
+         if b
+         then c
+         else d)
+      =
+        (if b
+         then a
+         else d).
+  Proof. now intros ? ? ? ? []. Qed.
+
+  Lemma if_if : forall {A} (a c d e : A) b,
+      (if b
+       then
+         if b
+         then a
+         else c
+       else
+         if b
+         then d
+         else e)
+      =
+        (if b
+         then a
+         else e).
+  Proof. now intros ? ? ? ? ? []. Qed.
+
+  Lemma if_const : forall {A} (a: A) b, (if b then a else a) = a.
+  Proof. now intros ? ? []. Qed.
+
+
   Lemma shvzk_success:
     ∀ LA A,
       ValidPackage LA [interface
@@ -2408,205 +2574,252 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       apply reflection_nonsense in e, H1.
       subst.
 
-      destruct vi.
+      eapply r_transR ; [ apply r_uniform_triple ; intros ; apply rreflexivity_rule | ].
+      apply rsymmetry.
+      eapply r_transR ; [ apply r_uniform_triple ; intros ; apply rreflexivity_rule | ].
+
+      eapply r_uniform_bij with
+        (f := (fun t =>
+                 let '(d, r, r_other) := ch3prod t in
+                 let '(w, d2, r2) :=
+                   if vi
+                   then
+                     let '(d2,r2) := (d, r) in
+                     let 'w := fto ((otf r2) + (m * (otf d2))) in
+                     let 'd := fto (otf c - otf d2) in
+                     (w, d, r_other)
+                   else
+                     let '(d2,r1) := (d, r_other) in
+                     (fto ((otf r1) + (m * (otf c - otf d2))), fto (otf d2), r)
+                 in
+                 prod3ch (w, d2, r2) (* w d r *)
+        )).
       {
-        (* r = r1, d = d1, (w = z1?) *)
-        (* lhs: w, d, r *)
-        (* rhs: d1, r1, r2 *)
-
-        apply rsymmetry.
-        eapply r_transR ; [ apply r_uniform_prod ; intros ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros ; apply rreflexivity_rule ] | ].
-
-        apply rsymmetry.
-        eapply r_transR.
+        eapply Bijective with
+          (g :=  fun (wdr : Arit (uniform (_ * _ * _))) =>
+                   let '(w, d2, r2) := ch3prod wdr in
+                   let '(d, r, r_other) :=
+                     if vi
+                     then
+                       let d := fto (otf c - otf d2) in
+                       let r := fto (otf w - (otf c - otf d2) * m) in
+                       (d, r, r2)
+                     else
+                       let r := fto (otf w - m * (otf c - otf d2)) in
+                       let r2 := r2 in
+                       (d2, r2, r)
+                   in
+                   prod3ch (d, r, r_other)).
         {
-          apply r_uniform_prod ; intros ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros; apply rreflexivity_rule ].
-        }
+          intros xyz.
+          rewrite -[RHS](prod3ch_ch3prod xyz).
+          simpl.
+          set (ch3prod _) at 2.
+          destruct s as [[d r] r_other] eqn:wrd_eq.
+          subst s.
+          rewrite wrd_eq.
 
-        apply rsymmetry.
-        eapply r_uniform_bij with (f := f_d2r2_to_wd m c).
-        1: apply f_d2r2_to_wd_bij.
-        intros dr.
-        unfold f_d2r2_to_wd.
-        apply rsymmetry.
-        destruct (ch2prod dr) as [d2 r2].
-        rewrite ch2prod_prod2ch.
+          rewrite (if_bind (fun '(x,y,z) => _)).
+          rewrite if_bind.
+          rewrite !ch3prod_prod3ch.
+          rewrite !(if_bind (fun '(x,y,z) => _)).
 
-        eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros r1 ].
+          rewrite if_if.
 
-        apply better_r_put_lhs.
-        rewrite bind_rewrite.
-        apply getr_set_lhs (* rewrite otf_fto *).
-        rewrite !otf_fto.
-        rewrite bind_rewrite.
-        apply r_ret.
-        intros ? ? H_post.
+          rewrite !otf_fto !fto_otf.
 
-        (* simpl. *)
+          rewrite !subKr.
+          rewrite mulrC.
+          rewrite !addrK.
+          rewrite !fto_otf.
 
-        (* rewrite !(trunc_pow _ (otf r2 + (m * otf d2) %% (Zp_trunc q).+2)). *)
-        (* rewrite !(expgD _ (otf r2) ((m * otf d2) %% (Zp_trunc q).+2)). *)
-        (* rewrite !(trunc_pow _ (m * otf d2)). *)
-        (* rewrite !(expgM _ m (otf d2)). *)
-        
-        rewrite !trunc_pow.
-        rewrite !expgD.
-        rewrite !trunc_pow.
-        rewrite !expgM.
-
-        split.
-        1:{
-          repeat (rewrite pair_equal_spec ; split).
-          (* Statement *)
-          {
-            reflexivity.
-          }
-          (* Message (r3a1, r4b1, r5a2, r6b2, r1x, r2y) *)
-          {
-            f_equal.
-            repeat (rewrite pair_equal_spec ; split).
-            - reflexivity.
-            - reflexivity.
-            - reflexivity.
-            - f_equal.
-              f_equal.
-              rewrite <- mulgA.
-              rewrite mulgV.
-              rewrite mulg1.
-              reflexivity.
-          }
-          (* Challenge *)
-          {
-            reflexivity.
-          }
-          (* Response *)
-          {
-            f_equal.
-            repeat (rewrite pair_equal_spec ; split).
-            - reflexivity.
-            - reflexivity.
-            - rewrite subKr.
-              rewrite addrK.
-              reflexivity.
-            - rewrite subKr.
-              reflexivity.
-          }
+          rewrite if_const.
+          reflexivity.
         }
         {
-          destruct H_post as [? [H_post ?]].
-          subst.
-          unfold heap_ignore in H_post.
-          unfold heap_ignore.
-          intros ℓ H_loc.
-          specialize (H_post ℓ H_loc).
-          rewrite <- H_post.
+          intros xyz.
+          rewrite -[RHS](prod3ch_ch3prod xyz).
+          simpl.
+          set (ch3prod _) at 2.
+          destruct s as [[w d] r] eqn:wrd_eq.
+          subst s.
+          rewrite wrd_eq.
 
-          unfold Sigma_locs in H_loc.
-          rewrite <- fset1E in H_loc.
-          rewrite in_fset1 in H_loc.
+          rewrite (if_bind (fun '(x,y,z) => _)).
+          rewrite if_bind.
+          rewrite !ch3prod_prod3ch.
+          rewrite !(if_bind (fun '(x,y,z) => _)).
 
-          now rewrite get_set_heap_neq.
+          rewrite if_if.
+
+          rewrite !otf_fto !fto_otf.
+
+          rewrite !subKr.
+          rewrite mulrC.
+          rewrite !subrK.
+          rewrite !fto_otf.
+
+          rewrite if_const.
+          reflexivity.
         }
       }
-      {
-        (* r = r1, d = d1, (w = z1?) *)
-        (* lhs: w, d, r *)
-        (* rhs: d1, r1, r2 *)
-        
-        eapply r_transR.
-        {
-          ssprove_sync_eq. intros.
-          apply swap_samples.
-        }
-        hnf.
+      intros d2r2r1.
+      apply rsymmetry.
 
-        apply rsymmetry.
-        eapply r_transR ; [ apply r_uniform_prod ; intros ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros ; apply rreflexivity_rule ] | ].
+      simpl ch3prod.
 
-        apply rsymmetry.
-        eapply r_transR.
-        {
-          apply r_uniform_prod ; intros ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros; apply rreflexivity_rule ].
-        }
+      destruct (ch3prod _) as [[d2 r2] r1] at 2 3.
 
-        apply rsymmetry.
-        eapply r_uniform_bij with (f := f_d1r1_to_wd m c).
-        1: apply f_d1r1_to_wd_bij.
-        intros dr.
-        unfold f_d1r1_to_wd.
-        apply rsymmetry.
-        destruct (ch2prod dr) as [d2 r1].
-        rewrite ch2prod_prod2ch.
+      rewrite (if_bind (fun '(w,d0,r0) => _)).
+      rewrite (if_bind ch3prod).
+      rewrite !ch3prod_prod3ch.
+      rewrite (if_bind (fun '(w,d0,r0) => _)).
 
-        eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros r2 ].
+      rewrite !otf_fto.
+      rewrite !trunc_pow.
+      rewrite !expgD.
+      rewrite !trunc_pow.
+      rewrite !expgM.
 
-        apply better_r_put_lhs.
-        rewrite bind_rewrite.
-        apply getr_set_lhs.
-        rewrite !otf_fto.
-        rewrite bind_rewrite.
-        apply r_ret.
-        intros ? ? H_post.
+      assert (forall {A} (ℓ : Location) b a c (f g : raw_code A),
+                 ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ #put ℓ := (if b then a else c) ;;
+                             if b
+                             then f
+                             else g
+                   ≈ if b
+                   then #put ℓ := a ;; f
+                   else #put ℓ := c ;; g
+                    ⦃ Logic.eq ⦄) by now intros ? ? [] ? ? ? ? ; apply rreflexivity_rule.
 
-        simpl.
-        rewrite !(trunc_pow).
-        rewrite !(expgD).
-        rewrite !(trunc_pow).
-        rewrite !(expgM).
-        rewrite !(trunc_pow).
-        rewrite !(expgD).
-        rewrite !(trunc_pow).
+      assert (forall {A B} b (y z : raw_code A) (f k : A -> raw_code B),
+                 (if b
+              then x ← y ;;
+                   f x
+              else x ← z ;;
+                   k x) = (x ← (if b then y else z) ;;
+                           (if b then f else k) x)) by now intros ; destruct b.
+      
+      eapply r_transL.
+      1: apply H1.
+      apply better_r_put_lhs.
 
-        rewrite !expg0.
-        rewrite !mulg1.
+      
+      rewrite H2.
 
-        split.
-        1:{
-          repeat (rewrite pair_equal_spec ; split).
-          (* Statement *)
-          {
-            reflexivity.
-          }
-          (* Message (r3a1, r4b1, r5a2, r6b2, r1x, r2y) *)
-          {
-            apply f_equal.
-            repeat (rewrite pair_equal_spec ; split).
-            - reflexivity.
-            - reflexivity.
-            - reflexivity.
-            - reflexivity.
-          }
-          (* Challenge *)
-          {
-            reflexivity.
-          }
-          (* Response *)
-          {
-            f_equal.
-            repeat (rewrite pair_equal_spec ; split).
-            - rewrite addrK.
-              reflexivity.
-            - reflexivity.
-            - reflexivity.
-            - reflexivity.
-          }
-        }
-        {
-          destruct H_post as [? [H_post ?]].
-          subst.
-          unfold heap_ignore in H_post.
-          unfold heap_ignore.
-          intros ℓ H_loc.
-          specialize (H_post ℓ H_loc).
-          rewrite <- H_post.
+      rewrite !(if_bind bind).
+      
+      rewrite (if_then_if).
+      rewrite (if_else_if).
 
-          unfold Sigma_locs in H_loc.
-          rewrite <- fset1E in H_loc.
-          rewrite in_fset1 in H_loc.
+      assert (forall {A B} b (x y : raw_code A) (f g : A -> raw_code B),
+                 (if b then bind x else bind y) (if b
+                  then f
+                  else g) = (if b then bind x f else bind y g)) by now intros ; destruct b.
+      rewrite H3.
+      rewrite !bind_rewrite.
 
-          now rewrite get_set_heap_neq.
-        }
+      assert (forall {B} b ℓ (f g : _ -> raw_code B),
+                 (if b then x ← get ℓ ;; f x else x ← get ℓ ;; g x) = (x ← get ℓ ;; if b then f x else g x)) by now intros ; destruct b.
+      rewrite H4.
+
+      apply getr_set_lhs (* rewrite otf_fto *).
+
+      rewrite (if_bind (fun '(w,d0,r0) => _)).
+      rewrite !(if_then_if).
+      rewrite !(if_else_if).
+
+
+      rewrite !(if_bind bind).
+      unfold bind at 1 2.
+
+      assert (forall {A B} b (x y : A) (f g : A -> raw_code B),
+                 (if b then (if b
+                            then f
+                            else g) x else (if b
+                            then f
+                            else g) y) = (if b then f x else g y)) by now intros ; destruct b.
+      rewrite H5.
+      rewrite !bind_rewrite.
+
+      rewrite !(trunc_pow).
+      rewrite !(expgD).
+      rewrite !(trunc_pow).
+
+      rewrite <- (if_bind (fun x => ret x)).
+      apply r_ret.
+
+      intros ? ? H_post.
+      split ; [clear s₀ s₁ H_post | ].
+      2:{
+        destruct H_post as [? [H_post ?]].
+        subst.
+        unfold heap_ignore in H_post.
+        unfold heap_ignore.
+        intros ℓ H_loc.
+        specialize (H_post ℓ H_loc).
+        rewrite <- H_post.
+
+        unfold Sigma_locs in H_loc.
+        rewrite <- fset1E in H_loc.
+        rewrite in_fset1 in H_loc.
+
+        now rewrite get_set_heap_neq.
       }
+
+      set (p := (_,_,_,_)).
+      pattern vi in p.
+      subst p.
+
+      set (p := (_,_,_,_)) at 2.
+      pattern vi in p.
+      subst p.
+
+      assert (forall {A} (f g : bool -> A) b, (if b then f b else g b) = if b then f true else g false) by now intros ; destruct b.
+      rewrite H6.
+
+      match goal with
+      | [ |- context [ _ = ?rhs ] ] => set (p := rhs) ; pattern vi in p ; subst p
+      end.
+
+      assert (forall {A} (f : bool -> A) b, (if b then f true else f false) = f b) by now intros ; destruct b.
+      set (f := fun _ => _).
+      rewrite <- (H7 _ f vi).
+      subst f.
+      hnf.
+
+      rewrite !expg0.
+      rewrite !mulg1.
+
+      assert (forall {A} b (a e : A) (c d : A), (if b then a = e else c = d) <-> ((if b then a else c) = (if b then e else d))) by now intros ; destruct b.
+      apply H8.
+
+      rewrite !otf_fto.
+
+      assert (forall {A : finType} (x y : A), (fto x = fto y) <-> (x = y)).
+      {
+        intros.
+        (* apply boolp.propeqP. *)
+        split.
+        - intros.
+          rewrite <- (otf_fto y).
+          rewrite <- H9.
+          rewrite otf_fto.
+          reflexivity.
+        - easy.
+      }
+      
+      repeat (rewrite (proj2 (boolp.propeqP _ _) (pair_equal_spec _ _ _ _))).
+      rewrite !(proj2 (boolp.propeqP _ _) (H9 (Message) _ _)).
+      rewrite !(proj2 (boolp.propeqP _ _) (H9 (MyParam.Response) _ _)).
+      repeat (rewrite (proj2 (boolp.propeqP _ _) (pair_equal_spec _ _ _ _))).
+
+      rewrite <- (mulgA (h^+m)).
+      rewrite mulgV.
+      rewrite mulg1.
+      rewrite !subKr.
+      rewrite !addrK.
+
+      now destruct vi.
     }
   Qed.
 
@@ -2624,7 +2837,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     2,3: apply fdisjoints0.
     simplify_eq_rel temp.
     destruct temp as [xhy [a [[e z] [e' z']]]].
-    
+
     unfold Extractor.
     unfold Verify.
     destruct
@@ -2633,7 +2846,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       (otf z) as [[[lr1 ld1] lr2] ld2],
       (otf z') as [[[rr1 rd1] rr2] rd2].
     rewrite !otf_fto.
-    
+
     destruct [&& _, _, _ & _] eqn:ando ; [ | now apply r_ret ; intros ; clear -H].
     apply (ssrbool.elimT and4P) in ando.
     destruct ando.
@@ -2642,179 +2855,113 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     apply reflection_nonsense in H0, H6, H5, H4, H3, H1, H9, H8, H7, H2.
 
     unfold R.
-      
-      eassert (Hd2d1 : ld2 = otf e - ld1).
-      {
-        rewrite H0.
-        rewrite addrC.
-        rewrite addKr.
-        reflexivity.
+
+    apply f_equal with (f := fto) in H0, H1.
+    rewrite !fto_otf in H0, H1.
+
+    subst la1 lb1 la2 lb2.
+
+    apply (proj1 (prod_swap_iff _ _ _ _)) in H9, H7, H8, H2.
+    rewrite <- mulgA in H9, H7, H8, H2.
+
+    rewrite !mulg_invg_sub in H9, H7, H8, H2.
+    symmetry in H9, H7, H8, H2.
+    apply (proj2 (prod_swap_iff _ _ _ _)) in H9, H7, H8, H2.
+    rewrite !mulg_invg_left_sub in H9, H7, H8, H2.
+
+    assert (ld1 - rd1 + (ld2 - rd2) <> 0).
+    {
+      subst e e'.
+      clear -H.
+      intros ?.
+      assert (fto (ld1 + ld2) = fto (rd1 + rd2)).
+      2:{
+        rewrite H1 in H.
+        rewrite eqxx in H.
+        discriminate.
       }
+      f_equal.
+      apply /eqP.
+      setoid_rewrite <- (subr_eq (ld1 + ld2) rd1 rd2).
+      rewrite <- addrA.
+      rewrite addrC.
+      rewrite <- (add0r rd1).
+      setoid_rewrite <- subr_eq.
+      rewrite <- addrA.
+      rewrite addrC.
+      apply /eqP.
+      apply H0.
+    }
 
-      eassert (H'd2d1 : rd2 = otf e' - rd1).
-      {
-        rewrite H1.
-        rewrite addrC.
-        rewrite addKr.
-        reflexivity.
-      }
+    assert ((ld1 - rd1) <> 0 \/ (ld2 - rd2) <> 0).
+    {
+      destruct (ld1 == rd1) eqn:is_eq;
+        [ apply (ssrbool.elimT eqP) in is_eq
+        | apply (ssrbool.elimF eqP) in is_eq ].
+      - rewrite is_eq in H3.
+        rewrite addrN in H3.
+        rewrite add0r in H3.
+        now right.
+      - left.
+        red ; intros.
+        apply is_eq.
+        now apply /eqP ; setoid_rewrite <- subr_eq0 ; apply /eqP.
+    }
 
-      apply f_equal with (f := fto) in H0, H1.
-      rewrite !fto_otf in H0, H1.
+    apply r_ret ; split ; [ clear H5 ; symmetry | easy ].
 
-      subst la1 lb1 la2 lb2.
+    assert (if_bind : forall b (a : gT) (c d : 'F_q), (a ^+ (if b then c else d)) = (if b then a ^+ c else a ^+ d)) by now clear ; intros [].
 
-      (* apply r_ret ; intros;  split ; [ clear s₀ s₁ H3 | assumption ]. *)
-      (* symmetry. *)
+    replace (g ^+ _) with (x ^+ (if ld1 - rd1 != 0 then (ld1 - rd1) / (ld1 - rd1) else (ld2 - rd2) / (ld2 - rd2))) by
+      now destruct (ld1 - rd1 != 0) ; rewrite !trunc_pow !expgM ; [ rewrite H9 | rewrite H7 ].
 
-      apply (proj1 (prod_swap_iff _ _ _ _)) in H9, H7, H8, H2.
-      rewrite <- mulgA in H9, H7, H8, H2.
-
-      rewrite !mulg_invg_sub in H9, H7, H8, H2.
-      symmetry in H9, H7, H8, H2.
-      apply (proj2 (prod_swap_iff _ _ _ _)) in H9, H7, H8, H2.
-      rewrite !mulg_invg_left_sub in H9, H7, H8, H2.
-
-      assert (g ^+ ((rr1 - lr1) + (rr2 - lr2))%R = x ^+ ((ld1 - rd1) + (ld2 - rd2))%R).
-      {
-        rewrite !(trunc_pow).
-        rewrite !(expgD).
-
-        setoid_rewrite <- H7.
-        setoid_rewrite <- H9.
-        reflexivity.
-      }
-      (* clear H7 H9. *)
-
-      assert (h ^+ ((rr1 - lr1) + (rr2 - lr2))%R = y ^+ ((ld1 - rd1) + (ld2 - rd2))%R * g^-1 ^+ (ld2 - rd2)%R).
-      {
-        rewrite !(trunc_pow y).
-        rewrite !(trunc_pow h).
-        rewrite !(expgD h).
-        rewrite !(expgD y).
-        setoid_rewrite H8.
-        setoid_rewrite H2.
-        rewrite (expgMn _ (cyclic_always_commute _ _)).
-        rewrite mulgA.
-        reflexivity.
-      }
-
-      assert (ld1 - rd1 + (ld2 - rd2) <> 0).
-      {
-        subst e e'.
-        clear -H.
-        intros ?.
-        assert (fto (ld1 + ld2) = fto (rd1 + rd2)).
-        2:{
-          rewrite H1 in H.
-          rewrite eqxx in H.
-          discriminate.
-        }
-        f_equal.
-        apply /eqP.
-        setoid_rewrite <- (subr_eq (ld1 + ld2) rd1 rd2).
-        rewrite <- addrA.
-        rewrite addrC.
-        rewrite <- (add0r rd1).
-        setoid_rewrite <- subr_eq.
-        rewrite <- addrA.
-        rewrite addrC.
-        apply /eqP.
-        apply H0.
-      }
-
-      assert ((ld1 - rd1) <> 0 \/ (ld2 - rd2) <> 0).
-      {
-        destruct (ld1 == rd1) eqn:is_eq;
-          [ apply (ssrbool.elimT eqP) in is_eq
-          | apply (ssrbool.elimF eqP) in is_eq ].
-        - rewrite is_eq in H5.
-          rewrite addrN in H5.
-          rewrite add0r in H5.
-          now right.
-        - left.
-          red ; intros.
-          apply is_eq.
-          now apply /eqP ; setoid_rewrite <- subr_eq0 ; apply /eqP.
-      }
-
-      destruct (ld1 == rd1) eqn:is_zero;
-          [ apply (ssrbool.elimT eqP) in is_zero
-          | apply (ssrbool.elimF eqP) in is_zero ].
-      {
-        rewrite is_zero in H6 |- *.
-        rewrite addrN in H6 |- *.
-        rewrite eqxx.
-        simpl (~~ true) ; hnf.
-
-        destruct H6 ; [ contradiction | ].
-
-        rewrite !trunc_pow.
-        rewrite !expgM.
-        rewrite H7 H2.
-        set ( _ + _).
-        rewrite <- !expgM.
-        replace (x ^+ _)
-          with (x ^+ ((s / s)%R)) by now rewrite !trunc_pow.
-        replace ((y * g^-1) ^+ _)
-          with ((y * g^-1) ^+ ((s / s)%R)) by now rewrite !trunc_pow.
-        rewrite !div_cancel ; [ | assumption ..].
-
-        rewrite <- !(mulgA _ g^-1).
-        rewrite !mulVg.
+    replace (h ^+ _) with ((y * g ^- (~~ (ld1 - rd1 != 0))) ^+ (if ld1 - rd1 != 0 then (ld1 - rd1) / (ld1 - rd1) else (ld2 - rd2) / (ld2 - rd2))).
+    2:{
+      destruct (ld1 - rd1 != 0) ; rewrite !trunc_pow !expgM ; [ rewrite H8 | rewrite H2 ].
+      - rewrite expg0.
+        rewrite invg1.
         rewrite mulg1.
-        rewrite (eqxx y).
+        reflexivity.
+      - rewrite expg1.
+        reflexivity.
+    }
 
-        rewrite expg1.
-        rewrite !mulVg.
-        rewrite mulg1.
+    destruct (ld1 == rd1) eqn:is_zero;
+      [ apply (ssrbool.elimT eqP) in is_zero
+      | apply (ssrbool.elimF eqP) in is_zero ].
+    {
+      rewrite is_zero in H4 |- *.
+      rewrite addrN in H4 |- *.
+      rewrite eqxx.
+      simpl (~~ true) ; hnf.
 
-        now rewrite !eqxx ; apply r_ret.
-      }
+      destruct H4 ; [ contradiction | ].
+      rewrite !div_cancel ; [ | assumption ..].
+
+      rewrite <- !(mulgA _ g^-1).
+      rewrite !mulVg.
+      rewrite mulg1.
+
+      now rewrite !eqxx.
+    }
+    {
+      assert (ld1 - rd1 <> 0).
       {
-        assert (ld1 - rd1 <> 0).
-        {
-          red ; intros.
-          apply is_zero.
-          now apply /eqP ; setoid_rewrite <- subr_eq0 ; apply /eqP.
-        }
-        rewrite (ssrbool.introF eqP H10).
-        simpl (~~false) ; hnf.
-
-        rewrite !trunc_pow.
-        rewrite !expgM.
-        rewrite H9 H8.
-        set ( _ + _).
-        rewrite <- !expgM.
-        replace (x ^+ _)
-          with (x ^+ ((s / s)%R)) by now rewrite !trunc_pow.
-        replace (y ^+ _)
-          with (y ^+ ((s / s)%R)) by now rewrite !trunc_pow.
-        rewrite !div_cancel ; [ | assumption ..].
-
-        replace (y == y * g) with false.
-        2:{
-          symmetry.
-          apply /eqP.
-          red.
-          intros.
-
-          rewrite <- (expg1 y) in H11.
-          change (y ^+ 1) with (y ^+ 1%R) in H11.
-          apply (prod_swap_iff (y ^+ 1%R) g y 1%R) in H11 .
-          rewrite mulVg in H11.
-
-          apply generator_is_not_one.
-          eapply both_equivalence_is_pure_eq.
-
-          fold g.
-          rewrite <- H11.
-          reflexivity.
-        }
-        rewrite expg0.
-        rewrite mulg1.
-        now rewrite !eqxx ; apply r_ret.
+        red ; intros.
+        apply is_zero.
+        now apply /eqP ; setoid_rewrite <- subr_eq0 ; apply /eqP.
       }
-    Qed.
+      rewrite (ssrbool.introF eqP H5).
+      simpl (~~false) ; hnf.
+
+      rewrite !div_cancel ; [ | assumption ..].
+
+      rewrite expg0.
+      rewrite invg1.
+      rewrite !mulg1.
+
+      now rewrite !eqxx.
+    }
+  Qed.
 
 End OVN_or_proof.
