@@ -1446,7 +1446,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
 
   Module MyParam <: SigmaProtocolParams.
 
-    Definition Witness : finType := (Finite.clone _ 'F_q).
+    Definition Witness : finType := prod (prod (Finite.clone _ 'F_q) (Finite.clone _ 'bool)) (Finite.clone _ 'F_q).
     Definition Statement : finType := prod (prod gT gT) gT.
     Definition Message : finType :=  prod (prod (prod gT gT) gT) gT.
     Definition Challenge : finType := Finite.clone _ 'F_q.
@@ -1459,16 +1459,16 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
     Definition R : Statement -> Witness -> bool :=
       (λ (xhy : Statement) (mvn : Witness),
         let '(x,h,y) := xhy in
-        let (* '( *)m(* ,v,n) *) := mvn in
+        let '(m,v,n) := mvn in
         (x == g ^+ m)
         (* && (h == g ^+ n) *)
-        && ((y == h^+m * g) || (y == h^+m))
+        && ((y == h^+m * g ^+ v))
         (* && ((g ^+ v == g) || (g ^+ v == 1)) *)
       ).
 
     Lemma relation_valid_left:
       ∀ (x : 'F_q) (yi : 'F_q),
-        R (g^+x, g^+yi, g^+(yi * x) * g) (x(* , 1%R, yi *)).
+        R (g^+x, g^+yi, g^+(yi * x) * g) (x, 1%R, yi).
     Proof.
       intros x yi.
       unfold R.
@@ -1478,12 +1478,12 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
 
     Lemma relation_valid_right:
       ∀ (x : 'F_q) (yi : 'F_q),
-        R (g ^+ x, g ^+ yi, g ^+ yi ^+x) (x(* , 0%R, yi *)).
+        R (g ^+ x, g ^+ yi, g ^+ yi ^+x) (x, 0%R, yi).
     Proof.
       intros x yi.
       unfold R.
-      (* rewrite expg0. *)
-      (* rewrite mulg1. *)
+      rewrite expg0.
+      rewrite mulg1.
       now rewrite !eqxx.
     Qed.
 
@@ -1552,8 +1552,8 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
          r ← sample uniform i_witness ;;
          #put commit_loc := (w, r, d) ;;
          let '(x, h, y) := (otf hy) in
-         let (* '( *)m(* , v, n) *) := (otf xv) in
-         if (* v == 1 *) y == h ^+ m * g
+         let '(m, v, n) := (otf xv) in
+         if v
          then
            (
              let r1 := r in
@@ -1594,8 +1594,8 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
       {code
          '(w, r, d) ← get commit_loc ;;
          let '(x, h, y) := (otf xhy) in
-         let (* '( *)m(* , v, n) *) := (otf xv) in
-         if (* v == 1 *) y == h ^+ m * g
+         let '(m, v, n) := (otf xv) in
+         if v (* y == h ^+ m * g *)
          then
            (let d2 := (otf c - otf d) in
             let r2 := (otf w - (m * d2)) in
@@ -1638,29 +1638,9 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
       let m := if d1 - d1' != 0
                then ((r1' - r1) / (d1 - d1'))
                else ((r2' - r2) / ((d2 - d2'))) in
-      (* let m := ((r1' - r1) / ((d1 - d1') + (d2 - d2')) + (r2' - r2) / ((d1 - d1') + (d2 - d2'))) in *)
-      Some (fto m).
-      (* if d1 == d1' *)
-      (* then Some (fto (m, ((d2 - d2') * ((d2 - d2')^-1))%R, 0%R)) *)
-      (* else *)
-      (*   if d2 == d2' *)
-      (*   then Some (fto (m, 0%R, 0%R)) *)
-      (*   else None. *)
-
-      (* (* let m := ((r2' - r2)) / ((d2 - d2')) in *) *)
-      (* let m := *)
-      (*   ((r1' - r1) + (r2' - r2)) / ((d1 - d1') + (d2 - d2')) *)
-      (*   (* if d1 == d1' *) *)
-      (*   (* then ((r1' - r1) + (r2' - r2)) / ((d1 - d1') + (d2 - d2')) *) *)
-      (*   (* else ((r1' - r1) + (r2' - r2)) / (d1 - d1') *) *)
-      (*   (* ((r1' - r1) + (r2' - r2)) / ((d1 - d1') + (d2 - d2')) *) *)
-      (* in *)
-      (* let v := *)
-      (*   if d1 == d1' *)
-      (*   then 1%R *)
-      (*   else 0%R *)
-      (* (* ((d2 - d2')%R / ((d1 - d1' + (d2 - d2')))%R)%R *) in *)
-      (* (* if y == h ^+ m * g then 1%R else 0%R in (* (d_2 - d_2') / ((d_2 - d_2') + (d_1 - d_1')) *) *) *)
+      let v := y == h ^+ m * g in
+      let n := 1 in
+      Some (fto (m, v, n)).
       (* let n := 0 (* (v + m) * ((d1 - d1') / (r1' - r1)) *) in *)
       (* (* g^{d_2 - d_2'} = g^{yi (r_2 - r_2') + (xi * yi + vi) (d_2 - d_2')} *) *)
       (* (* (d_2 - d_2') (1 - vi) = yi ((r_2 - r_2') + xi * (d_2 - d_2')) *) *)
@@ -1668,239 +1648,10 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
       (* Some (fto (m, v, n)). (* xi, vi, yi *) *)
     Fail Next Obligation.
 
-    Lemma valid_extractor :
-      forall xhy a e e' z z',
-        [&& e != e', otf (Verify xhy a e z) & otf (Verify xhy a e' z')] = true ->
-          match Extractor xhy a e e' z z' with
-            Option_Some w => (R (otf xhy) (otf w))
-          | _ => false
-          end.
-    Proof.
-      intros xhy a e e' z z' ando.
-
-      unfold Extractor.
-      unfold Verify in ando.
-      destruct
-        (otf xhy) as [[x h] y],
-          (otf a) as [[[la1 lb1] la2] lb2],
-            (otf z) as [[[lr1 ld1] lr2] ld2],
-              (otf z') as [[[rr1 rd1] rr2] rd2].
-      rewrite !otf_fto in ando |- *.
-
-      apply (ssrbool.elimT and4P) in ando.
-      destruct ando.
-      repeat (apply (ssrbool.elimT andP) in H0 ; destruct H0).
-      repeat (apply (ssrbool.elimT andP) in H1 ; destruct H1).
-      apply reflection_nonsense in H0, H6, H5, H4, H3, H1, H9, H8, H7, H2.
-
-      unfold R.
-      
-      eassert (Hd2d1 : ld2 = otf e - ld1).
-      {
-        rewrite H0.
-        rewrite addrC.
-        rewrite addKr.
-        reflexivity.
-      }
-
-      eassert (H'd2d1 : rd2 = otf e' - rd1).
-      {
-        rewrite H1.
-        rewrite addrC.
-        rewrite addKr.
-        reflexivity.
-      }
-
-      apply f_equal with (f := fto) in H0, H1.
-      rewrite !fto_otf in H0, H1.
-
-      subst la1 lb1 la2 lb2.
-
-      (* apply r_ret ; intros;  split ; [ clear s₀ s₁ H3 | assumption ]. *)
-      (* symmetry. *)
-
-      apply (proj1 (prod_swap_iff _ _ _ _)) in H9, H7, H8, H2.
-      rewrite <- mulgA in H9, H7, H8, H2.
-
-      rewrite !mulg_invg_sub in H9, H7, H8, H2.
-      symmetry in H9, H7, H8, H2.
-      apply (proj2 (prod_swap_iff _ _ _ _)) in H9, H7, H8, H2.
-      rewrite !mulg_invg_left_sub in H9, H7, H8, H2.
-
-      assert (g ^+ ((rr1 - lr1) + (rr2 - lr2))%R = x ^+ ((ld1 - rd1) + (ld2 - rd2))%R).
-      {
-        rewrite !(trunc_pow).
-        rewrite !(expgD).
-
-        setoid_rewrite <- H7.
-        setoid_rewrite <- H9.
-        reflexivity.
-      }
-      (* clear H7 H9. *)
-
-      assert (h ^+ ((rr1 - lr1) + (rr2 - lr2))%R = y ^+ ((ld1 - rd1) + (ld2 - rd2))%R * g^-1 ^+ (ld2 - rd2)%R).
-      {
-        rewrite !(trunc_pow y).
-        rewrite !(trunc_pow h).
-        rewrite !(expgD h).
-        rewrite !(expgD y).
-        setoid_rewrite H8.
-        setoid_rewrite H2.
-        rewrite (expgMn _ (cyclic_always_commute _ _)).
-        rewrite mulgA.
-        reflexivity.
-      }
-
-      assert (ld1 - rd1 + (ld2 - rd2) <> 0).
-      {
-        subst e e'.
-        clear -H.
-        intros ?.
-        assert (fto (ld1 + ld2) = fto (rd1 + rd2)).
-        2:{
-          rewrite H1 in H.
-          rewrite eqxx in H.
-          discriminate.
-        }
-        f_equal.
-        apply /eqP.
-        setoid_rewrite <- (subr_eq (ld1 + ld2) rd1 rd2).
-        rewrite <- addrA.
-        rewrite addrC.
-        rewrite <- (add0r rd1).
-        setoid_rewrite <- subr_eq.
-        rewrite <- addrA.
-        rewrite addrC.
-        apply /eqP.
-        apply H0.
-      }
-
-      assert (x = g ^+ ((rr1 - lr1) / ((ld1 - rd1 + (ld2 - rd2))) + (rr2 - lr2) / ((ld1 - rd1 + (ld2 - rd2))))%R).
-      {
-        rewrite !trunc_pow.
-        rewrite expgD.
-        rewrite !trunc_pow.
-        rewrite expgM.
-        rewrite H9.
-        rewrite expgM.
-        rewrite H7.
-
-        
-        rewrite expgAC.
-        rewrite <- expgM.
-        rewrite expgAC.
-        rewrite  expgM.
-        rewrite <- expgD.
-        rewrite expgAC.
-
-        replace (x ^+ (_ + _)) with (x ^+ ((ld1 - rd1) + (ld2 - rd2))%R) by now rewrite trunc_pow.
-
-        rewrite <- !expgM.
-        set ( _ + _).
-
-        replace (x ^+ _)
-          with (x ^+ ((s / s)%R)) by now rewrite !trunc_pow.
-
-        now rewrite !div_cancel.
-      }
-
-      assert (y =
-   h ^+ ((rr1 - lr1 + (rr2 - lr2))%R / ((ld1 - rd1 + (ld2 - rd2)))%R)%R *
-     g ^+ ((ld2 - rd2)%R / ((ld1 - rd1 + (ld2 - rd2)))%R)%R).
-      {
-        rewrite !trunc_pow.
-        rewrite !expgM.
-        rewrite H4.
-
-        rewrite <- !expgM.
-
-        set ( _ + _).
-
-        rewrite !(expgMn _ (cyclic_always_commute _ _)).
-        rewrite <- !expgM.
-
-        replace (y ^+ _)
-          with (y ^+ ((s / s)%R)) by now rewrite !trunc_pow.
-
-        rewrite !div_cancel ; [ | assumption ..].
-
-        rewrite expgVn.
-        rewrite <- mulgA.
-        rewrite mulVg.
-        now rewrite !mulg1.
-      }
-
-      assert ((ld1 - rd1) <> 0 \/ (ld2 - rd2) <> 0).
-      {
-        destruct (ld1 == rd1) eqn:is_eq;
-          [ apply (ssrbool.elimT eqP) in is_eq
-          | apply (ssrbool.elimF eqP) in is_eq ].
-        - rewrite is_eq in H5.
-          rewrite addrN in H5.
-          rewrite add0r in H5.
-          now right.
-        - left.
-          red ; intros.
-          apply is_eq.
-          now apply /eqP ; setoid_rewrite <- subr_eq0 ; apply /eqP.
-      }
-
-      (* rewrite <- H6. *)
-
-      destruct (ld1 == rd1) eqn:is_zero;
-          [ apply (ssrbool.elimT eqP) in is_zero
-          | apply (ssrbool.elimF eqP) in is_zero ].
-      {
-        rewrite is_zero in H11 |- *.
-        rewrite addrN in H11 |- *.
-        rewrite eqxx.
-        simpl (~~ true) ; hnf.
-
-        destruct H11 ; [ contradiction | ].
-
-        rewrite !trunc_pow.
-        rewrite !expgM.
-        rewrite H7 H2.
-        set ( _ + _).
-        rewrite <- !expgM.
-        replace (x ^+ _)
-          with (x ^+ ((s / s)%R)) by now rewrite !trunc_pow.
-        replace ((y * g^-1) ^+ _)
-          with ((y * g^-1) ^+ ((s / s)%R)) by now rewrite !trunc_pow.
-        rewrite !div_cancel ; [ | assumption ..].
-        rewrite <- mulgA.
-        rewrite mulVg.
-        rewrite mulg1.
-        now rewrite !eqxx.
-      }
-      {
-        assert (ld1 - rd1 <> 0).
-        {
-          red ; intros.
-          apply is_zero.
-          now apply /eqP ; setoid_rewrite <- subr_eq0 ; apply /eqP.
-        }
-        rewrite (ssrbool.introF eqP H12).
-        simpl (~~false) ; hnf.
-
-        rewrite !trunc_pow.
-        rewrite !expgM.
-        rewrite H9 H8.
-        set ( _ + _).
-        rewrite <- !expgM.
-        replace (x ^+ _)
-          with (x ^+ ((s / s)%R)) by now rewrite !trunc_pow.
-        replace (y ^+ _)
-          with (y ^+ ((s / s)%R)) by now rewrite !trunc_pow.
-        rewrite !div_cancel ; [ | assumption ..].
-        now rewrite !eqxx.
-      }
-    Qed.
-
     Definition KeyGen (xv : choiceWitness) :=
       let '(m, v, n) := otf xv in
       fto (g ^+ m, g ^+ n ^+ m, g ^+ n ^+ m * g ^+ v).
-    (* TODO: should be g ^+ yi, g ^+ (yi * mi * nat vi), and vi *)
+
   End MyAlg.
 
   Module Sigma := SigmaProtocol MyParam MyAlg.
@@ -2147,9 +1898,9 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     subst f_rand f_rand_inner.
 
     (* destruct (y == h ^+ m * g) eqn:H. *)
-    destruct H.
+    destruct v.
     {
-      apply reflection_nonsense in H, H0, H1.
+      apply reflection_nonsense in H(* , H0, H1 *).
       subst.
 
       rewrite !eqxx.
@@ -2270,7 +2021,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
         now rewrite <- get_heap_set_heap.
     }
     {
-      apply reflection_nonsense in H, H0, H1.
+      apply reflection_nonsense in H(* , H0, H1 *).
       subst.
       set (_ == _).
       replace b with false.
@@ -2358,7 +2109,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
             (* rewrite WitnessToFieldCancel. *)
             rewrite pow_witness_to_field.
             rewrite WitnessToFieldCancel.
-            rewrite pow_witness_to_field.
+            (* rewrite pow_witness_to_field. *)
             rewrite prod_witness_to_field.
             now push_down_sides.
         }
@@ -2654,21 +2405,14 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       unfold R in e.
       simpl in e.
       repeat (apply andb_prop in e ; destruct e as [e ?]).
-      apply (ssrbool.elimT orP) in H1.
-      apply reflection_nonsense in e, H2, H3.
+      apply reflection_nonsense in e, H1.
       subst.
 
-      destruct H1.
+      destruct vi.
       {
         (* r = r1, d = d1, (w = z1?) *)
         (* lhs: w, d, r *)
         (* rhs: d1, r1, r2 *)
-        apply reflection_nonsense in H1.
-        subst.
-
-        (* rewrite !expg1. *)
-        rewrite !eqxx.
-
 
         apply rsymmetry.
         eapply r_transR ; [ apply r_uniform_prod ; intros ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros ; apply rreflexivity_rule ] | ].
@@ -2698,11 +2442,17 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
         apply r_ret.
         intros ? ? H_post.
 
-        simpl.
-        rewrite !(trunc_pow _ (otf r2 + (m * otf d2) %% (Zp_trunc q).+2)).
-        rewrite !(expgD _ (otf r2) ((m * otf d2) %% (Zp_trunc q).+2)).
-        rewrite !(trunc_pow _ (m * otf d2)).
-        rewrite !(expgM _ m (otf d2)).
+        (* simpl. *)
+
+        (* rewrite !(trunc_pow _ (otf r2 + (m * otf d2) %% (Zp_trunc q).+2)). *)
+        (* rewrite !(expgD _ (otf r2) ((m * otf d2) %% (Zp_trunc q).+2)). *)
+        (* rewrite !(trunc_pow _ (m * otf d2)). *)
+        (* rewrite !(expgM _ m (otf d2)). *)
+        
+        rewrite !trunc_pow.
+        rewrite !expgD.
+        rewrite !trunc_pow.
+        rewrite !expgM.
 
         split.
         1:{
@@ -2762,29 +2512,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
         (* r = r1, d = d1, (w = z1?) *)
         (* lhs: w, d, r *)
         (* rhs: d1, r1, r2 *)
-        apply reflection_nonsense in H1.
-        subst.
-        set (_ == _).
-        replace b with false ; subst b.
-        2:{
-          clear.
-          symmetry.
-          apply /eqP.
-          intros ?.
-          subst.
-
-          apply generator_is_not_one.
-          eapply both_equivalence_is_pure_eq.
-          apply prod_swap_iff in H.
-          rewrite expg0 in H.
-          rewrite mulg1 in H.
-          rewrite mulVg in H.
-
-          fold g.
-          rewrite <- H.
-          reflexivity.
-        }
-
+        
         eapply r_transR.
         {
           ssprove_sync_eq. intros.
@@ -2891,8 +2619,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
                          #val #[ SOUNDNESS ] : chSoundness → 'bool
         ] A_export A →
       ɛ_soundness A = 0.
-  Proof.
-    intros LA A VA.
+        intros LA A VA.
     apply: eq_rel_perf_ind_eq.
     2,3: apply fdisjoints0.
     simplify_eq_rel temp.
@@ -2906,7 +2633,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       (otf z) as [[[lr1 ld1] lr2] ld2],
       (otf z') as [[[rr1 rd1] rr2] rd2].
     rewrite !otf_fto.
-
+    
     destruct [&& _, _, _ & _] eqn:ando ; [ | now apply r_ret ; intros ; clear -H].
     apply (ssrbool.elimT and4P) in ando.
     destruct ando.
@@ -2915,343 +2642,179 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     apply reflection_nonsense in H0, H6, H5, H4, H3, H1, H9, H8, H7, H2.
 
     unfold R.
-
-    eassert (Hd2d1 : ld2 = otf e - ld1).
-    {
-      rewrite H0.
-      rewrite addrC.
-      rewrite addKr.
-      reflexivity.
-    }
-
-    eassert (H'd2d1 : rd2 = otf e' - rd1).
-    {
-      rewrite H1.
-      rewrite addrC.
-      rewrite addKr.
-      reflexivity.
-    }
-
-    apply f_equal with (f := fto) in H0, H1.
-    rewrite !fto_otf in H0, H1.
-
-    subst la1 lb1 la2 lb2.
-
-    apply r_ret ; intros;  split ; [ clear s₀ s₁ H3 | assumption ].
-    symmetry.
-
-    apply (proj1 (prod_swap_iff _ _ _ _)) in H9, H7, H8, H2.
-    rewrite <- mulgA in H9, H7, H8, H2.
-
-    rewrite !mulg_invg_sub in H9, H7, H8, H2.
-    symmetry in H9, H7, H8, H2.
-    apply (proj2 (prod_swap_iff _ _ _ _)) in H9, H7, H8, H2.
-    rewrite !mulg_invg_left_sub in H9, H7, H8, H2.
-
-    assert (g ^+ ((rr1 - lr1) + (rr2 - lr2))%R = x ^+ ((ld1 - rd1) + (ld2 - rd2))%R).
-    {
-      rewrite !(trunc_pow).
-      rewrite !(expgD).
-
-      setoid_rewrite <- H7.
-      setoid_rewrite <- H9.
-      reflexivity.
-    }
-    (* clear H7 H9. *)
-
-    assert (h ^+ ((rr1 - lr1) + (rr2 - lr2))%R = y ^+ ((ld1 - rd1) + (ld2 - rd2))%R * g^-1 ^+ (ld2 - rd2)%R).
-    {
-      rewrite !(trunc_pow y).
-      rewrite !(trunc_pow h).
-      rewrite !(expgD h).
-      rewrite !(expgD y).
-      setoid_rewrite H8.
-      setoid_rewrite H2.
-      rewrite (expgMn _ (cyclic_always_commute _ _)).
-      rewrite mulgA.
-      reflexivity.
-    }
-    (* clear H8 H2. *)
-
-    (* replace *)
-    (*   (y == *)
-    (*      h ^+ _ * g) with *)
-    (*   (y == *)
-    (*      h ^+ ((rr1 - lr1 + (rr2 - lr2)) / *)
-    (*              (ld1 - rd1 + (ld2 - rd2)))%R * g) by *)
-    (*   now rewrite !(trunc_pow). *)
-
-    rewrite !(trunc_pow).
-    rewrite !expgM.
-
-    (* rewrite H7. *)
-    rewrite H3.
-    (* rewrite H4. *)
-
-    rewrite <- !expgM.
-
-    set ( _ + _).
-
-    (* rewrite !(expgMn _ (cyclic_always_commute _ _)). *)
-    (* rewrite <- !expgM. *)
-
-    replace (x ^+ _)
-        with (x ^+ ((s / s)%R)) by now rewrite !trunc_pow.
-    (* replace (y ^+ _) *)
-    (*     with (y ^+ ((s / s)%R)) by now rewrite !trunc_pow. *)
-
-    assert (s <> 0).
-    {
-      subst s e e'.
-      clear -H.
-      intros ?.
-      assert (fto (ld1 + ld2) = fto (rd1 + rd2)).
-      2:{
-        rewrite H1 in H.
-        rewrite eqxx in H.
-        discriminate.
-      }
-      f_equal.
-      apply /eqP.
-      setoid_rewrite <- (subr_eq (ld1 + ld2) rd1 rd2).
-      rewrite <- addrA.
-      rewrite addrC.
-      rewrite <- (add0r rd1).
-      setoid_rewrite <- subr_eq.
-      rewrite <- addrA.
-      rewrite addrC.
-      apply /eqP.
-      apply H0.
-    }
-    rewrite !div_cancel ; [ | assumption ..].
-
-
-    (* rewrite <- !mulgA. *)
-
-    rewrite !eqxx.
-    rewrite !andb_true_l.
-
-    
-
-    (* subst s. *)
-
-    (* assert (ld1 - rd1 <> rd2 - ld2 /\ ld1 <> rd1 + rd2 - ld2). *)
-    (* { *)
-    (*   red ; intros. *)
-    (*   rewrite H6 in H5. *)
-
-    (*   rewrite addrA in H5 |- *. *)
-    (*   rewrite addrC in H5 |- *. *)
-    (*   rewrite subrK in H5 |- *. *)
-
-    (*   rewrite addrC in H5 |- *. *)
-    (*   rewrite addrN in H5 |- *. *)
-
-    (*   contradiction. *)
-    (* } *)
-
-    (* assert ((((ld2 - rd2) * (s^-1))%R = 1%R) *)
-    (*         \/ (((ld2 - rd2) * (s^-1))%R = 0%R) *)
-    (*         \/ ((ld1 ≠ rd1) /\ (ld2 ≠ rd2))). *)
-    (* { *)
-    (*   subst s. *)
-
-    (*   clear Hd2d1 H'd2d1. *)
-    (*   subst. *)
-
-    (*   destruct (ld1 == rd1) eqn:sub0. *)
-    (*   - apply (ssrbool.elimT eqP) in sub0. *)
-    (*     rewrite sub0 in H5 |- *. *)
-    (*     rewrite addrN in H5 |- *. *)
-    (*     rewrite add0r in H5 |- *. *)
-    (*     rewrite mulrV. *)
-    (*     2: apply all_unit_in_prime_field ; [apply prime_order | apply /eqP ; assumption ]. *)
-    (*     easy. *)
-    (*   - apply (ssrbool.elimF eqP) in sub0. *)
-    (*     destruct (ld2 == rd2%R) eqn:sub1. *)
-    (*     + apply (ssrbool.elimT eqP) in sub1. *)
-    (*       rewrite sub1. *)
-    (*       rewrite addrN. *)
-    (*       rewrite mul0r. *)
-    (*       easy. *)
-    (*     + apply (ssrbool.elimF eqP) in sub1. *)
-
-    (*       destruct ((ld1 - rd1) == (rd2 - ld2)) eqn:sub2. *)
-    (*       -- apply (ssrbool.elimT eqP) in sub2. *)
-    (*          rewrite sub2 in H5 |- *. *)
-
-    (*          rewrite addrA in H5 |- *. *)
-    (*          rewrite addrC in H5 |- *. *)
-    (*          rewrite subrK in H5 |- *. *)
-
-    (*          rewrite addrC in H5 |- *. *)
-    (*          rewrite addrN in H5 |- *. *)
-    (*          contradiction. *)
-    (*       -- apply (ssrbool.elimF eqP) in sub2. *)
-
-    (*          rewrite addrA in H5 |- *. *)
-    (*          rewrite addrC in H5 |- *. *)
-    (*          rewrite subrK in H5 |- *. *)
-
-    (*          rewrite addrC in H5 |- *. *)
-    (*          rewrite addrN in H5 |- *. *)
-
-    (*          (ld2 - rd2) / (ld1 - rd1 + (ld2 - rd2)) *)
-    (* } *)
-
-    replace (g^-1 ^+ _)
-      with (g^-1 ^+ (((ld2 - rd2) / s)%R)) by now rewrite !trunc_pow.
-
-    
-    
-    destruct H6 as [ | [ | ] ].
-    {
-      rewrite H6.
-      rewrite expg1.
-      rewrite <- mulgA.
-      rewrite mulVg.
-      rewrite mulg1.
-      now rewrite eqxx.
-    }
-    {
-      rewrite H6.
-      rewrite expg0.
-      rewrite mulg1.
-      now rewrite eqxx.
-    }
-    {
-      subst s.
       
-      rewrite H6.
-      rewrite expg0.
-      rewrite mulg1.
-      now rewrite eqxx.
-    }
-
-    destruct (g ^+ ((ld2 - rd2)%R * (s^-1)%R) == g) eqn:yo.
-    {
-      rewrite expgVn.
-      apply reflection_nonsense in yo.
-      rewrite yo.
-
-      (* rewrite orb_true_l. *)
-      (* reflexivity. *)
-      (* rewrite andb_true_r. *)
-      (* apply (prod_swap_iff y _ y 1%R) in yo. *)
-      rewrite mulVg in yo.
-
-      rewrite expgVn in yo.
-      symmetry in yo.
-
-      epose (proj1 (proj2 (prod_swap_iff g 1 g ((ld2 - rd2)%R * (s^-1)%R)%R))).
-      setoid_rewrite trunc_pow in e1.
-      apply e1 in yo.
-      rewrite mulg1 in yo.
-      symmetry in yo.
-
-      rewrite expgD.
-      rewrite trunc_pow.
-      rewrite (addnC 1%R).
-      rewrite expgD.
-      rewrite expg1.
-
-      (* h == g ^+ x * (g ^+ vi) * g ^+ yi? *)
-
-      rewrite <- yo at 2.
-      rewrite <- mulgA.
-      rewrite <- expgD.
-
-      unfold s.
-
-
-      rewrite addf_div.
-      rewrite addgR.
-
-
-      rewrite <- yo.
-      rewrite <- !expgM.
-
-
-
-      rewrite expgM.
-
-      assert (forall (x : gT) (y : 'F_q), x ^+ (y ^- 1)%R == x ^- y).
+      eassert (Hd2d1 : ld2 = otf e - ld1).
       {
-        clear ; intros x y.
+        rewrite H0.
+        rewrite addrC.
+        rewrite addKr.
+        reflexivity.
+      }
 
-        rewrite expgAC.
-        cbn.
-
-        rewrite exprAC.
-        From mathcomp Require Import ssralg.
-        simpl.
-        epose (exprVn  ).
-        (* rewrite exprnN. *)
-        (* rewrite <- exprVn. *)
-
-        unfold "^-"%R.
-        simpl GRing.Ring_hasMulInverse.inv.
-        rewrite expr1.
-
-
-        induction x.
-
-      rewrite expgM.
-      rewrite trunc_pow.
-      rewrite <- div1r.
-
-
-      Unset Printing Notations.
-
-GRing.inv
-      set (_ + _)%R at 3.
-      set (_ * _)%R.
-
-
-      (* erewrite mulr1_eq in s0. *)
-
-      invf_div
-
-      rewrite GRing.exprVn.
-      rewrite <- div1r.
-      rewrite invrN.
-
-      assert (((rr1 - lr1 - (rr1 - lr1 + (rr2 - lr2)) / s)^-1))%R.
-
-      rewrite invMg.
-
-      rewrite expgVn.
-      rewrite yo.
-
-      rewrite
-
-      assert (y ^- 1 * y = (g^-1 ^+ ((ld2 - rd2)%R * (s^-1)%R) * g)).
+      eassert (H'd2d1 : rd2 = otf e' - rd1).
       {
-        epose (prod_swap_iff y (g^-1 ^+ ((ld2 - rd2)%R * (s^-1)%R) * g) y 1).
-        setoid_rewrite mulg1 in a0.
+        rewrite H1.
+        rewrite addrC.
+        rewrite addKr.
+        reflexivity.
+      }
 
-        eapply (proj2 (proj2 a0)).
-        apply e1.
-        apply a0.
-        apply (prod_swap_iff).
+      apply f_equal with (f := fto) in H0, H1.
+      rewrite !fto_otf in H0, H1.
 
-      assert (g ^+ ((ld2 - rd2)%R * (s^-1)%R) = g).
+      subst la1 lb1 la2 lb2.
 
+      (* apply r_ret ; intros;  split ; [ clear s₀ s₁ H3 | assumption ]. *)
+      (* symmetry. *)
 
-      apply prod_swap_iff in yo.
-      apply
-      apply
-      admit.
-    }
-    {
-      rewrite !mul0r.
-      rewrite mul0n.
+      apply (proj1 (prod_swap_iff _ _ _ _)) in H9, H7, H8, H2.
+      rewrite <- mulgA in H9, H7, H8, H2.
 
+      rewrite !mulg_invg_sub in H9, H7, H8, H2.
+      symmetry in H9, H7, H8, H2.
+      apply (proj2 (prod_swap_iff _ _ _ _)) in H9, H7, H8, H2.
+      rewrite !mulg_invg_left_sub in H9, H7, H8, H2.
 
+      assert (g ^+ ((rr1 - lr1) + (rr2 - lr2))%R = x ^+ ((ld1 - rd1) + (ld2 - rd2))%R).
+      {
+        rewrite !(trunc_pow).
+        rewrite !(expgD).
 
+        setoid_rewrite <- H7.
+        setoid_rewrite <- H9.
+        reflexivity.
+      }
+      (* clear H7 H9. *)
 
+      assert (h ^+ ((rr1 - lr1) + (rr2 - lr2))%R = y ^+ ((ld1 - rd1) + (ld2 - rd2))%R * g^-1 ^+ (ld2 - rd2)%R).
+      {
+        rewrite !(trunc_pow y).
+        rewrite !(trunc_pow h).
+        rewrite !(expgD h).
+        rewrite !(expgD y).
+        setoid_rewrite H8.
+        setoid_rewrite H2.
+        rewrite (expgMn _ (cyclic_always_commute _ _)).
+        rewrite mulgA.
+        reflexivity.
+      }
 
-  Qed.
+      assert (ld1 - rd1 + (ld2 - rd2) <> 0).
+      {
+        subst e e'.
+        clear -H.
+        intros ?.
+        assert (fto (ld1 + ld2) = fto (rd1 + rd2)).
+        2:{
+          rewrite H1 in H.
+          rewrite eqxx in H.
+          discriminate.
+        }
+        f_equal.
+        apply /eqP.
+        setoid_rewrite <- (subr_eq (ld1 + ld2) rd1 rd2).
+        rewrite <- addrA.
+        rewrite addrC.
+        rewrite <- (add0r rd1).
+        setoid_rewrite <- subr_eq.
+        rewrite <- addrA.
+        rewrite addrC.
+        apply /eqP.
+        apply H0.
+      }
 
-  (* Require Import mathcomp.algebra.all_algebra. *)
+      assert ((ld1 - rd1) <> 0 \/ (ld2 - rd2) <> 0).
+      {
+        destruct (ld1 == rd1) eqn:is_eq;
+          [ apply (ssrbool.elimT eqP) in is_eq
+          | apply (ssrbool.elimF eqP) in is_eq ].
+        - rewrite is_eq in H5.
+          rewrite addrN in H5.
+          rewrite add0r in H5.
+          now right.
+        - left.
+          red ; intros.
+          apply is_eq.
+          now apply /eqP ; setoid_rewrite <- subr_eq0 ; apply /eqP.
+      }
+
+      destruct (ld1 == rd1) eqn:is_zero;
+          [ apply (ssrbool.elimT eqP) in is_zero
+          | apply (ssrbool.elimF eqP) in is_zero ].
+      {
+        rewrite is_zero in H6 |- *.
+        rewrite addrN in H6 |- *.
+        rewrite eqxx.
+        simpl (~~ true) ; hnf.
+
+        destruct H6 ; [ contradiction | ].
+
+        rewrite !trunc_pow.
+        rewrite !expgM.
+        rewrite H7 H2.
+        set ( _ + _).
+        rewrite <- !expgM.
+        replace (x ^+ _)
+          with (x ^+ ((s / s)%R)) by now rewrite !trunc_pow.
+        replace ((y * g^-1) ^+ _)
+          with ((y * g^-1) ^+ ((s / s)%R)) by now rewrite !trunc_pow.
+        rewrite !div_cancel ; [ | assumption ..].
+
+        rewrite <- !(mulgA _ g^-1).
+        rewrite !mulVg.
+        rewrite mulg1.
+        rewrite (eqxx y).
+
+        rewrite expg1.
+        rewrite !mulVg.
+        rewrite mulg1.
+
+        now rewrite !eqxx ; apply r_ret.
+      }
+      {
+        assert (ld1 - rd1 <> 0).
+        {
+          red ; intros.
+          apply is_zero.
+          now apply /eqP ; setoid_rewrite <- subr_eq0 ; apply /eqP.
+        }
+        rewrite (ssrbool.introF eqP H10).
+        simpl (~~false) ; hnf.
+
+        rewrite !trunc_pow.
+        rewrite !expgM.
+        rewrite H9 H8.
+        set ( _ + _).
+        rewrite <- !expgM.
+        replace (x ^+ _)
+          with (x ^+ ((s / s)%R)) by now rewrite !trunc_pow.
+        replace (y ^+ _)
+          with (y ^+ ((s / s)%R)) by now rewrite !trunc_pow.
+        rewrite !div_cancel ; [ | assumption ..].
+
+        replace (y == y * g) with false.
+        2:{
+          symmetry.
+          apply /eqP.
+          red.
+          intros.
+
+          rewrite <- (expg1 y) in H11.
+          change (y ^+ 1) with (y ^+ 1%R) in H11.
+          apply (prod_swap_iff (y ^+ 1%R) g y 1%R) in H11 .
+          rewrite mulVg in H11.
+
+          apply generator_is_not_one.
+          eapply both_equivalence_is_pure_eq.
+
+          fold g.
+          rewrite <- H11.
+          reflexivity.
+        }
+        rewrite expg0.
+        rewrite mulg1.
+        now rewrite !eqxx ; apply r_ret.
+      }
+    Qed.
+
 End OVN_or_proof.
