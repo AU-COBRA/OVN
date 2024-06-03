@@ -2965,3 +2965,62 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
   Qed.
 
 End OVN_or_proof.
+
+Module OVN_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl) (SG : SecureGroup OVN_impl GOP) (schnorr_proof_args : OVN_schnorr_proof_preconditions OVN_impl GOP SG) (or_proof_args : OVN_or_proof_preconditions OVN_impl GOP SG).
+  Module Schnorr_ZKP := OVN_schnorr_proof OVN_impl GOP SG schnorr_proof_args.
+  Module OR_ZKP := OVN_or_proof OVN_impl GOP SG or_proof_args.
+
+  Import OR_ZKP.
+  Import Schnorr_ZKP.
+
+  (* Redifinition *)
+  #[export] Instance Bool_pos : Positive #|'bool|.
+  Proof.
+    rewrite card_bool. done.
+  Defined.
+
+  Program Definition maximum_ballot_secrecy_real :
+    package fset0
+      [interface]
+      [interface #val #[ 1%nat ] : 'bool → 'bool]
+    :=
+    [package
+      #def #[ 1%nat ] (hwe : 'bool) : 'bool
+      {
+        v ← sample uniform #|'bool| ;;
+        @ret 'bool (otf v)
+      }
+    ].
+
+  Definition maximum_ballot_secrecy_ideal:
+    package fset0
+      [interface]
+      [interface #val #[ 1%nat ] : 'bool → 'bool]
+    :=
+    [package
+      #def #[ 1%nat ] (v : 'bool) : 'bool
+      {
+        ret v
+      }
+    ].
+
+  Definition ɛ_maximum_ballot_secrecy A := AdvantageE maximum_ballot_secrecy_real maximum_ballot_secrecy_ideal A.
+
+  Lemma shvzk_success:
+    ∀ LA A,
+      ValidPackage LA [interface
+                         #val #[ 1%nat ] : 'bool → 'bool
+        ] A_export A →
+      fdisjoint LA fset0 →
+      ɛ_maximum_ballot_secrecy A = 0.
+  Proof.
+    intros.
+    unfold ɛ_maximum_ballot_secrecy.
+    unfold maximum_ballot_secrecy_real.
+    unfold maximum_ballot_secrecy_ideal.
+    apply: eq_rel_perf_ind.
+    all: ssprove_valid.
+
+  Admitted.
+
+End OVN_or_proof.
