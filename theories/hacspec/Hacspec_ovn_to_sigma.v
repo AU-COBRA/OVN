@@ -69,10 +69,10 @@ Import GroupScope GRing.Theory.
 
 Import PackageNotation.
 
-From Hammer Require Import Reflect.
+(* From Hammer Require Import Reflect.
 From Hammer Require Import Hammer.
 Hammer_version.
-Hammer_objects.
+Hammer_objects. *)
 
 (* Set Hammer Z3. *)
 (* Unset Hammer Parallel. *)
@@ -82,7 +82,7 @@ Hammer_objects.
 (* Set Hammer ATPLimit 30. *)
 (* Hammer_cleanup. *)
 
-Require Import SMTCoq.SMTCoq.
+(* Require Import SMTCoq.SMTCoq. *)
 (* Set SMT Solver "z3". (** Use Z3, also "CVC4" **) *)
 
 Module Misc.
@@ -3023,4 +3023,4 @@ Module OVN_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperation
 
   Admitted.
 
-End OVN_or_proof.
+End OVN_proof.
