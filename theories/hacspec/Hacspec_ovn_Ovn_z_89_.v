@@ -127,7 +127,7 @@ Hint Unfold t_z_89__t_Field.
   f_pow := (@f_pow);
   f_group_one := (@f_group_one);
   f_prod := (@f_prod);
-  f_group_inv := (@f_inv);
+  f_group_inv := (@f_group_inv);
   f_div := (@f_div)|}.
 Fail Next Obligation.
 Hint Unfold t_g_z_89__t_Group.

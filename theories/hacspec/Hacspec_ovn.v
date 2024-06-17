@@ -285,7 +285,7 @@ Module HacspecOVN (Params : HacspecOVNParams).
     'unit.
   Equations Build_t_TallyParameter : both (t_TallyParameter) :=
     Build_t_TallyParameter  :=
-      solve_lift (ret_both (tt (* Empty tuple *) : (t_TallyParameter))) : both (t_TallyParameter).
+      solve_lift (ret_both (_ (* Empty tuple *) : (t_TallyParameter))) : both (t_TallyParameter).
   Fail Next Obligation.
 
   Equations schnorr_zkp (random : both int32) (h : both v_G) (x : both f_Z) : both (t_SchnorrZKPCommit) :=
@@ -414,10 +414,10 @@ Module HacspecOVN (Params : HacspecOVNParams).
   Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_tally' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := f_g_pow_xis x) (f_zkp_xis := f_zkp_xis x) (f_commit_vis := f_commit_vis x) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := f_zkp_vis x) (f_tally := y) (f_round1 := f_round1 x)).
   Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_round1' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := f_g_pow_xis x) (f_zkp_xis := f_zkp_xis x) (f_commit_vis := f_commit_vis x) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := f_zkp_vis x) (f_tally := f_tally x) (f_round1 := y)).
 
-  Equations cast_vote {impl_574521470_ : _} `{ t_Sized impl_574521470_} `{ t_HasReceiveContext impl_574521470_ 'unit} (ctx : both impl_574521470_) (state : both (t_OvnContractState)) : both (t_Result (v_A × t_OvnContractState) t_ParseError) :=
+  Equations cast_vote `{ t_Sized t_CastVoteParam } `{ t_HasReceiveContext t_CastVoteParam 'unit} (ctx : both t_CastVoteParam) (state : both (t_OvnContractState)) : both (t_Result (v_A × t_OvnContractState) t_ParseError) :=
     cast_vote ctx state  :=
-          solve_lift (run (letb '(_,out) := f_get (Ctx := t_CastVoteParam) (f_parameter_cursor ctx) in
-      letm[choice_typeMonad.result_bind_code _ (* t_ParseError *)] (params : t_CastVoteParam f_Z) := (impl__map_err out (* f_from *) _) in
+          solve_lift (run (letb '(_,out) := f_get (f_parameter_cursor ctx) in
+      letm[choice_typeMonad.result_bind_code _ (* t_ParseError *)] (params : t_CastVoteParam f_Z) := (impl__map_err out (f_from : t_ParseError -> (Result_t t_ParseError (v_A × t_OvnContractState)))) in
       Result_Ok (letb g_pow_yi := compute_g_pow_yi (cast_int (WS2 := _) (f_cvp_i params)) (f_g_pow_xis state) in
       letb g_pow_xi_yi_vi := compute_group_element_for_vote (f_cvp_xi params) (f_cvp_vote params) g_pow_yi in
       letb zkp_vi := zkp_one_out_of_two (f_cvp_zkp_random_w params) (f_cvp_zkp_random_r params) (f_cvp_zkp_random_d params) g_pow_yi (f_cvp_xi params) (f_cvp_vote params) in
@@ -426,8 +426,8 @@ Module HacspecOVN (Params : HacspecOVNParams).
       letb cast_vote_state_ret := Build_t_OvnContractState[cast_vote_state_ret] (f_zkp_vis := update_at_usize (f_zkp_vis cast_vote_state_ret) (cast_int (WS2 := _) (f_cvp_i params)) zkp_vi) in
       Result_Ok (prod_b (f_accept,cast_vote_state_ret))))) : both (t_Result (v_A × t_OvnContractState) t_ParseError).
   Fail Next Obligation.
-
-  Equations commit_to_vote {impl_574521470_ : _} `{ t_Sized impl_574521470_} `{ t_HasReceiveContext impl_574521470_ 'unit} (ctx : both impl_574521470_) (state : both (t_OvnContractState)) : both (t_Result (v_A × t_OvnContractState) t_ParseError) :=
+  
+  Equations commit_to_vote `{ t_Sized t_CastVoteParam } `{ t_HasReceiveContext t_CastVoteParam 'unit} (ctx : both t_CastVoteParam) (state : both (t_OvnContractState)) : both (t_Result (v_A × t_OvnContractState) t_ParseError) :=
     commit_to_vote ctx state  :=
       solve_lift (run (letb '(_,out) := f_get (f_parameter_cursor ctx) in
       letm[choice_typeMonad.result_bind_code _ (* t_ParseError *)] (params : t_CastVoteParam f_Z) := impl__map_err out f_from in
@@ -451,7 +451,7 @@ Module HacspecOVN (Params : HacspecOVNParams).
       Result_Ok (solve_lift (Build_t_OvnContractState (f_g_pow_xis := repeat f_group_one n) (f_zkp_xis := repeat (Build_t_SchnorrZKPCommit (f_schnorr_zkp_u := f_group_one) (f_schnorr_zkp_z := f_field_zero) (f_schnorr_zkp_c := f_field_zero)) n) (f_commit_vis := repeat f_field_zero n) (f_g_pow_xi_yi_vis := repeat f_group_one n) (f_zkp_vis := repeat (Build_t_OrZKPCommit (f_or_zkp_x := f_group_one) (f_or_zkp_y := f_group_one) (f_or_zkp_a1 := f_group_one) (f_or_zkp_b1 := f_group_one) (f_or_zkp_a2 := f_group_one) (f_or_zkp_b2 := f_group_one) (f_or_zkp_c := f_field_zero) (f_or_zkp_d1 := f_field_zero) (f_or_zkp_d2 := f_field_zero) (f_or_zkp_r1 := f_field_zero) (f_or_zkp_r2 := f_field_zero)) n) (f_tally := ret_both (0 : int32)) (f_round1 := repeat (ret_both (false : 'bool)) n))) : both (t_Result (t_OvnContractState) t_Reject).
   Fail Next Obligation.
 
-  Equations register_vote {impl_574521470_ : _} `{ t_Sized impl_574521470_} `{ t_HasReceiveContext impl_574521470_ 'unit} (ctx : both impl_574521470_) (state : both (t_OvnContractState)) : both (t_Result (v_A × t_OvnContractState) t_ParseError) :=
+  Equations register_vote `{ t_Sized t_RegisterParam} `{ t_HasReceiveContext t_RegisterParam 'unit} (ctx : both t_RegisterParam) (state : both (t_OvnContractState)) : both (t_Result (v_A × t_OvnContractState) t_ParseError) :=
     register_vote ctx state  :=
       solve_lift (run (letb '(_,out) := f_get (f_parameter_cursor ctx) in
       letm[choice_typeMonad.result_bind_code _ (* t_ParseError *)] (params : t_RegisterParam f_Z) := impl__map_err out f_from in
@@ -464,7 +464,7 @@ Module HacspecOVN (Params : HacspecOVNParams).
       Result_Ok (prod_b (f_accept,register_vote_state_ret))))) : both (t_Result (v_A × t_OvnContractState) t_ParseError).
   Fail Next Obligation.
 
-  Equations tally_votes {impl_574521470_ : _} `{ t_Sized impl_574521470_} `{ t_HasReceiveContext impl_574521470_ 'unit} (_ : both impl_574521470_) (state : both (t_OvnContractState)) : both (t_Result (v_A × t_OvnContractState ) t_ParseError) :=
+  Equations tally_votes `{ t_Sized t_TallyParameter } `{ t_HasReceiveContext t_TallyParameter 'unit} (_ : both t_TallyParameter) (state : both (t_OvnContractState)) : both (t_Result (v_A × t_OvnContractState ) t_ParseError) :=
     tally_votes _ state  :=
       letb _ := foldi_both_list (f_into_iter (Build_t_Range (f_start := ret_both (0 : uint_size)) (f_end := n))) (fun i =>
         ssp (fun _ =>
@@ -523,7 +523,7 @@ Module OVNConcert (Params : HacspecOVNParams).
     t_OvnContractState.
 
   #[global] Program Instance t_CastVoteParam_t_HasReceiveContext : t_HasReceiveContext t_CastVoteParam 'unit :=
-    {| f_get := (fun  {Ctx : _} => (solve_lift (@ret_both (t_ParamType × t_Result Ctx t_ParseError)) (tt, inr tt)) : _)|}.
+    {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result t_CastVoteParam t_ParseError)) (tt, inl ctx)) : _)|}.
   Fail Next Obligation.
   #[global] Program Instance t_CastVoteParam_t_Sized : t_Sized t_CastVoteParam :=
     fun x =>
@@ -546,7 +546,7 @@ Module OVNConcert (Params : HacspecOVNParams).
     ResultMonad.Ok st.
 
   #[global] Program Instance t_RegisterParam_t_HasReceiveContext : t_HasReceiveContext t_RegisterParam 'unit :=
-    {| f_get := (fun  {Ctx : _} => (solve_lift (@ret_both (t_ParamType × t_Result Ctx t_ParseError)) (tt, inr tt)) : _)|}.
+    {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result t_RegisterParam t_ParseError)) (tt, inl ctx)) : _)|}.
   Fail Next Obligation.
   #[global] Program Instance t_RegisterParam_t_Sized : t_Sized t_RegisterParam :=
     fun x =>
@@ -556,7 +556,7 @@ Module OVNConcert (Params : HacspecOVNParams).
     register_vote ctx st.
 
   #[global] Program Instance t_TallyParameter_t_HasReceiveContext : t_HasReceiveContext t_TallyParameter 'unit :=
-    {| f_get := (fun  {Ctx : _} => (solve_lift (@ret_both (t_ParamType × t_Result Ctx t_ParseError)) (tt, inr tt)) : _)|}.
+    {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result t_TallyParameter t_ParseError)) (tt, inl ctx)) : _)|}.
   Fail Next Obligation.
   #[global] Program Instance t_TallyParameter_t_Sized : t_Sized t_TallyParameter :=
     fun x =>
@@ -571,7 +571,7 @@ Module OVNConcert (Params : HacspecOVNParams).
   | msg_OVN_register : t_RegisterParam -> Msg_OVN
   | msg_OVN_tally : t_TallyParameter -> Msg_OVN.
   #[global] Program Instance state_OVN_t_HasReceiveContext : t_HasReceiveContext (state_OVN) 'unit :=
-    {| f_get := (fun  (Ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result Ctx t_ParseError)) (tt, inr tt)) : _)|}.
+    {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result (state_OVN) t_ParseError)) (tt, inl ctx)) : _)|}.
   Fail Next Obligation.
   #[global] Program Instance state_OVN_t_Sized : t_Sized (state_OVN) :=
     fun x =>

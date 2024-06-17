@@ -69,21 +69,23 @@ Import GroupScope GRing.Theory.
 
 Import PackageNotation.
 
-From Hammer Require Import Reflect.
-From Hammer Require Import Hammer.
-Hammer_version.
-Hammer_objects.
+(* From Hammer Require Import Reflect. *)
+(* From Hammer Require Import Hammer. *)
+(* Hammer_version. *)
+(* Hammer_objects. *)
 
-(* Set Hammer Z3. *)
-(* Unset Hammer Parallel. *)
-(* (* (* disable the preliminary sauto tactic *) *) *)
-(* (* Set Hammer SAutoLimit 0. *) *)
-(* Set Hammer GSMode 1. *)
-(* Set Hammer ATPLimit 30. *)
-(* Hammer_cleanup. *)
+(* (* Set Hammer Z3. *) *)
+(* (* Unset Hammer Parallel. *) *)
+(* (* (* (* disable the preliminary sauto tactic *) *) *) *)
+(* (* (* Set Hammer SAutoLimit 0. *) *) *)
+(* (* Set Hammer GSMode 1. *) *)
+(* (* Set Hammer ATPLimit 30. *) *)
+(* (* Hammer_cleanup. *) *)
 
-Require Import SMTCoq.SMTCoq.
-(* Set SMT Solver "z3". (** Use Z3, also "CVC4" **) *)
+(* Require Import SMTCoq.SMTCoq. *)
+(* (* Set SMT Solver "z3". (** Use Z3, also "CVC4" **) *) *)
+
+From mathcomp Require Import ring.
 
 Module Misc.
 
@@ -1084,7 +1086,7 @@ Module HacspecGroupParam (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupO
   (* Proof. *)
   (*   intros ; now apply /eqP. *)
   (* Qed. *)
-  
+
   (* plugins/ring/InitialRing.v *)
   Add Ring zq_ring : hacspec_zq_ring_theory ( setoid hacspec_zq_setoid_structure hacspec_zq_ring_eq_ext ).
 
@@ -1446,39 +1448,39 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
 
   Module MyParam <: SigmaProtocolParams.
 
-    Definition Witness : finType := prod (prod (Finite.clone _ 'F_q) (Finite.clone _ 'bool)) (Finite.clone _ 'F_q).
+    Definition Witness : finType := prod (prod (Finite.clone _ 'F_q) (Finite.clone _ 'bool)) gT.
     Definition Statement : finType := prod (prod gT gT) gT.
     Definition Message : finType :=  prod (prod (prod gT gT) gT) gT.
     Definition Challenge : finType := Finite.clone _ 'F_q.
     Definition Response : finType :=  (prod (prod (prod (Finite.clone _ 'F_q) (Finite.clone _ 'F_q)) (Finite.clone _ 'F_q)) (Finite.clone _ 'F_q)).
 
-    Definition w0 : Witness := 0.
+    Definition w0 : Witness := (0, false, 1).
     Definition e0 : Challenge := 0.
     Definition z0 : Response := 0.
 
     Definition R : Statement -> Witness -> bool :=
-      (λ (xhy : Statement) (mvn : Witness),
+      (λ (xhy : Statement) (mv : Witness),
         let '(x,h,y) := xhy in
-        let '(m,v,n) := mvn in
+        let '(m,v,h2) := mv in
         (x == g ^+ m)
-        (* && (h == g ^+ n) *)
+        && (h == h2)
         && ((y == h^+m * g ^+ v))
         (* && ((g ^+ v == g) || (g ^+ v == 1)) *)
       ).
 
     Lemma relation_valid_left:
-      ∀ (x : 'F_q) (yi : 'F_q),
-        R (g^+x, g^+yi, g^+(yi * x) * g) (x, 1%R, yi).
+      ∀ (x : 'F_q) (h : gT),
+        R (g^+x, h, h^+x * g) (x, 1%R, h).
     Proof.
       intros x yi.
       unfold R.
-      rewrite expgM.
+      (* rewrite expgM. *)
       now rewrite !eqxx.
     Qed.
 
     Lemma relation_valid_right:
-      ∀ (x : 'F_q) (yi : 'F_q),
-        R (g ^+ x, g ^+ yi, g ^+ yi ^+x) (x, 0%R, yi).
+      ∀ (x : 'F_q) (h : gT),
+        R (g ^+ x, h, h ^+x) (x, 0%R, h).
     Proof.
       intros x yi.
       unfold R.
@@ -1552,7 +1554,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
          r ← sample uniform i_witness ;;
          #put commit_loc := (w, r, d) ;;
          let '(x, h, y) := (otf hy) in
-         let '(m, v, n) := (otf xv) in
+         let '(m, v, _) := (otf xv) in
          if v
          then
            (
@@ -1594,7 +1596,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
       {code
          '(w, r, d) ← get commit_loc ;;
          let '(x, h, y) := (otf xhy) in
-         let '(m, v, n) := (otf xv) in
+         let '(m, v, _) := (otf xv) in
          if v (* y == h ^+ m * g *)
          then
            (let d2 := (otf c - otf d) in
@@ -1639,18 +1641,12 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
                then ((r1' - r1) / (d1 - d1'))
                else ((r2' - r2) / ((d2 - d2'))) in
       let v := ~~ (d1 - d1' != 0) (* y == h ^+ m * g *) in
-      let n := 1 in
-      Some (fto (m, v, n)).
-      (* let n := 0 (* (v + m) * ((d1 - d1') / (r1' - r1)) *) in *)
-      (* (* g^{d_2 - d_2'} = g^{yi (r_2 - r_2') + (xi * yi + vi) (d_2 - d_2')} *) *)
-      (* (* (d_2 - d_2') (1 - vi) = yi ((r_2 - r_2') + xi * (d_2 - d_2')) *) *)
-      (* (* (d_2 - d_2') (1 - vi) = yi ((r_2 - r_2') + xi * (d2 - d2')) *) *)
-      (* Some (fto (m, v, n)). (* xi, vi, yi *) *)
+      Some (fto (m, v, h)).
     Fail Next Obligation.
 
     Definition KeyGen (xv : choiceWitness) :=
-      let '(m, v, n) := otf xv in
-      fto (g ^+ m, g ^+ n ^+ m, g ^+ n ^+ m * g ^+ v).
+      let '(m, v, h) := otf xv in
+      fto (g ^+ m, h ^+ m, h ^+ m * g ^+ v).
 
   End MyAlg.
 
@@ -2099,7 +2095,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
             reflexivity.
           + rewrite expg0.
             rewrite mulg1.
-            
+
             rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
             rewrite prod_witness_to_field.
             rewrite pow_witness_to_field.
@@ -2571,7 +2567,8 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       unfold R in e.
       simpl in e.
       repeat (apply andb_prop in e ; destruct e as [e ?]).
-      apply reflection_nonsense in e, H1.
+      apply reflection_nonsense in e, H1, H2.
+      symmetry in H2.
       subst.
 
       eapply r_transR ; [ apply r_uniform_triple ; intros ; apply rreflexivity_rule | ].
@@ -2698,16 +2695,16 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
               else x ← z ;;
                    k x) = (x ← (if b then y else z) ;;
                            (if b then f else k) x)) by now intros ; destruct b.
-      
+
       eapply r_transL.
       1: apply H1.
       apply better_r_put_lhs.
 
-      
+
       rewrite H2.
 
       rewrite !(if_bind bind).
-      
+
       rewrite (if_then_if).
       rewrite (if_else_if).
 
@@ -2807,7 +2804,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
           reflexivity.
         - easy.
       }
-      
+
       repeat (rewrite (proj2 (boolp.propeqP _ _) (pair_equal_spec _ _ _ _))).
       rewrite !(proj2 (boolp.propeqP _ _) (H9 (Message) _ _)).
       rewrite !(proj2 (boolp.propeqP _ _) (H9 (MyParam.Response) _ _)).
@@ -2963,64 +2960,5 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       now rewrite !eqxx.
     }
   Qed.
-
-End OVN_or_proof.
-
-Module OVN_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl) (SG : SecureGroup OVN_impl GOP) (schnorr_proof_args : OVN_schnorr_proof_preconditions OVN_impl GOP SG) (or_proof_args : OVN_or_proof_preconditions OVN_impl GOP SG).
-  Module Schnorr_ZKP := OVN_schnorr_proof OVN_impl GOP SG schnorr_proof_args.
-  Module OR_ZKP := OVN_or_proof OVN_impl GOP SG or_proof_args.
-
-  Import OR_ZKP.
-  Import Schnorr_ZKP.
-
-  (* Redifinition *)
-  #[export] Instance Bool_pos : Positive #|'bool|.
-  Proof.
-    rewrite card_bool. done.
-  Defined.
-
-  Program Definition maximum_ballot_secrecy_real :
-    package fset0
-      [interface]
-      [interface #val #[ 1%nat ] : 'bool → 'bool]
-    :=
-    [package
-      #def #[ 1%nat ] (hwe : 'bool) : 'bool
-      {
-        v ← sample uniform #|'bool| ;;
-        @ret 'bool (otf v)
-      }
-    ].
-
-  Definition maximum_ballot_secrecy_ideal:
-    package fset0
-      [interface]
-      [interface #val #[ 1%nat ] : 'bool → 'bool]
-    :=
-    [package
-      #def #[ 1%nat ] (v : 'bool) : 'bool
-      {
-        ret v
-      }
-    ].
-
-  Definition ɛ_maximum_ballot_secrecy A := AdvantageE maximum_ballot_secrecy_real maximum_ballot_secrecy_ideal A.
-
-  Lemma shvzk_success:
-    ∀ LA A,
-      ValidPackage LA [interface
-                         #val #[ 1%nat ] : 'bool → 'bool
-        ] A_export A →
-      fdisjoint LA fset0 →
-      ɛ_maximum_ballot_secrecy A = 0.
-  Proof.
-    intros.
-    unfold ɛ_maximum_ballot_secrecy.
-    unfold maximum_ballot_secrecy_real.
-    unfold maximum_ballot_secrecy_ideal.
-    apply: eq_rel_perf_ind.
-    all: ssprove_valid.
-
-  Admitted.
 
 End OVN_or_proof.
