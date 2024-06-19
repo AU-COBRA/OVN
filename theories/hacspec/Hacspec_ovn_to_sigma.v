@@ -1261,70 +1261,19 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
   Require Import Setoid.
   Require Import Relation_Definitions.
 
-  Add Morphism (@GRing.inv v_Z_is_field) with signature (@Logic.eq f_Z ==> @Logic.eq f_Z) as f_Z_inv.
-  Proof. reflexivity. Qed.
-  Add Parametric Morphism : (lower2 f_add) with signature (@Logic.eq v_Z_is_field ==> @Logic.eq v_Z_is_field ==> @Logic.eq v_Z_is_field) as f_Z_add.
-  Proof. reflexivity. Qed.
+  Add Parametric Morphism : (+%R) with signature ((fun x y : v_Z_is_field => (x == y) = true) ==> (fun x y => (x == y) = true) ==> (fun x y => (x == y) = true)) as f_Z_add.
+  Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H , H0. now subst. Defined.
 
-  Check R_setoid3.
+  Add Parametric Morphism : ( *%R ) with signature ((fun x y : v_Z_is_field => (x == y) = true) ==> (fun x y => (x == y) = true) ==> (fun x y => (x == y) = true)) as f_Z_mul.
+  Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H , H0. now subst. Defined.
 
-  Add Field v_Z_field : hacspec_field_theory ( setoid (R_setoid3 (eqType_setoid_structure (A := f_Z))) ring_eq_ext ).
+  Add Parametric Morphism : ( -%R ) with signature ((fun x y : v_Z_is_field => (x == y) = true) ==> (fun x y => (x == y) = true)) as f_Z_opp.
+  Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H. now subst. Defined.
 
-  Program Definition inverse_morphism {R : fieldType} : Ring_theory.ring_morph _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ :=
-    (@mkmorph
-             R 0%R 1%R (fun x y => (GRing.add (x^-1) (y^-1))^-1)%R
-             (fun x y => GRing.mul y x) (fun x y => (GRing.add (x^-1) (GRing.opp (y^-1)))^-1)%R
-             (GRing.opp) eq_op
+  Add Parametric Morphism : ( fun x => (x ^-1)%R ) with signature ((fun x y : v_Z_is_field => (x == y) = true) ==> (fun x y => (x == y) = true)) as f_Z_inv.
+  Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H. now subst. Defined.
 
-             R 0%R 1%R (GRing.add)
-             (GRing.mul) (fun x y => GRing.add x (GRing.opp y))
-             (GRing.opp) eq_op
-
-             (GRing.inv)
-
-             (ssrbool.introT eqP (invr0 _))
-             (ssrbool.introT eqP (invr1 _))
-             _
-             (* (fun x _ => ssrbool.introT eqP (invrN (R := R) x)) *)
-             _
-             _
-             (fun x => ssrbool.introT eqP (invrN (R := R) x))
-             _
-          ).
-  Next Obligation.
-    now rewrite !invrK.
-  Qed.
-  Next Obligation.
-    now rewrite !invrK.
-  Qed.
-  Next Obligation.
-    destruct (x != 0%R) eqn:x_not_zero.
-    2:{
-      apply (ssrbool.elimNf eqP) in x_not_zero.
-      rewrite x_not_zero.
-      rewrite mul0r.
-      rewrite invr0.
-      rewrite mulr0.
-      apply eqxx.
-    }
-
-    destruct (y != 0%R) eqn:y_not_zero.
-    2:{
-      apply (ssrbool.elimNf eqP) in y_not_zero.
-      rewrite y_not_zero.
-      rewrite mulr0.
-      rewrite invr0.
-      rewrite mul0r.
-      apply eqxx.
-    }
-
-    rewrite <- (unitfE) in x_not_zero, y_not_zero.
-    refine (ssrbool.introT eqP (@invrM _ _ _ x_not_zero y_not_zero)).
-  Qed.
-  Next Obligation.
-    now apply (ssrbool.elimT eqP) in H ; subst.
-  Qed.
-  Fail Next Obligation.
+  Add Field v_Z_field : hacspec_field_theory ( abstract ).
 
   Definition zq_ring_theory `{R : fieldType} :
     ring_theory (R := R) (0)%R (1)%R
@@ -1427,7 +1376,7 @@ Module HacspecGroupParam (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupO
   Definition hacspec_zq_ring_theory := @zq_ring_theory 'F_q.
   Definition hacspec_zq_field_theory := @zq_field_theory 'F_q.
 
-  Definition hacspec_zq_setoid_structure := (setoid_structure ('F_q)).
+  Definition hacspec_zq_setoid_structure := (eqType_setoid_structure (A := 'F_q)).
   Definition hacspec_zq_ring_eq_ext := @zq_ring_eq_ext 'F_q.
 
   Check sign_theory.
@@ -1454,7 +1403,22 @@ Module HacspecGroupParam (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupO
   Require Import Field.
   Check Field_theory.field_theory.
 
-  (* Add Field zq_field : hacspec_zq_field_theory ( setoid hacspec_zq_setoid_structure hacspec_zq_ring_eq_ext ). *)
+  Require Import Setoid.
+  Require Import Relation_Definitions.
+
+  Add Parametric Morphism (R: fieldType) : (+%R) with signature ((fun x y : R => (x == y) = true) ==> (fun x y => (x == y) = true) ==> (fun x y => (x == y) = true)) as zq_add.
+  Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H , H0. now subst. Defined.
+
+  Add Parametric Morphism (R: fieldType) : ( *%R ) with signature ((fun x y : R => (x == y) = true) ==> (fun x y => (x == y) = true) ==> (fun x y => (x == y) = true)) as zq_mul.
+  Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H , H0. now subst. Defined.
+
+  Add Parametric Morphism (R: fieldType) : ( -%R ) with signature ((fun x y : R => (x == y) = true) ==> (fun x y => (x == y) = true)) as zq_opp.
+  Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H. now subst. Defined.
+
+  Add Parametric Morphism (R: fieldType) : ( fun x => (x ^-1)%R ) with signature ((fun x y : R => (x == y) = true) ==> (fun x y => (x == y) = true)) as zq_inv.
+  Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H. now subst. Defined.
+
+  Add Field zq_field : hacspec_zq_field_theory ( abstract ).
 
 End HacspecGroupParam.
 
