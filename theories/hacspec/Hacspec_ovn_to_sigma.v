@@ -657,8 +657,7 @@ Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
 
   Axiom f_addA : forall x y z, f_add x (f_add y z) ≈both f_add (f_add x y) z.
   Axiom f_addC: forall x y, f_add x y ≈both f_add y x.
-  (* Axiom f_mul_addr: right_distributive (f_mul) (f_add). *)
-  (* Axiom f_mul_addl: left_distributive (f_mul) (f_add). *)
+
   Axiom f_add0z: forall x, f_add f_field_zero x ≈both x.
   Axiom f_addNz: forall x, f_add (f_opp x) x ≈both f_field_zero.
 
@@ -666,7 +665,7 @@ Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
   Axiom prod_pow_pow : forall h x a b, f_prod (f_pow h x) (f_pow (f_pow h a) b) ≈both f_pow h (f_add x (f_mul a b)).
   Axiom div_prod_cancel : forall x y, f_div (f_prod x y) y ≈both x.
 
-  Axiom mul_comm : forall x y, f_mul x y ≈both f_mul y x.
+  Axiom f_mulC : forall x y, f_mul x y ≈both f_mul y x.
 
   Axiom v_G_countable : Choice_isCountable (Choice.sort (chElement v_G)).
   Axiom v_G_isFinite : isFinite (Choice.sort (chElement v_G)).
@@ -680,18 +679,22 @@ Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
   Axiom f_invK : involutive (lower1 f_group_inv).
   Axiom f_invM : {morph (lower1 f_group_inv)  : x y / (lower2 f_prod) x y >-> (lower2 f_prod)  y x}.
 
-  Axiom v_Z_Field : GRing.Field (v_G_t_Group.(f_Z)).
+  (* Axiom v_Z_Field : GRing.Field (v_G_t_Group.(f_Z)). *)
 
   Axiom prod_inv_cancel : forall x, f_prod (f_group_inv x) x ≈both f_group_one.
 
+  Axiom f_mul0 : forall x, f_mul f_field_zero x ≈both f_field_zero.
   Axiom f_mul1 : forall x, f_mul f_field_one x ≈both x.
   Axiom f_mulA : forall x y z, f_mul x (f_mul y z) ≈both f_mul (f_mul x y) z.
   Axiom f_mul_addr : forall x y z, f_mul (f_add x y) z ≈both f_add (f_mul x z) (f_mul y z).
   Axiom f_one_not_zero : ¬ (f_field_one ≈both f_field_zero).
-  Axiom mul_inv_cancel1 : forall x, ¬ (x ≈both f_field_zero) -> f_mul (f_inv x) x ≈both f_field_one.
-  Axiom mul_inv_cancel : forall x, f_mul x (f_inv x) ≈both f_field_one.
+  Axiom mul_inv_cancel : forall x, ¬ (x ≈both f_field_zero) -> f_mul (f_inv x) x ≈both f_field_one.
+  Axiom f_inv0 : f_inv (f_field_zero) ≈both f_field_zero.
 
   Axiom generator_is_not_one : f_group_one ≈both f_g -> False.
+
+  Axiom f_mulDr : forall x y z, f_mul x (f_add y z) ≈both f_add (f_mul x y) (f_mul x z).
+  Axiom f_mulDl : forall x y z, f_mul (f_add x y) z ≈both f_add (f_mul x z) (f_mul y z).
 
 End GroupOperationProperties.
 
@@ -788,14 +791,323 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_pow ]) ;
       try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply div_prod_cancel ]).
 
-  Definition v_Z_is_field : fieldType := {| GRing.Field.sort := f_Z; GRing.Field.class := v_Z_Field |}.
+  Lemma f_lower_addA : forall x y z,
+      lower2 f_add x (lower2 f_add y z) = lower2 f_add (lower2 f_add x y) z.
+  Proof.
+    intros.
+    unfold lower2.
+    rewrite hacspec_function_guarantees2.
+    simpl (ret_both (is_pure _)) at 2.
+    rewrite <- hacspec_function_guarantees2.
 
+    symmetry.
+    rewrite hacspec_function_guarantees2.
+    simpl (ret_both (is_pure _)) at 1.
+    rewrite <- hacspec_function_guarantees2.
+
+    symmetry.
+
+    apply (proj1 both_equivalence_is_pure_eq (f_addA (ret_both x) (ret_both y) (ret_both z))).
+  Qed.
+
+  Lemma f_lower_addC : forall x y,
+      lower2 f_add x y = lower2 f_add y x.
+  Proof.
+    intros.
+    unfold lower2.
+    apply (proj1 both_equivalence_is_pure_eq (f_addC (ret_both x) (ret_both y))).
+  Qed.
+
+  Lemma f_lower_add0r : forall x,
+      lower2 f_add (is_pure f_field_zero) x = x.
+  Proof.
+    intros.
+    unfold lower2.
+
+    rewrite hacspec_function_guarantees2.
+    simpl (ret_both (is_pure _)) at 1.
+    rewrite <- hacspec_function_guarantees2.
+
+    apply (proj1 both_equivalence_is_pure_eq (f_add0z (ret_both x))).
+  Qed.
+
+  Definition v_Z_isNmodule : GRing.isNmodule.axioms_ f_Z :=
+    {|
+          GRing.isNmodule.zero := is_pure f_field_zero;
+          GRing.isNmodule.add := lower2 f_add;
+          GRing.isNmodule.addrA := f_lower_addA;
+          GRing.isNmodule.addrC := f_lower_addC;
+          GRing.isNmodule.add0r := f_lower_add0r
+    |}.
+
+
+  Lemma f_lower_mulrA : forall x y z,
+      lower2 f_mul x (lower2 f_mul y z) = lower2 f_mul (lower2 f_mul x y) z.
+  Proof.
+    intros.
+    unfold lower2.
+
+    rewrite hacspec_function_guarantees2.
+    simpl (ret_both (is_pure _)) at 2.
+    rewrite <- hacspec_function_guarantees2.
+
+    symmetry.
+    rewrite hacspec_function_guarantees2.
+    simpl (ret_both (is_pure _)) at 1.
+    rewrite <- hacspec_function_guarantees2.
+
+    symmetry.
+
+    apply (proj1 both_equivalence_is_pure_eq (f_mulA (ret_both x) (ret_both y) (ret_both z))).
+  Qed.
+
+  Lemma f_lower_mulrC :
+      commutative (lower2 f_mul).
+  Proof.
+    intros x y.
+    unfold lower2.
+
+    apply (proj1 both_equivalence_is_pure_eq (f_mulC (ret_both x) (ret_both y))).
+  Qed.
+
+  Lemma f_lower_mul1r : forall x,
+      lower2 f_mul (is_pure f_field_one) x = x.
+  Proof.
+    intros.
+    unfold lower2.
+
+    rewrite hacspec_function_guarantees2.
+    simpl (ret_both (is_pure _)) at 1.
+    rewrite <- hacspec_function_guarantees2.
+
+    apply (proj1 both_equivalence_is_pure_eq (f_mul1 (ret_both x))).
+  Qed.
+
+  Lemma f_lower_mulr1 : forall x,
+      lower2 f_mul x (is_pure f_field_one) = x.
+  Proof.
+    intros.
+    rewrite f_lower_mulrC.
+    apply f_lower_mul1r.
+  Qed.
+
+  Lemma f_lower_mul0r : forall x,
+      lower2 f_mul (is_pure f_field_zero) x = is_pure f_field_zero.
+  Proof.
+    intros.
+    unfold lower2.
+
+    rewrite hacspec_function_guarantees2.
+    simpl (ret_both (is_pure _)) at 1.
+    rewrite <- hacspec_function_guarantees2.
+
+    apply (proj1 both_equivalence_is_pure_eq (f_mul0 (ret_both x))).
+  Qed.
+
+  Lemma f_lower_mulr0 : forall x,
+      lower2 f_mul x (is_pure f_field_zero) = is_pure f_field_zero.
+  Proof.
+    intros.
+    rewrite f_lower_mulrC.
+    apply f_lower_mul0r.
+  Qed.
+
+  Lemma f_lower_mulrDl : left_distributive (lower2 f_mul) (lower2 f_add).
+  Proof.
+    intros.
+    unfold left_distributive, lower2.
+    intros.
+
+    rewrite hacspec_function_guarantees2.
+    simpl (ret_both (is_pure _)) at 1.
+    rewrite <- hacspec_function_guarantees2.
+
+    rewrite <- hacspec_function_guarantees2.
+
+    apply (proj1 both_equivalence_is_pure_eq (f_mulDl (ret_both x) (ret_both y) (ret_both z))).
+  Qed.
+
+  Lemma f_lower_mulrDr : right_distributive (lower2 f_mul) (lower2 f_add).
+  Proof.
+    intros.
+    unfold right_distributive, lower2.
+    intros.
+
+    rewrite hacspec_function_guarantees2.
+    simpl (ret_both (is_pure _)) at 2.
+    rewrite <- hacspec_function_guarantees2.
+
+    rewrite <- hacspec_function_guarantees2.
+
+    apply (proj1 both_equivalence_is_pure_eq (f_mulDr (ret_both x) (ret_both y) (ret_both z))).
+  Qed.
+
+  Lemma f_lower_oner_neq0 : is_pure f_field_one != is_pure f_field_zero.
+  Proof.
+    apply /eqP.
+    red ; intros.
+    apply f_one_not_zero.
+    now apply (both_equivalence_is_pure_eq).
+  Qed.
+
+  Program Definition v_Z_Nmodule_isSemiRing : GRing.Nmodule_isSemiRing.axioms_ f_Z v_Z_isNmodule (Choice.class v_Z) (Choice.class v_Z) :=
+    {|
+      GRing.Nmodule_isSemiRing.one := is_pure f_field_one;
+      GRing.Nmodule_isSemiRing.mul := lower2 f_mul;
+      GRing.Nmodule_isSemiRing.mulrA := f_lower_mulrA;
+      GRing.Nmodule_isSemiRing.mul1r := f_lower_mul1r;
+      GRing.Nmodule_isSemiRing.mulr1 := f_lower_mulr1;
+      GRing.Nmodule_isSemiRing.mulrDl := f_lower_mulrDl;
+      GRing.Nmodule_isSemiRing.mulrDr := f_lower_mulrDr;
+      GRing.Nmodule_isSemiRing.mul0r := f_lower_mul0r;
+      GRing.Nmodule_isSemiRing.mulr0 := f_lower_mulr0;
+      GRing.Nmodule_isSemiRing.oner_neq0 := f_lower_oner_neq0
+    |}.
+  Fail Next Obligation.
+
+  Program Definition v_Z_hasCommutativeMul :
+    GRing.SemiRing_hasCommutativeMul.axioms_ f_Z v_Z_isNmodule (Choice.class v_Z)
+      (Choice.class v_Z) v_Z_Nmodule_isSemiRing :=
+    {| GRing.SemiRing_hasCommutativeMul.mulrC := f_lower_mulrC |}.
+
+  Lemma f_lower_addNr : forall x, (lower2 f_add) (lower1 f_opp x) x = is_pure f_field_zero.
+  Proof.
+    intros.
+    unfold lower2.
+    unfold lower1.
+    
+    rewrite hacspec_function_guarantees2.
+    simpl (ret_both (is_pure _)) at 1.
+    rewrite <- hacspec_function_guarantees2.
+
+    apply (proj1 both_equivalence_is_pure_eq (f_addNz (ret_both x))).
+  Qed.
+
+  Program Definition v_Z_isZmodule : GRing.Nmodule_isZmodule.axioms_ f_Z v_Z_isNmodule (Choice.class v_Z) (Choice.class v_Z) :=
+    {| GRing.Nmodule_isZmodule.opp := lower1 f_opp; GRing.Nmodule_isZmodule.addNr := f_lower_addNr |}.
+
+  Lemma f_lower_mulVr : forall x, x != is_pure f_field_zero -> lower2 f_mul (lower1 f_inv x) x = is_pure f_field_one.
+  Proof.
+    intros.
+    unfold lower1, lower2.
+
+    rewrite hacspec_function_guarantees2.
+    simpl (ret_both (is_pure _)) at 1.
+    rewrite <- hacspec_function_guarantees2.
+
+    refine (proj1 both_equivalence_is_pure_eq (mul_inv_cancel _ _)).
+
+    red ; intros.
+    apply (ssrbool.elimN eqP H).
+    apply (proj1 both_equivalence_is_pure_eq H0).
+  Qed.
+
+  Program Definition f_lower_mulVr_subproof : _ :=
+    proj2 (classical_sets.in_setP ( fun (x : f_Z) => x != is_pure f_field_zero ) (fun x => lower2 f_mul (lower1 f_inv x) x = is_pure f_field_one)) _.
+  Next Obligation.
+    apply f_lower_mulVr.
+    assumption.
+  Qed.
+
+  Program Definition f_lower_mulrV_subproof : _ :=
+    proj2 (classical_sets.in_setP ( fun (x : f_Z) => x != is_pure f_field_zero ) (fun x => lower2 f_mul x (lower1 f_inv x) = is_pure f_field_one)) _.
+  Next Obligation.
+    rewrite f_lower_mulrC.
+    apply f_lower_mulVr.
+    assumption.
+  Qed.
+
+  Definition f_lower_unitrP_subproof : forall (x y : f_Z), lower2 f_mul y x = is_pure f_field_one /\ lower2 f_mul x y = is_pure f_field_one -> classical_sets.in_set (λ x0 : f_Z, x0 != is_pure f_field_zero) x.
+  Proof.
+    intros ? ? [].
+
+    
+    unfold classical_sets.in_set.
+    unfold boolp.asbool.
+    destruct boolp.pselect.
+    - reflexivity.
+    - exfalso.
+      apply n0.
+      apply /eqP.
+      red ; intros.
+      subst x.
+      rewrite (f_lower_mulr0 y) in H.
+      apply f_one_not_zero.
+      now apply both_equivalence_is_pure_eq.
+  Qed.
+
+  Definition f_lower_invr_out : {in [predC classical_sets.in_set (λ x0 : f_Z, x0 != is_pure f_field_zero)],
+        lower1 f_inv =1 id}.
+  Proof.
+    intros ? ?.
+    rewrite inE in H.
+    rewrite classical_sets.notin_set in H.
+    destruct (x == is_pure f_field_zero) eqn:H0 ; [ clear H | now exfalso ].
+    apply (ssrbool.elimT eqP) in H0.
+    rewrite H0.
+
+    unfold lower1.
+    rewrite <- hacspec_function_guarantees.
+
+    apply (proj1 both_equivalence_is_pure_eq f_inv0).
+  Qed.
+
+  Program Definition v_Z_hasMulInverse : GRing.Ring_hasMulInverse.axioms_ f_Z v_Z_isNmodule (Choice.class v_Z) (Choice.class v_Z) v_Z_Nmodule_isSemiRing v_Z_isZmodule :=
+    {|
+      GRing.Ring_hasMulInverse.unit_subdef := classical_sets.in_set (λ x0 : f_Z, x0 != is_pure f_field_zero);
+      GRing.Ring_hasMulInverse.inv := lower1 f_inv;
+      GRing.Ring_hasMulInverse.mulVr_subproof := f_lower_mulVr_subproof;
+      GRing.Ring_hasMulInverse.divrr_subproof := f_lower_mulrV_subproof;
+      GRing.Ring_hasMulInverse.unitrP_subproof := f_lower_unitrP_subproof;
+      GRing.Ring_hasMulInverse.invr_out_subproof := f_lower_invr_out
+    |}.
+  Fail Next Obligation.
+
+  Program Definition v_Z_fieldP :
+    GRing.MathCompCompatField.Field.mixin_of f_Z v_Z_isNmodule (Choice.class v_Z)
+      (Choice.class v_Z) v_Z_Nmodule_isSemiRing v_Z_isZmodule v_Z_hasMulInverse :=
+    {| GRing.UnitRing_isField.fieldP := _ |}.
+  Next Obligation.
+    rewrite unitrE.
+    unfold "/".
+    simpl.
+    unfold "^-1"%R.
+    simpl.
+    rewrite f_lower_mulrC.
+    now rewrite f_lower_mulVr ; [ apply eqxx | ].
+  Qed.
+
+  Program Definition v_Z_IntegralDomain :
+  GRing.MathCompCompatIntegralDomain.IntegralDomain.mixin_of f_Z v_Z_isNmodule
+    (Choice.class v_Z) (Choice.class v_Z) v_Z_Nmodule_isSemiRing v_Z_hasCommutativeMul v_Z_isZmodule
+    v_Z_hasMulInverse.
+  Proof.
+    constructor.
+    unfold GRing.MathCompCompatIntegralDomain.IntegralDomain.axiom.
+    intros.
+    admit.
+  Admitted.
+
+  Program Definition v_Z_Field : GRing.Field (v_G_t_Group.(f_Z)) :=
+    {|
+      GRing.Field.GRing_isNmodule_mixin := v_Z_isNmodule;
+      GRing.Field.choice_hasChoice_mixin := v_Z_Finite;
+      GRing.Field.eqtype_hasDecEq_mixin := v_Z_Finite;
+      GRing.Field.GRing_Nmodule_isSemiRing_mixin := v_Z_Nmodule_isSemiRing;
+      GRing.Field.GRing_SemiRing_hasCommutativeMul_mixin := v_Z_hasCommutativeMul;
+      GRing.Field.GRing_Nmodule_isZmodule_mixin := v_Z_isZmodule;
+      GRing.Field.GRing_Ring_hasMulInverse_mixin := v_Z_hasMulInverse;
+      GRing.Field.GRing_UnitRing_isField_mixin := v_Z_fieldP;
+      GRing.Field.GRing_ComUnitRing_isIntegral_mixin := v_Z_IntegralDomain
+    |}.
+
+  Definition v_Z_is_field : fieldType := {| GRing.Field.sort := f_Z; GRing.Field.class := v_Z_Field |}.
 
   Require Import Field.
   Check Field_theory.field_theory.
 
   Definition hacspec_ring_theory :
-    ring_theory (is_pure f_field_zero) (is_pure f_field_one)
+    ring_theory (R := v_Z_is_field) (is_pure f_field_zero) (is_pure f_field_one)
       (lower2 f_add) (lower2 f_mul)
       (lower2 (fun x y => f_add x (f_opp y)))
       (lower1 f_opp) eq_op.
@@ -829,7 +1141,7 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       apply H.
     }
     {
-      apply (proj1 both_equivalence_is_pure_eq (mul_comm (ret_both x) (ret_both y))).
+      apply (proj1 both_equivalence_is_pure_eq (f_mulC (ret_both x) (ret_both y))).
     }
     {
       pose proof (proj1 both_equivalence_is_pure_eq (f_mulA (ret_both x) (ret_both y) (ret_both z))).
@@ -859,7 +1171,7 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
   Defined.
 
   Definition hacspec_field_theory :
-    field_theory (is_pure f_field_zero) (is_pure f_field_one) (lower2 f_add)
+    field_theory (R := v_Z_is_field) (is_pure f_field_zero) (is_pure f_field_one) (lower2 f_add)
              (lower2 f_mul) (lower2 (fun x y => f_add x (f_opp y)))
              (lower1 f_opp) (lower2 (fun x y => f_mul x (f_inv y)))
              (lower1 f_inv) eq_op.
@@ -888,7 +1200,7 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       apply (ssrbool.introT eqP).
       unfold lower2.
       unfold lower1.
-      epose proof (proj1 both_equivalence_is_pure_eq (mul_inv_cancel1 (ret_both p) _)).
+      epose proof (proj1 both_equivalence_is_pure_eq (mul_inv_cancel (ret_both p) _)).
       rewrite hacspec_function_guarantees2 in H0.
       refine H0.
       Unshelve.
@@ -900,7 +1212,7 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     }
   Defined.
 
-  Lemma setoid_structure : forall (A : eqType), Setoid.Setoid_Theory A eq_op.
+  Definition eqType_setoid_structure : forall {A : eqType}, Setoid.Setoid_Theory A eq_op.
   Proof.
     constructor.
     - intros x.
@@ -911,9 +1223,16 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       apply (ssrbool.introT eqP).
       apply (ssrbool.elimT eqP) in H0, H1.
       easy.
-  Qed.
+  Defined.
 
-  Lemma ring_eq_ext : Ring_theory.ring_eq_ext
+  Add Parametric Relation (A : eqType) :
+    A eq_op
+      reflexivity proved by (@RelationClasses.Equivalence_Reflexive A eq_op eqType_setoid_structure)
+      symmetry proved by  (@RelationClasses.Equivalence_Symmetric A eq_op eqType_setoid_structure)
+      transitivity  proved by (@RelationClasses.Equivalence_Transitive A eq_op eqType_setoid_structure)
+      as eqType_setoid.
+
+  Definition ring_eq_ext : Ring_theory.ring_eq_ext
       (lower2 f_add) (lower2 f_mul)
       (lower1 f_opp) eq_op.
   Proof.
@@ -935,10 +1254,77 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       apply (ssrbool.elimT eqP) in H.
       subst.
       reflexivity.
-  Qed.
+  Defined.
+  
+  Add Ring v_Z_ring : hacspec_ring_theory ( setoid (eqType_setoid_structure (A := f_Z)) ring_eq_ext ).
 
-  Add Ring v_Z_ring : hacspec_ring_theory ( setoid (setoid_structure f_Z) ring_eq_ext ).
-  (* Add Field v_Z_field : hacspec_field_theory ( setoid (setoid_structure _) ring_eq_ext ). *)
+  Require Import Setoid.
+  Require Import Relation_Definitions.
+
+  Add Morphism (@GRing.inv v_Z_is_field) with signature (@Logic.eq f_Z ==> @Logic.eq f_Z) as f_Z_inv.
+  Proof. reflexivity. Qed.
+  Add Parametric Morphism : (lower2 f_add) with signature (@Logic.eq v_Z_is_field ==> @Logic.eq v_Z_is_field ==> @Logic.eq v_Z_is_field) as f_Z_add.
+  Proof. reflexivity. Qed.
+
+  Check R_setoid3.
+
+  Add Field v_Z_field : hacspec_field_theory ( setoid (R_setoid3 (eqType_setoid_structure (A := f_Z))) ring_eq_ext ).
+
+  Program Definition inverse_morphism {R : fieldType} : Ring_theory.ring_morph _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ :=
+    (@mkmorph
+             R 0%R 1%R (fun x y => (GRing.add (x^-1) (y^-1))^-1)%R
+             (fun x y => GRing.mul y x) (fun x y => (GRing.add (x^-1) (GRing.opp (y^-1)))^-1)%R
+             (GRing.opp) eq_op
+
+             R 0%R 1%R (GRing.add)
+             (GRing.mul) (fun x y => GRing.add x (GRing.opp y))
+             (GRing.opp) eq_op
+
+             (GRing.inv)
+
+             (ssrbool.introT eqP (invr0 _))
+             (ssrbool.introT eqP (invr1 _))
+             _
+             (* (fun x _ => ssrbool.introT eqP (invrN (R := R) x)) *)
+             _
+             _
+             (fun x => ssrbool.introT eqP (invrN (R := R) x))
+             _
+          ).
+  Next Obligation.
+    now rewrite !invrK.
+  Qed.
+  Next Obligation.
+    now rewrite !invrK.
+  Qed.
+  Next Obligation.
+    destruct (x != 0%R) eqn:x_not_zero.
+    2:{
+      apply (ssrbool.elimNf eqP) in x_not_zero.
+      rewrite x_not_zero.
+      rewrite mul0r.
+      rewrite invr0.
+      rewrite mulr0.
+      apply eqxx.
+    }
+
+    destruct (y != 0%R) eqn:y_not_zero.
+    2:{
+      apply (ssrbool.elimNf eqP) in y_not_zero.
+      rewrite y_not_zero.
+      rewrite mulr0.
+      rewrite invr0.
+      rewrite mul0r.
+      apply eqxx.
+    }
+
+    rewrite <- (unitfE) in x_not_zero, y_not_zero.
+    refine (ssrbool.introT eqP (@invrM _ _ _ x_not_zero y_not_zero)).
+  Qed.
+  Next Obligation.
+    now apply (ssrbool.elimT eqP) in H ; subst.
+  Qed.
+  Fail Next Obligation.
 
   Definition zq_ring_theory `{R : fieldType} :
     ring_theory (R := R) (0)%R (1)%R
@@ -952,30 +1338,14 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       (GRing.opp) eq_op).
     all: intros.
     all: apply (ssrbool.introT eqP).
-    {
-      apply add0r.
-    }
-    {
-      apply addrC.
-    }
-    {
-      apply addrA.
-    }
-    {
-      apply mul1r.
-    }
-    {
-      apply mulrC.
-    }
-    {
-      apply mulrA.
-    }
-    {
-      apply mulrDl.
-    }
-    {
-      reflexivity.
-    }
+    { apply add0r.}
+    { apply addrC.}
+    { apply addrA.}
+    { apply mul1r.}
+    { apply mulrC.}
+    { apply mulrA.}
+    { apply mulrDl.}
+    { reflexivity.}
     {
       apply (ssrbool.elimT eqP).
       rewrite subr_eq0.
@@ -994,19 +1364,13 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
              (GRing.inv)
              (zq_ring_theory)
           ).
-    {
-      now rewrite GRing.oner_eq0.
-      (* easy. *)
-    }
-    {
-      easy.
-    }
+    { now rewrite GRing.oner_eq0.}
+    { easy.}
     {
       intros.
       apply (ssrbool.introT eqP).
       apply mulVr.
       now rewrite unitfE.
-      (* apply all_unit_in_prime_field. *)
     }
   Defined.
 
@@ -1034,9 +1398,6 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       subst.
       reflexivity.
   Qed.
-
-  Add Ring v_Z_ring : hacspec_ring_theory ( setoid (setoid_structure f_Z) ring_eq_ext ).
-  (* Add Field v_Z_field : hacspec_field_theory ( setoid (setoid_structure f_Z) ring_eq_ext ). *)
 
 End HacspecGroup.
 
@@ -1109,6 +1470,8 @@ Module Type OVN_schnorr_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNPa
   Import Schnorr.Sigma.Oracle.
   Import Schnorr.Sigma.
 
+  From mathcomp Require Import ssralg.
+
   Axiom WitnessToField :
     Witness -> v_G_t_Group.(f_Z).
 
@@ -1116,12 +1479,15 @@ Module Type OVN_schnorr_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNPa
     v_G_t_Group.(f_Z) -> Witness.
 
   Axiom WitnessToFieldCancel :
+    (* cancel WitnessToField FieldToWitness. *)
     forall x, WitnessToField (FieldToWitness x) = x.
 
   Axiom FieldToWitnessCancel :
+    (* cancel FieldToWitness WitnessToField. *)
     forall x, FieldToWitness (WitnessToField x) = x.
 
-  Axiom WitnessToFieldAdd : forall x y, WitnessToField (Zp_add x y) = is_pure (f_add (ret_both (WitnessToField x)) (ret_both (WitnessToField y))).
+  Axiom WitnessToFieldAdd : forall x y, WitnessToField (x + y) = is_pure (f_add (ret_both (WitnessToField x)) (ret_both (WitnessToField y))).
+
   Axiom WitnessToFieldMul : forall x y, WitnessToField (Zp_mul x y) = is_pure (f_mul (ret_both (WitnessToField x)) (ret_both (WitnessToField y))).
 
   Axiom randomness_sample_is_bijective :
@@ -1656,14 +2022,17 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
   Import MyAlg.
   Import Sigma.Oracle.
   Import Sigma.
-  Axiom WitnessToField :
-    'F_q -> v_G_t_Group.(f_Z).
-  Axiom FieldToWitness :
-    v_G_t_Group.(f_Z) -> Finite.clone _ 'F_q.
+  Axiom WitnessToField : {rmorphism 'F_ HacspecGroup.q -> v_Z_is_field}.
+    (* 'F_q -> v_G_t_Group.(f_Z). *)
+  Axiom FieldToWitness : {rmorphism v_Z_is_field -> 'F_ HacspecGroup.q}.
+    (* v_G_t_Group.(f_Z) -> Finite.clone _ 'F_q. *)
   Axiom WitnessToFieldCancel :
+    (* cancel WitnessToField FieldToWitness. *)
     forall x, WitnessToField (FieldToWitness x) = x.
   Axiom FieldToWitnessCancel :
+    (* cancel FieldToWitness WitnessToField. *)
     forall x, FieldToWitness (WitnessToField x) = x.
+
   Axiom randomness_sample_is_bijective :
     bijective
     (λ x : 'I_(2 ^ 32),
@@ -1684,24 +2053,40 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
                   (unsize
                      (box_new
                         (array_from_list l))))) ;; c1 x ⦃ post ⦄.
-  Axiom pow_field_to_witness :
-    forall (h : both v_G) (b : both (v_G_t_Group.(f_Z))),
-    ((is_pure h : gT) ^+ FieldToWitness (is_pure b)) = is_pure (f_pow h b).
+
   Axiom pow_witness_to_field :
     forall (h : gT) (b : 'F_q),
       (h ^+ b = is_pure (f_pow (ret_both h) (ret_both (WitnessToField b)))).
-  Axiom prod_witness_to_field :
-    forall (h k : gT),
-      (h * k) = is_pure (f_prod (ret_both h) (ret_both k)).
+
   Axiom pow_base : forall x, f_g_pow x ≈both f_pow (ret_both g) x.
   Axiom div_is_prod_inv : forall x y, f_div x y ≈both f_prod x (f_group_inv y).
-  Axiom FieldToWitnessAdd : forall x y, (Zp_add (FieldToWitness x) (FieldToWitness y)) = FieldToWitness (is_pure (f_add (ret_both x) (ret_both y))).
-  Axiom FieldToWitnessMul : forall x y, (Zp_mul (FieldToWitness x) (FieldToWitness y)) = FieldToWitness (is_pure (f_mul (ret_both x) (ret_both y))).
-  Axiom FieldToWitnessOpp : (forall (b : both _), Zp_opp (FieldToWitness (is_pure b)) = FieldToWitness (is_pure (f_opp b))).
-  (* Axiom FieldToWitnessInv : (forall (b : both (v_G_t_Group.(f_Z))), Zp_inv (FieldToWitness (is_pure b)) = FieldToWitness (is_pure (f_inv b))). *)
-  Axiom FieldToWitnessInv : forall (b : f_Z), Zp_inv (FieldToWitness b) = FieldToWitness (is_pure (f_inv (ret_both b))).
+
+  Definition FieldToWitnessOpp : (forall (b : both _), Zp_opp (FieldToWitness (is_pure b)) = FieldToWitness (is_pure (f_opp b))).
+  Proof.
+    intros.
+    setoid_rewrite <- (rmorphN FieldToWitness).
+    unfold "- _".
+    simpl.
+    unfold lower1.
+    rewrite <- hacspec_function_guarantees.
+    reflexivity.
+  Qed.
+    
+  (* (* Axiom FieldToWitnessInv : (forall (b : both (v_G_t_Group.(f_Z))), Zp_inv (FieldToWitness (is_pure b)) = FieldToWitness (is_pure (f_inv b))). *) *)
+  (* Lemma FieldToWitnessInv : forall (b : f_Z), Zp_inv (FieldToWitness b) = FieldToWitness (is_pure (f_inv (ret_both b))). *)
+  (* Proof. *)
+  (*   intros. *)
+  (*   simpl. *)
+    
+  
   Axiom WitnessToField_f_inv : forall s, (f_inv (ret_both (WitnessToField s)) = ret_both (WitnessToField (Zp_inv s))).
-  Axiom FieldToWitnessOne : FieldToWitness (is_pure f_field_one) = 1%R.
+  
+  Lemma FieldToWitnessOne : FieldToWitness (is_pure f_field_one) = 1%R.
+  Proof.
+    intros.
+    now rewrite GRing.rmorph1.
+  Qed.
+
 End OVN_or_proof_preconditions.
 
 Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl) (SG : SecureGroup OVN_impl GOP) (proof_args : OVN_or_proof_preconditions OVN_impl GOP SG).
@@ -1954,7 +2339,6 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
             rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
             rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
             rewrite pow_witness_to_field.
-            rewrite prod_witness_to_field.
             reflexivity.
           - rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
             rewrite (pow_witness_to_field (is_pure (f_prod _ _))) ; rewrite WitnessToFieldCancel.
@@ -1979,25 +2363,25 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
           -
             rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
             rewrite hacspec_function_guarantees2.
-            rewrite <- !FieldToWitnessAdd.
+            rewrite !rmorphD.
             rewrite <- !FieldToWitnessOpp.
             apply f_equal.
             apply f_equal.
             rewrite  hacspec_function_guarantees2.
             simpl.
-            rewrite <- (FieldToWitnessMul).
+            rewrite (rmorphM).
             rewrite !FieldToWitnessCancel.
             apply f_equal.
             rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
             rewrite hacspec_function_guarantees2.
-            rewrite <- FieldToWitnessAdd.
+            rewrite rmorphD.
             rewrite <- FieldToWitnessOpp.
             simpl.
             rewrite !FieldToWitnessCancel.
             reflexivity.
           - rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
             rewrite hacspec_function_guarantees2.
-            rewrite <- FieldToWitnessAdd.
+            rewrite rmorphD.
             rewrite <- FieldToWitnessOpp.
 
             simpl.
@@ -2090,14 +2474,14 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
           + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
             rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
             rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-            rewrite prod_witness_to_field.
+            (* rewrite prod_witness_to_field. *)
             rewrite <- pow_witness_to_field.
             reflexivity.
           + rewrite expg0.
             rewrite mulg1.
 
             rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-            rewrite prod_witness_to_field.
+            (* rewrite prod_witness_to_field. *)
             rewrite pow_witness_to_field.
             unfold lower1.
             rewrite (proj1 both_equivalence_is_pure_eq (div_is_prod_inv _ _)).
@@ -2106,7 +2490,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
             rewrite pow_witness_to_field.
             rewrite WitnessToFieldCancel.
             (* rewrite pow_witness_to_field. *)
-            rewrite prod_witness_to_field.
+            (* rewrite prod_witness_to_field. *)
             now push_down_sides.
         }
         (* Challenges *)
@@ -2121,24 +2505,24 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
           all: repeat setoid_rewrite <- expgnE.
           - rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
             rewrite hacspec_function_guarantees2.
-            rewrite <- FieldToWitnessAdd.
+            rewrite rmorphD.
             rewrite <- FieldToWitnessOpp.
             simpl.
             apply f_equal.
             apply f_equal.
 
             rewrite hacspec_function_guarantees2.
-            rewrite <- FieldToWitnessMul.
+            rewrite rmorphM.
 
             rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
             rewrite hacspec_function_guarantees2.
-            rewrite <- FieldToWitnessAdd.
+            rewrite rmorphD.
             rewrite <- FieldToWitnessOpp.
             simpl.
             now rewrite !FieldToWitnessCancel.
           - rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
             rewrite hacspec_function_guarantees2.
-            rewrite <- FieldToWitnessAdd.
+            rewrite rmorphD.
             rewrite <- FieldToWitnessOpp.
             simpl.
             now rewrite !FieldToWitnessCancel.

@@ -148,7 +148,10 @@ Module OVN_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperation
         (*     | Result_Err_case _ => ret_both (None : chOption t_OvnContractState) *)
         (*     end : both (chOption (t_OvnContractState))) *)
 
-        temp ← is_state (@cast_vote (ConcertDefinitions.t_CastVoteParam_t_Sized) (ConcertDefinitions.t_CastVoteParam_t_HasReceiveContext) (ret_both (ctx : t_CastVoteParam)) (ret_both (state : t_OvnContractState))) ;;
+        temp ← is_state (@cast_vote
+                           (ConcertDefinitions.t_CastVoteParam_t_Sized)
+                           (ConcertDefinitions.t_CastVoteParam_t_HasReceiveContext)
+                           (ret_both (ctx : t_CastVoteParam)) (ret_both (state : t_OvnContractState))) ;;
         match temp : t_Result (v_A × t_OvnContractState) _ with
         | Result_Ok_case (_, s) => ret (Some s)
         | Result_Err_case _ => ret None
@@ -507,7 +510,10 @@ Module OVN_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperation
       rewrite !bind_assoc; rewrite !bind_rewrite.
       rewrite bind_assoc.
 
-      eassert (is_state (zkp_one_out_of_two _ _ _ _ _ _) = match lookup_op or_proof_args.Sigma.RUN_interactive (or_proof_args.Sigma.RUN, ((chProd or_proof_args.MyAlg.choiceStatement or_proof_args.MyAlg.choiceWitness), or_proof_args.MyAlg.choiceTranscript)) with Some c => temp ← c (_, _) ;; _ | None => _ end) by admit.
+      eassert (is_state (zkp_one_out_of_two _ _ _ _ _ _) = match lookup_op or_proof_args.Sigma.RUN_interactive (or_proof_args.Sigma.RUN, ((chProd or_proof_args.MyAlg.choiceStatement or_proof_args.MyAlg.choiceWitness), or_proof_args.MyAlg.choiceTranscript)) with Some c => temp ← c (fto (g ^+ _,(
+                 is_pure (compute_g_pow_yi
+                 (cast_int (f_cvp_i (solve_lift ret_both (f_parameter_cursor (ret_both s0)))))
+                 (f_g_pow_xis (ret_both s))) : gT),_), ( fto ((or_proof_args.FieldToWitness (is_pure (f_cvp_xi (solve_lift ret_both (f_parameter_cursor (ret_both s0)))))) : 'F_q, _, _))) ;; _ | None => _ end) by admit.
       rewrite H2.
       simpl (lookup_op _ _).
       destruct choice_type_eqP ; [ | subst ; contradiction ].
@@ -515,8 +521,11 @@ Module OVN_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperation
       subst.
       rewrite cast_fun_K.
 
+      rewrite otf_fto.
+
       rewrite !bind_assoc.
       simpl.
+      rewrite otf_fto.
 
       apply r_assertD ; [ reflexivity | ].
       unfold #assert.

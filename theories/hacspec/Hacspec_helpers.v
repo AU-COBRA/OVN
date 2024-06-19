@@ -297,6 +297,24 @@ Proof.
       apply H2.
 Qed.
 
+
+Require Import Setoid.
+Definition setoid_structure {A : choice_type} : Setoid.Setoid_Theory (both A) both_equivalence :=
+  {|
+    RelationClasses.Equivalence_Reflexive := both_eq_reflexivity;
+    RelationClasses.Equivalence_Symmetric := fun x y Hxy => proj2 (both_eq_symmetry x y) Hxy ;
+    RelationClasses.Equivalence_Transitive := fun x y z Hxy Hyz => both_eq_trans y Hxy Hyz ;
+  |}.
+
+Add Parametric Relation (A : choice_type) :
+  (both A) both_equivalence
+    reflexivity proved by both_eq_reflexivity
+    symmetry proved by (fun x y => proj2 (both_eq_symmetry x y))
+    transitivity  proved by (@both_eq_trans _)
+    as both_setoid.
+
+(* Add Parametric Setoid (A : choice_type) : (both A) both_equivalence setoid_structure as both_setoid. *)
+
 Lemma both_eq_bind : forall {A B : choice_type} (f : A -> both B) (a : both A) v,
     a ≈both ret_both v ->
     bind_both a f ≈both (f v).
@@ -314,9 +332,7 @@ Qed.
 Lemma both_eq_let_both : forall {A B : choice_type} (f : both A -> both B) (a : both A),
     (letb x := a in f x) ≈both (f a).
 Proof.
-  intros.
-  unfold both_equivalence;  simpl in *.
-  split ; now apply both_eq_reflexivity.
+  intros. setoid_reflexivity.
 Qed.
 
 
