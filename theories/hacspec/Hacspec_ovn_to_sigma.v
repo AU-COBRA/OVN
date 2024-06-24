@@ -412,23 +412,47 @@ Module Type FieldEquality (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : Group
   Program Definition Z_to_F : {rmorphism 'Z_q -> 'F_q} := GRing.ssrfun_idfun__canonical__GRing_RMorphism _.
   Next Obligation.
     now rewrite (@pdiv_id q HacspecGroup.prime_order).
-  Qed.
+  Defined.
+  Fail Next Obligation.
 
   Program Definition F_to_Z : {rmorphism 'F_q -> 'Z_q} := GRing.ssrfun_idfun__canonical__GRing_RMorphism _.
   Next Obligation.
     now rewrite (@pdiv_id q HacspecGroup.prime_order).
+  Defined.
+  Fail Next Obligation.
+
+  Definition F_to_Z_cancel :
+    cancel Z_to_F F_to_Z.
+  Proof.
+    intros x.
+    unfold Z_to_F, F_to_Z.
+    unfold eq_rect.
+    unfold Z_to_F_obligation_1, F_to_Z_obligation_1.
+    unfold eq_ind_r.
+    unfold eq_ind.
+    destruct (Logic.eq_sym (pdiv_id (p:=q) prime_order)).
+    reflexivity.
+  Qed.
+
+  Definition Z_to_F_cancel :
+    cancel F_to_Z Z_to_F.
+  Proof.
+    intros x.
+    unfold Z_to_F, F_to_Z.
+    unfold eq_rect.
+    unfold Z_to_F_obligation_1, F_to_Z_obligation_1.
+    unfold eq_ind_r.
+    unfold eq_ind.
+    destruct (Logic.eq_sym (pdiv_id (p:=q) prime_order)).
+    reflexivity.
   Qed.
 
   Axiom WitnessToField : {rmorphism 'Z_ HacspecGroup.q -> v_Z_is_field}.
-    (* 'F_q -> v_G_t_Group.(f_Z). *)
   Axiom FieldToWitness : {rmorphism v_Z_is_field -> 'Z_ HacspecGroup.q}.
-    (* v_G_t_Group.(f_Z) -> Finite.clone _ 'F_q. *)
   Axiom WitnessToFieldCancel :
-    (* cancel WitnessToField FieldToWitness. *)
-    forall x, WitnessToField (FieldToWitness x) = x.
+    cancel FieldToWitness WitnessToField.
   Axiom FieldToWitnessCancel :
-    (* cancel FieldToWitness WitnessToField. *)
-    forall x, FieldToWitness (WitnessToField x) = x.
+    cancel WitnessToField FieldToWitness.
 
   (* Properties of the field isomorphism *)
   Axiom WitnessToFieldAdd : forall x y, WitnessToField (x + y) = is_pure (f_add (ret_both (WitnessToField x)) (ret_both (WitnessToField y))).
@@ -781,8 +805,6 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
     apply commuteX2.
     apply commute_refl.
   Qed.
-Lemma Z'_to_F' : 'Z_ HacspecGroup.q = 'F_ HacspecGroup.q.
-  Proof. now rewrite (@pdiv_id q HacspecGroup.prime_order). Qed.
 
   Lemma div_cancel_Fq : forall (x : gT) (s : 'F_q), s <> 0 -> x ^+ nat_of_ord (s / s)%R = x.
   Proof.
@@ -795,34 +817,18 @@ Lemma Z'_to_F' : 'Z_ HacspecGroup.q = 'F_ HacspecGroup.q.
   Lemma div_cancel : forall (x : gT) (s : 'Z_q), s <> 0 -> x ^+ nat_of_ord (s / s)%R = x.
   Proof.
     intros.
-    pose (div_cancel_Fq x (Z_to_F s)).
-    replace (s / _)%R with (s * s^-1)%R by admit.
-    replace (s) with (F_to_Z (Z_to_F s)) by admit.
-    pose rmorph.
-    F_to_Z (Z_to_F s) * F_to_Z (Z_to_F s) ^-1
-    epose (rmorphM F_to_Z (Z_to_F s) (Z_to_F s^-1%R)).
-    epose (rmorphM Z_to_F _ _).
-    simpl in e1.
-    rewrite 
-    unfold "/".
-    simpl.
-    unfold "^-1"%R in e0.
-    simpl in e0.
-    
-    rewrite e0.
-    
-    rewrite <- (rmorphM F_to_Z (Z_to_F s) (Z_to_F s)^-1%R).
-    unfold "/". simpl.
-    simpl in e0.
-    rewrite rmorph.
-    (rmorphM, rmorphB, rmorphD, rmorphN, rmorph1, rmorph0)
-    simpl in e.
-    unfold Z_to_F in e.
-    rewrite e.
-    
-    
     rewrite mulrV.
-    2: now rewrite (unitfE) ; apply /eqP.
+    2:{
+      rewrite <- (F_to_Z_cancel _).
+      apply rmorph_unit.
+      rewrite (unitfE).
+      apply /eqP.
+      red ; intros.
+      apply H.
+      rewrite <- (F_to_Z_cancel _).
+      rewrite H0.
+      apply  (@rmorph0 'F_q 'Z_q F_to_Z).
+    }
     now rewrite expg1.
   Qed.
 
@@ -1033,15 +1039,11 @@ Lemma Z'_to_F' : 'Z_ HacspecGroup.q = 'F_ HacspecGroup.q.
   End MyAlg.
 
   Module Sigma := SigmaProtocol MyParam MyAlg.
-  Check Sigma.run_interactive_shvzk.
-  Import MyParam.
-  Import MyAlg.
-  Import Sigma.Oracle.
-  Import Sigma.
 
 End OVN_or_proof_preconditions.
 
-Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl) (SG : SecureGroup OVN_impl GOP) (proof_args : OVN_or_proof_preconditions OVN_impl GOP SG).
+Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl) (SG : SecureGroup OVN_impl GOP) (field_equality : FieldEquality OVN_impl GOP SG) (proof_args : OVN_or_proof_preconditions OVN_impl GOP SG field_equality).
+  Import field_equality.
   Import proof_args.
 
   Import MyParam.
@@ -1053,10 +1055,9 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
   Include proof_args.
   Export proof_args.
 
-  (* Include Misc. *)
-
   Transparent OVN.zkp_one_out_of_two.
 
+  (* Mapping between d2, r2 and w, d for sampled randomness *)
   Definition f_d2r2_to_wd : 'Z_q -> 'I_MyAlg.i_witness -> Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)) → Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)) :=
     fun m c dr =>
       let '(d2, r2) := (ch2prod dr) in
@@ -1099,6 +1100,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       reflexivity.
   Qed.
 
+  (* Mapping between d1, r1 and w, d for sampled randomness *)
   Definition f_d1r1_to_wd : 'Z_q -> 'I_MyAlg.i_witness -> Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)) → Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)) :=
     fun m c dr =>
       let '(d2, r1) := ch2prod dr in
@@ -1137,13 +1139,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       reflexivity.
   Qed.
 
-  Definition run_code (ab : src (RUN, (choiceStatement × choiceWitness, choiceTranscript))) : code fset0 [interface
-          #val #[ VERIFY ] : chTranscript → 'bool ;
-          #val #[ RUN ] : chRelation → chTranscript
-                                                                                                ] choiceTranscript :=
-    {code (x ← op (RUN, ((chProd choiceStatement choiceWitness), choiceTranscript)) ⋅ ab ;;
-              ret x) }.
-
+  (* Mapping between return values for the two OR protocols *)
   Transparent run.
   Definition hacspec_ret_to_or_sigma_ret : Statement -> OVN.t_OrZKPCommit -> choiceTranscript.
   Proof.
@@ -1171,6 +1167,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     refine (a = hacspec_ret_to_or_sigma_ret (otf stmt) b).
   Defined.
 
+  (* Equivalence between the two OR protocols *)
  Lemma or_run_eq  (pre : precond) :
     forall (b : Statement * Witness) c,
       Some c = lookup_op RUN_interactive (RUN, ((chProd choiceStatement choiceWitness), choiceTranscript)) ->
@@ -1192,6 +1189,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
   Proof.
     intros [[[x h] y] [[m v] n]] c H.
 
+    (* Unfold lhs *)
     simpl fst ; simpl snd.
 
     simpl in H.
@@ -1201,6 +1199,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     clear e e1.
     inversion_clear H.
 
+    (* Unfold rhs *)
     unfold OVN.zkp_one_out_of_two.
 
     rewrite !otf_fto; unfold R.
@@ -1208,10 +1207,10 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     intros _ ?.
     simpl in e₁.
     repeat (apply andb_prop in e₁ ; destruct e₁ as [e₁ ?]).
-    (* apply (ssrbool.elimT orP) in H. *)
-    apply reflection_nonsense in e₁(* , H *)(* , H0 *)(* , H1 *).
+    apply reflection_nonsense in e₁.
     subst.
 
+    (* Align random sampling *)
     pose (bij_f := randomness_sample_is_bijective).
     set (f_rand := fun _ => _) in bij_f.
 
@@ -1219,8 +1218,10 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     eapply rsymmetry ; eapply r_uniform_bij with (f := fun x => _) ; [ apply bij_f | intros x1 ] ; apply rsymmetry ; apply better_r.
     eapply rsymmetry ; eapply r_uniform_bij with (f := fun x => _) ; [ apply bij_f | intros x2] ; apply rsymmetry ; apply better_r.
 
+    (* Save value in memory *)
     apply better_r_put_lhs.
 
+    (* Substitue random *)
     pose (f_rand_inner := fun (x : 'I_(2 ^ 32)) => (FieldToWitness
             (is_pure
                (f_random_field_elem (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord x)))))))).
@@ -1230,34 +1231,31 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       end.
     subst f_rand f_rand_inner.
 
-    (* destruct (y == h ^+ m * g) eqn:H. *)
+    (* Case on vote *)
     destruct v.
     {
-      apply reflection_nonsense in H(* , H0, H1 *).
+      (* Simlify to v = true case *)
+      apply reflection_nonsense in H.
       subst.
-
       rewrite !eqxx.
-
       repeat unfold let_both at 1.
       simpl.
       Transparent Build_t_OrZKPCommit.
       unfold Build_t_OrZKPCommit; hnf.
-      
+
+      (* isolate f_hash *)
       eapply (r_transR_both (B := t_OrZKPCommit)) ; [ set (H_hash := f_hash _); pattern_lhs_both_pat H_hash ; now rewrite <- (bind_both_eta _ H_hash) |  hnf ; unfold bind_both at 1, bind_raw_both, both_prog at 1, is_state at 1; set (f_or := fun _ => is_state (bind_both _ _)) ].
 
-      (* TODO : connect hash to random sample value ! *)
-      (* apply (r_const_sample_L) ; [ apply LosslessOp_uniform | intros ]. *)
+      (* replace f_hash with random sampling *)
       eapply (hash_is_psudorandom _ _ (fun x => WitnessToField (otf x)) _ _ _ _ [:: _; _; _; _; _; _]).
-      {
-        exists (fun x => fto (FieldToWitness x)).
-        -- now intros ? ; rewrite FieldToWitnessCancel ; rewrite fto_otf.
-        -- now intros ? ; rewrite otf_fto ; rewrite WitnessToFieldCancel.
-      }
       intros x3.
 
+      (* get value from memory *)
       apply getr_set_lhs.
+      (* get return value *)
       apply make_pure ; simpl.
 
+      (* Compare result values *)
       apply r_ret.
       intros ? ? ?.
 
@@ -1267,7 +1265,6 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       rewrite FieldToWitnessCancel.
       rewrite !otf_fto.
       unfold lower2 ; simpl.
-      (* rewrite !mulg1. *)
 
       set (f_random_field_elem _).
       set (f_random_field_elem _).
@@ -1353,6 +1350,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
         now rewrite <- get_heap_set_heap.
     }
     {
+      (* Simlify to v = false case *)
       apply reflection_nonsense in H(* , H0, H1 *).
       subst.
       set (_ == _).
@@ -1382,21 +1380,19 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       Transparent Build_t_OrZKPCommit.
       unfold Build_t_OrZKPCommit; hnf.
 
+      (* isolate f_hash *)
       eapply (r_transR_both (B := t_OrZKPCommit)) ; [ set (H_hash := f_hash _); pattern_lhs_both_pat H_hash ; now rewrite <- (bind_both_eta _ H_hash) |  hnf ; unfold bind_both at 1, bind_raw_both, both_prog at 1, is_state at 1; set (f_or := fun _ => is_state (bind_both _ _)) ].
 
-      (* TODO : connect hash to random sample value ! *)
-      (* apply (r_const_sample_L) ; [ apply LosslessOp_uniform | intros ]. *)
+      (* replace f_hash with random sampling *)
       eapply (hash_is_psudorandom _ _ (fun x => WitnessToField (otf x)) _ _ _ _ [:: _; _; _; _; _; _]).
-      {
-        exists (fun x => fto (FieldToWitness x)).
-        -- now intros ? ; rewrite FieldToWitnessCancel ; rewrite fto_otf.
-        -- now intros ? ; rewrite otf_fto ; rewrite WitnessToFieldCancel.
-      }
       intros x3.
 
+      (* get value from memory *)
       apply getr_set_lhs.
+      (* get return value *)
       apply make_pure ; simpl.
 
+      (* Compare result values *)
       apply r_ret.
       intros ? ? ?.
 
@@ -1490,6 +1486,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     (* Qed. *)
     Fail Timeout 5 Qed. Admitted. (* SLOW: 525.61 sec *)
 
+  (* The packaged version for running the hacspec code *)
   Program Definition hacspec_or_run :
     package Sigma_locs
         [interface]
@@ -1526,6 +1523,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
   Qed.
   Fail Next Obligation.
 
+  (* Helper function *)
   Lemma compute_in_post_cond_R :
     forall {A B C : choice_type} (a : raw_code A) (b : raw_code B) (f : B -> C) pre post,
     ⊢ ⦃ pre ⦄ a ≈ b ⦃ fun '(x,h0) '(y,h1) => post (x, h0) (f y, h1) ⦄ ->
@@ -1545,6 +1543,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     apply rreflexivity_rule.
   Qed.
 
+  (* Adversary gets no advantage by running hacspec version *)
   Lemma hacspec_vs_RUN_interactive :
     ∀ LA A,
       ValidPackage LA [interface
@@ -1553,6 +1552,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       fdisjoint LA Sigma_locs →
       AdvantageE hacspec_or_run RUN_interactive A = 0.
   Proof.
+    (* Unfold statement *)
     intros LA A Va Hdisj.
     eapply eq_rel_perf_ind_ignore.
     6,7: apply Hdisj.
@@ -1601,7 +1601,6 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     destruct x.
 
     set (pkg_core_definition.sampler _ _).
-
     eassert (r =
               (v ← (wr ← sample uniform (2 ^ 32) ;;
                     dr ← sample uniform (2 ^ 32) ;;
@@ -1616,12 +1615,14 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
                ret (hacspec_ret_to_or_sigma_ret (otf (s, s0).1) v))) by (now subst r ; simpl) ; rewrite H0 ; clear H0.
     clear.
 
+    (* Proof equality *)
     eapply r_transR ; [ apply r_bind_assertD | hnf ].
     apply compute_in_post_cond_R.
     eapply rpost_weaken_rule.
     1:{
       eapply r_transL.
       2:{
+        (* Apply proven equality *)
         eapply (or_run_eq (λ '(h₁, h₀), heap_ignore Sigma_locs (h₀, h₁)) (otf s, otf s0) y).
         subst y.
         simpl.
@@ -1654,6 +1655,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
   Qed.
 
   (* Special honest verify zero knowledge *)
+  (* Apply triangle inequality to get guarantees about hacspec *)
   Lemma run_interactive_or_shvzk :
     ∀ LA A,
       ValidPackage LA [interface
@@ -1670,6 +1672,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     now rewrite hacspec_vs_RUN_interactive.
   Qed.
 
+  (* Helper functions *)
   Lemma card_prod_iprod3 :
     ∀ i j k,
       #|Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (fintype_ordinal__canonical__fintype_Finite i) (fintype_ordinal__canonical__fintype_Finite j)) (fintype_ordinal__canonical__fintype_Finite k)| = (i * j * k)%N.
@@ -1835,7 +1838,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
   Lemma if_const : forall {A} (a: A) b, (if b then a else a) = a.
   Proof. now intros ? ? []. Qed.
 
-
+  (* Extractor correctness *)
   Lemma shvzk_success:
     ∀ LA A,
       ValidPackage LA [interface
@@ -2152,7 +2155,6 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
 
   (* Lemma proving that the output of the extractor defined for Schnorr's *)
   (* protocol is perfectly indistinguishable from real protocol execution. *)
-  (*  *)
   Lemma extractor_success:
     ∀ LA A,
       ValidPackage LA [interface
