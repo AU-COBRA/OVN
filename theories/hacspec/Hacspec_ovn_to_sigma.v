@@ -76,6 +76,14 @@ From mathcomp Require Import ring.
 (*                                                                            *)
 (* Module GroupOperationProperties has all properties of group operations for *)
 (*   v_G, and field operations for f_Z                                        *)
+(* Module HacspecGroup ovn implementation with proofs of group operation, to  *)
+(*   instantiate HB instances for group and field using hacspec OVN impl      *)
+(* Module SecureGroup properties for security of group, e.g. prime fields     *)
+(* Module FieldEquality equality between group field Z/#[g]Z and OVN field and*)
+(*   some properties about the equality                                       *)
+(* Module OVN_schnorr_proof instantiation of Schnorr proof                    *)
+(* Module OVN_or_proof_preconditions            *)
+(*   some properties about the equality                                       *)
 (******************************************************************************)
 
 Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
@@ -83,10 +91,6 @@ Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
   Export OVN_impl.
 
   Include Misc.
-
-  (* Axiom v_Z_pickle : f_Z → nat. *)
-  (* Axiom v_Z_unpickle : nat -> Datatypes.option f_Z. *)
-  (* Axiom v_Z_pickleK : pcancel v_Z_pickle v_Z_unpickle. *)
 
   Definition v_G_type := Choice.sort (chElement v_G).
   Definition f_Z_type := Choice.sort (chElement f_Z).
@@ -157,29 +161,9 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
 
   #[local] Open Scope hacspec_scope.
 
-  (** Helper tactics *)
-  Ltac remove_ret_both_is_pure_from_args :=
-    match goal with
-    | [ |- context [ ?f (ret_both (is_pure ?x)) ?y ] ] =>
-        setoid_rewrite (both_eq_fun_ext (fun k => f k y) (ret_both (is_pure x)) x) ; [ | now rewrite ret_both_is_pure_cancel]
-    | [ |- context [ ?f ?x (ret_both (is_pure ?y)) ] ] =>
-        setoid_rewrite (both_eq_fun_ext (fun k => f x k) (ret_both (is_pure y)) y) ; [ | now rewrite ret_both_is_pure_cancel]
-    | [ |- context [ ?f (ret_both (is_pure ?y)) ] ] =>
-        setoid_rewrite (both_eq_fun_ext f (ret_both (is_pure y)) y) ; [ | now rewrite ret_both_is_pure_cancel]
-    end.
-
-  Ltac lower_proof proof :=
-    intros ;
-    unfold lower1 ;
-    unfold lower2 ;
-    apply (proj1 both_equivalence_is_pure_eq) ;
-    repeat remove_ret_both_is_pure_from_args ;
-    rewrite proof.
-
   (*** Hierachy builder instances *)
 
   (** Group instances *)
-
   HB.instance Definition _ : Finite v_G_type := {|
       Finite.choice_hasChoice_mixin := Choice.choice_hasChoice_mixin (Choice.class v_G_type);
       Finite.choice_Choice_isCountable_mixin := v_G_countable;
@@ -632,8 +616,8 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
 
   Include field_equality.
   Export field_equality.
-  
   (*** Helper properties *)
+
   Lemma order_ge1 : succn (succn (Zp_trunc q)) = q.
   Proof.
     rewrite <- (@pdiv_id q HacspecGroup.prime_order) at 1.
@@ -655,47 +639,6 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
       rewrite <- order_ge1 in e.
       intros.
       apply e ; clear e.
-  Qed.
-
-  Lemma swap_samples :
-    forall {n m : nat} {C} `{Positive n} `{Positive m} (c : 'I_n -> 'I_m -> raw_code C),
-      ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
-      a0 ← sample uniform n ;;
-      a1 ← sample uniform m ;;
-      c a0 a1 ≈
-      a1 ← sample uniform m ;;
-      a0 ← sample uniform n ;;
-      c a0 a1
-     ⦃ Logic.eq ⦄.
-  Proof.
-    intros.
-
-    eapply r_transR.
-    {
-      apply r_uniform_prod.
-      intros.
-      apply rreflexivity_rule.
-    }
-    apply r_nice_swap_rule ; [ easy | easy | ].
-    eapply r_transR.
-    {
-      apply r_uniform_prod.
-      intros.
-      apply rreflexivity_rule.
-    }
-    eapply r_uniform_bij with (f := fun x => let '(a,b) := ch2prod x in prod2ch (b,a)).
-    {
-      clear.
-      econstructor.
-      Unshelve.
-      3: refine (fun x => let '(a,b) := ch2prod x in prod2ch (b,a)).
-      all: intros x ; rewrite <- (prod2ch_ch2prod x) ; destruct (ch2prod x) ; now rewrite !ch2prod_prod2ch.
-    }
-    intros.
-    destruct (ch2prod x).
-    rewrite (ch2prod_prod2ch).
-
-    apply rreflexivity_rule.
   Qed.
 
   Lemma invg_id : (forall (x : gT), x ^-1 = x ^- 1%R).
@@ -1523,26 +1466,6 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
   Qed.
   Fail Next Obligation.
 
-  (* Helper function *)
-  Lemma compute_in_post_cond_R :
-    forall {A B C : choice_type} (a : raw_code A) (b : raw_code B) (f : B -> C) pre post,
-    ⊢ ⦃ pre ⦄ a ≈ b ⦃ fun '(x,h0) '(y,h1) => post (x, h0) (f y, h1) ⦄ ->
-    ⊢ ⦃ pre ⦄ a ≈ v ← b ;; ret (f v) ⦃ post ⦄.
-  Proof.
-    intros.
-    eapply r_transL.
-    2:{
-      eapply r_bind.
-      + apply H.
-      + intros.
-        apply r_ret.
-        intros.
-        apply H0.
-    }
-    rewrite bind_ret.
-    apply rreflexivity_rule.
-  Qed.
-
   (* Adversary gets no advantage by running hacspec version *)
   Lemma hacspec_vs_RUN_interactive :
     ∀ LA A,
@@ -1671,172 +1594,6 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     rewrite GRing.addr0.
     now rewrite hacspec_vs_RUN_interactive.
   Qed.
-
-  (* Helper functions *)
-  Lemma card_prod_iprod3 :
-    ∀ i j k,
-      #|Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (fintype_ordinal__canonical__fintype_Finite i) (fintype_ordinal__canonical__fintype_Finite j)) (fintype_ordinal__canonical__fintype_Finite k)| = (i * j * k)%N.
-  Proof.
-    intros i j k.
-    rewrite !card_prod. simpl. rewrite !card_ord. reflexivity.
-  Qed.
-
-  Definition ch3prod {i j k} `{Positive i} `{Positive j} `{Positive k}
-    (xyz : Arit (uniform (i * j * k))) :
-    Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (Arit (uniform i)) (Arit (uniform j))) (Arit (uniform k)) :=
-    let '(xy,z) := ch2prod xyz in
-    let '(x,y) := ch2prod xy in
-    (x,y,z).
-
-  Definition prod3ch {i j k} `{Positive i} `{Positive j} `{Positive k}
-    (xyz : Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (Arit (uniform i)) (Arit (uniform j))) (Arit (uniform k))) :
-    Arit (uniform (i * j * k)) :=
-    prod2ch (prod2ch (fst xyz),snd xyz).
-
-  Definition ch3prod_prod3ch :
-    ∀ {i j k} `{Positive i} `{Positive j} `{Positive k}
-      (x : Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (Arit (uniform i)) (Arit (uniform j))) (Arit (uniform k))),
-      ch3prod (prod3ch x) = x.
-  Proof.
-    intros i j k hi hj hk xyz.
-    unfold ch3prod, prod3ch.
-    destruct xyz as [[]].
-    now rewrite !ch2prod_prod2ch.
-  Qed.
-
-  Definition prod3ch_ch3prod :
-    ∀ {i j k} `{Positive i} `{Positive j} `{Positive k} (x : Arit (uniform (i * j * k))),
-      prod3ch (ch3prod x) = x.
-  Proof.
-    intros i j k hi hj hk xyz.
-    unfold ch3prod, prod3ch in *.
-    rewrite -[RHS](prod2ch_ch2prod xyz).
-    destruct (ch2prod xyz) as [xy z].
-    set (s := xy) at 1 ; rewrite -(prod2ch_ch2prod xy) ; subst s.
-    destruct (ch2prod xy) as [x y].
-    rewrite ch2prod_prod2ch.
-    reflexivity.
-  Qed.
-
-  Lemma r_uniform_triple :
-    ∀ {A : ord_choiceType} i j k `{H : Positive i} `{H0 : Positive j} `{H1 : Positive k}
-      (r : fin_family (mkpos (cond_pos := H) i) → fin_family (mkpos (cond_pos := H0) j) → fin_family (mkpos (cond_pos := H1) k) → raw_code A),
-      (∀ x y z, ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ r x y z ≈ r x y z ⦃ Logic.eq ⦄) →
-      ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
-        xyz ← sample uniform (i * j * k) ;;
-      let '(x,y,z) := ch3prod xyz in r x y z
-                                       ≈
-                                       x ← sample uniform i ;;
-                                     y ← sample uniform j ;;
-                                     z ← sample uniform k ;;
-                                     r x y z
-                                       ⦃ Logic.eq ⦄.
-  Proof.
-    intros A i j k pi pj pk r h.
-    eapply r_transR.
-    1:{
-      eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros ].
-      apply r_uniform_prod.
-      intros ; apply rreflexivity_rule.
-    }
-    simpl.
-    eapply r_transR.
-    1:{
-      apply r_uniform_prod.
-      intros ; apply rreflexivity_rule.
-    }
-    simpl.
-    eapply r_uniform_bij with (f := fun (xyz : Arit (uniform (i * j * k))) =>
-                                      let '(x,y,z) := ch3prod xyz in
-                                      (prod2ch (x,prod2ch(y,z))) : Arit (uniform (i * (j * k)))).
-    {
-      apply Bijective with (g :=  fun (xyz : Arit (uniform (i * (j * k)))) =>
-                                    let '(x,yz) := ch2prod xyz in
-                                    let '(y,z) := ch2prod yz in
-                                    prod3ch (x,y,z) : Arit (uniform (i * j * k))).
-      {
-        intros xyz.
-        rewrite -[RHS](prod3ch_ch3prod xyz).
-        destruct (ch3prod xyz) as [[x y] z].
-        now rewrite !ch2prod_prod2ch.
-      }
-      {
-        intros xyz.
-        rewrite -[RHS](prod2ch_ch2prod xyz).
-        destruct (ch2prod xyz) as [x yz].
-        set (s := yz) at 1 ; rewrite <- (prod2ch_ch2prod yz) ; subst s.
-        destruct (ch2prod yz) as [y z].
-        now rewrite !ch3prod_prod3ch.
-      }
-    }
-    {
-      intros xyz.
-      unfold ch3prod.
-      destruct ch2prod.
-      destruct ch2prod.
-      rewrite ch2prod_prod2ch.
-      rewrite ch2prod_prod2ch.
-      apply rreflexivity_rule.
-    }
-  Qed.
-
-  Lemma if_bind : forall {A B} (k : A -> B) (a c : A) b,
-      (let 'x :=
-         if b
-         then a
-         else c
-       in
-       k x)
-      =
-        (if b then k a else k c).
-  Proof. now intros ? ? ? ? ? []. Qed.
-
-  Lemma if_then_if : forall {A} (a c e : A) b,
-      (if b
-       then
-         if b
-         then a
-         else c
-       else
-         e)
-      =
-        (if b
-         then a
-         else e).
-  Proof. now intros ? ? ? ? []. Qed.
-
-  Lemma if_else_if : forall {A} (a c d : A) b,
-      (if b
-       then
-         a
-       else
-         if b
-         then c
-         else d)
-      =
-        (if b
-         then a
-         else d).
-  Proof. now intros ? ? ? ? []. Qed.
-
-  Lemma if_if : forall {A} (a c d e : A) b,
-      (if b
-       then
-         if b
-         then a
-         else c
-       else
-         if b
-         then d
-         else e)
-      =
-        (if b
-         then a
-         else e).
-  Proof. now intros ? ? ? ? ? []. Qed.
-
-  Lemma if_const : forall {A} (a: A) b, (if b then a else a) = a.
-  Proof. now intros ? ? []. Qed.
 
   (* Extractor correctness *)
   Lemma shvzk_success:
