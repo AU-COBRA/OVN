@@ -69,613 +69,64 @@ Import GroupScope GRing.Theory.
 
 Import PackageNotation.
 
-(* From Hammer Require Import Reflect. *)
-(* From Hammer Require Import Hammer. *)
-(* Hammer_version. *)
-(* Hammer_objects. *)
-
-(* (* Set Hammer Z3. *) *)
-(* (* Unset Hammer Parallel. *) *)
-(* (* (* (* disable the preliminary sauto tactic *) *) *) *)
-(* (* (* Set Hammer SAutoLimit 0. *) *) *)
-(* (* Set Hammer GSMode 1. *) *)
-(* (* Set Hammer ATPLimit 30. *) *)
-(* (* Hammer_cleanup. *) *)
-
-(* Require Import SMTCoq.SMTCoq. *)
-(* (* Set SMT Solver "z3". (** Use Z3, also "CVC4" **) *) *)
-
 From mathcomp Require Import ring.
 
-Module Misc.
-
-  Lemma hasChoice_surjective : forall {A B : Type},
-    forall {f : A -> B} {f_inv : B -> A} `(η : cancel f_inv f),
-      hasChoice.axioms_ A ->
-      hasChoice.axioms_ B.
-  Proof.
-    intros A B f f_inv η [].
-    refine ({| hasChoice.find_subdef := (fun P n => match find_subdef (fun x => P (f x)) n with
-                                                 | Some x => Some (f x)
-                                                 | None => None
-                                                 end) |}).
-    - intros.
-      destruct (find_subdef (fun x => P (f x)) n) eqn:Heq.
-      + inversion H.
-        subst.
-        apply (choice_correct_subdef (fun x => P (f x)) n a Heq).
-      + discriminate H.
-    - intros.
-      destruct (choice_complete_subdef (fun x => P (f x)) (match H with ex_intro _ x H_P => ex_intro _ (f_inv x) (eq_ind_r P H_P (η x)) end )).
-      exists x.
-      now destruct (find_subdef _ _).
-    - intros P Q H_eq n.
-      now rewrite (choice_extensional_subdef (fun x => P (f x)) (fun x => Q (f x)) (fun x => H_eq (f x)) n).
-  Qed.
-
-  Lemma Choice_isCountable_surjective : forall {A B},
-    forall {f : A -> B} {f_inv : B -> A} `(η : cancel f_inv f),
-      Choice_isCountable.axioms_ A ->
-      Choice_isCountable.axioms_ B.
-  Proof.
-    intros A B f f_inv η [].
-    refine {|
-        Choice_isCountable.pickle := fun x => pickle (f_inv x);
-        Choice_isCountable.unpickle := fun x => Option.map f (unpickle x);
-        Choice_isCountable.pickleK := _
-      |}.
-    intros x.
-    rewrite (pickleK (f_inv x)).
-    simpl.
-    now rewrite η.
-  Qed.
-
-  Lemma equality_surjective : forall {A B},
-    forall {f : A -> B} {f_inv : B -> A} `(η : cancel f_inv f),
-      hasDecEq.axioms_ A ->
-      hasDecEq.axioms_ B.
-  Proof.
-    intros A B f f_inv η H_eq.
-    assert (@injective (Equality.sort (@Equality.Pack A (@Equality.Class A H_eq))) _ f_inv) by easy.
-    apply (eqtype_inj_type__canonical__eqtype_Equality H).
-  Qed.
-
-  Lemma bijection_is_adjoint : forall {A B : eqType},
-    forall (f : A -> B) (f_inv : B -> A),
-      (forall (x : B), f (f_inv x) == x) /\ (forall x, f_inv (f x) == x) <-> forall x y, (f y == x) = (y == f_inv x).
-  Proof.
-    intros.
-    split.
-    - intros [] x y.
-      specialize (H x).
-      specialize (H0 y).
-      apply (ssrbool.elimT eqP) in H.
-      apply (ssrbool.elimT eqP) in H0.
-      apply Bool.eq_iff_eq_true.
-      now split ; intros ; apply (ssrbool.elimT eqP) in H1 ; apply (ssrbool.introT eqP).
-    - intros.
-      split ; [ intros x ; set (y := f_inv x) |
-                intros y ; set (x := f y) ; rewrite eq_sym ; symmetry in H ] ;
-        specialize (H x y) ;
-        now rewrite H.
-  Qed.
-
-  Lemma isFinite_bijective : forall {A B},
-    forall {f : A -> B} {f_inv : B -> A} `(η : cancel f_inv f) `(β : cancel f f_inv),
-    forall (H_eq : Equality.mixin_of A),
-      isFinite.axioms_ A H_eq ->
-      isFinite.axioms_ B (equality_surjective η H_eq).
-  Proof.
-    intros A B f f_inv η β H_eq [].
-
-    pose (eqA := @Equality.Pack A (@Equality.Class A H_eq)).
-    pose (eqB := @Equality.Pack B (@Equality.Class B (@equality_surjective A B f f_inv η H_eq))).
-
-    refine {|
-        isFinite.enum_subdef := [ seq f i | i <- enum_subdef ];
-        isFinite.enumP_subdef := _;
-      |}.
-
-    assert (H : injective (aT := Equality.sort eqA) (rT := Equality.sort eqB) f) by easy ; epose proof (H_inj := eqtype.inj_eq H) ; simpl in H_inj ; clear H.
-
-    assert (H : injective (aT := Equality.sort eqB) (rT := Equality.sort eqA) f_inv) by easy ; epose proof (H_inv_inj := eqtype.inj_eq H) ; simpl in H_inv_inj ; clear H.
-
-    intros x ; simpl in x.
-    rewrite count_map.
-    rewrite <- (enumP_subdef (f_inv x)).
-    clear -H_inj β.
-    induction enum_subdef as [ | y ] ; [ reflexivity | ] ; simpl in *.
-    rewrite (IHenum_subdef).
-    f_equal.
-    f_equal.
-    apply (proj1 (bijection_is_adjoint (A := eqA) (B := eqB) f f_inv)).
-    now split ; intros ; [ rewrite η | rewrite β ].
-  Qed.
-
-  Definition finite_bijective : forall {A B},
-    forall (f : A -> B) (f_inv : B -> A) `(η : cancel f_inv f) `(β : cancel f f_inv),
-      Finite.axioms_ A ->
-      Finite.axioms_ B.
-  Proof.
-    intros A B f f_inv η β H.
-    refine {|
-        Finite.choice_hasChoice_mixin := hasChoice_surjective η H ;
-        Finite.choice_Choice_isCountable_mixin := Choice_isCountable_surjective η H;
-        Finite.fintype_isFinite_mixin := isFinite_bijective η β H H
-      |}.
-  Qed.
-
-  Lemma is_pure_cancel_ret_both : forall {A : choice_type}, cancel (@ret_both A) (@is_pure A).
-  Proof. easy. Qed.
-
-  Definition finite_to_word {n} (x : 'I_(Z.to_nat (modulus n)).-1.+1) : n.-word :=
-    mkword _ (Z.of_nat (nat_of_ord x)).
-
-  Definition word_to_finite {n} (x : n.-word) : 'I_((Z.to_nat (modulus n)).-1.+1) := inord (Z.to_nat (toword x)).
-
-  Lemma finite_word_cancel : forall {n}, cancel word_to_finite (finite_to_word (n := n)).
-  Proof.
-    intros.
-    unfold word_to_finite, finite_to_word.
-    intros x ; clear.
-    rewrite inordK.
-    - rewrite Z2Nat.id.
-      + now rewrite ureprK.
-      + now destruct x as [[] ?].
-    - destruct x.
-      simpl.
-      apply (ssrbool.elimT andP) in i as [].
-      apply Z.leb_le in H.
-      apply Z.ltb_lt in H0.
-      apply (ssrbool.introT (jasmin_util.ZNltP _ _)).
-      rewrite Nat.succ_pred.
-      + now rewrite !Z2Nat.id.
-      + unfold modulus.
-        unfold two_power_nat.
-        easy.
-  Qed.
-
-  Lemma word_finite_cancel : forall {n}, cancel (finite_to_word (n := n)) word_to_finite.
-  Proof.
-    intros.
-    unfold finite_to_word, word_to_finite.
-    intros x.
-
-    destruct n.
-    {
-      simpl in x |- *.
-      rewrite Z.mod_1_r.
-      unfold Z.to_nat.
-      destruct x as [[]].
-      + unfold inord, insubd, odflt, oapp, insub.
-        destruct idP ; now apply ord_ext.
-      + discriminate i.
-    }
-
-    rewrite mkword_val_small.
-    2:{
-      destruct x ; simpl.
-      rewrite <- modulusE.
-      rewrite Nat.succ_pred in i. 2: now unfold modulus, two_power_nat .
-      apply (ssrbool.introT andP) ; split ; [ apply Z.leb_le | apply Z.ltb_lt ].
-      - eapply (ssrbool.elimT (isword_ofnatZP _ _)).
-        apply (ltn_expl m).
-        easy.
-      - eapply Z.lt_le_trans ; [ apply (ssrbool.elimT (jasmin_util.ZNltP _ _) i) | ].
-        clear.
-        rewrite !Z2Nat.id. 2: easy.
-        unfold modulus.
-        now rewrite two_power_nat_equiv.
-    }
-    rewrite Nat2Z.id.
-    now rewrite inord_val.
-  Qed.
-
-  (* A slightly more general version where we don't fix the precondition *)
-  Theorem rsame_head_cmd_alt :
-    forall {A B C : ord_choiceType} {f₀ : A -> raw_code B} {f₁ : A -> raw_code C}
-      (m : command A) pre (post : postcond B C),
-      ⊢ ⦃ pre ⦄
-        x ← cmd m ;; ret x ≈ x ← cmd m ;; ret x
-                                            ⦃ fun '(a₀, s₀) '(a₁, s₁) => pre (s₀, s₁) /\ a₀ = a₁ ⦄ ->
-      (forall a, ⊢ ⦃ pre ⦄ f₀ a ≈ f₁ a ⦃ post ⦄) ->
-      ⊢ ⦃ pre ⦄ x ← cmd m ;; f₀ x ≈ x ← cmd m ;; f₁ x ⦃ post ⦄.
-  Proof.
-    intros A B C f₀ f₁ m pre post hm hf.
-    eapply from_sem_jdg. rewrite !repr_cmd_bind.
-    eapply (bind_rule_pp (repr_cmd m) (repr_cmd m)).
-    - eapply to_sem_jdg in hm. rewrite !repr_cmd_bind in hm.
-      rewrite bindrFree_ret in hm. eauto.
-    - intros a₀ a₁. eapply to_sem_jdg.
-      eapply rpre_hypothesis_rule.
-      intros s₀ s₁ [h e]. subst.
-      eapply rpre_weaken_rule. 1: eapply hf.
-      simpl. intros ? ? [? ?]. subst. auto.
-  Qed.
-
-  (* One-sided sampling rule. *)
-  (* Removes the need for intermediate games in some cases. *)
-  Lemma r_const_sample_L :
-    ∀ {A B : choiceType} (op : Op) c₀ c₁ (pre : precond) (post : postcond A B),
-      LosslessOp op →
-      (∀ x, ⊢ ⦃ pre ⦄ c₀ x ≈ c₁ ⦃ post ⦄) →
-      ⊢ ⦃ pre ⦄ x ← sample op ;; c₀ x ≈ c₁ ⦃ post ⦄.
-  Proof.
-    intros A B op c₀ c₁ pre post hop h.
-    eapply r_transR with (x ← sample op ;; (λ _, c₁) x).
-    - apply r_dead_sample_L. 1: auto.
-      apply rreflexivity_rule.
-    - apply (rsame_head_cmd_alt (cmd_sample op)).
-      + eapply rpre_weaken_rule. 1: eapply cmd_sample_preserve_pre.
-        auto.
-      + apply h.
-  Qed.
-
-  Lemma r_const_sample_R :
-    ∀ {A B : choiceType} (op : Op) c₀ c₁ (pre : precond) (post : postcond A B),
-      LosslessOp op →
-      (∀ x, ⊢ ⦃ pre ⦄ c₀ ≈ c₁ x ⦃ post ⦄) →
-      ⊢ ⦃ pre ⦄ c₀ ≈ x ← sample op ;; c₁ x ⦃ post ⦄.
-  Proof.
-    intros A B op c₀ c₁ pre post hop h.
-    eapply r_transL with (x ← sample op ;; (λ _, c₀) x).
-    - apply r_dead_sample_L. 1: auto.
-      apply rreflexivity_rule.
-    - apply (rsame_head_cmd_alt (cmd_sample op)).
-      + eapply rpre_weaken_rule. 1: eapply cmd_sample_preserve_pre.
-        auto.
-      + apply h.
-  Qed.
-
-  Theorem forget_precond {A B} (x : raw_code A) (y : raw_code B) P Q :
-    ⊢ ⦃ true_precond ⦄ x ≈ y ⦃ Q ⦄ ->
-    ⊢ ⦃ P ⦄ x ≈ y ⦃ Q ⦄.
-  Proof.
-    intros.
-    now apply (rpre_weaken_rule _ _ _ H).
-  Qed.
-
-  Theorem rpre_hypothesis_rule' :
-    ∀ {A₀ A₁ : _} {p₀ : raw_code A₀} {p₁ : raw_code A₁}
-      (pre : precond) post,
-      (∀ s₀ s₁,
-          pre (s₀, s₁) → ⊢ ⦃ λ '(s₀', s₁'), s₀' = s₀ ∧ s₁' = s₁ ⦄ p₀ ≈ p₁ ⦃ post ⦄
-      ) →
-      ⊢ ⦃ pre ⦄ p₀ ≈ p₁ ⦃ post ⦄.
-  Proof.
-    intros A₀ A₁ p₀ p₁ pre post h.
-    eapply rpre_hypothesis_rule.
-    intros s0 s1 H. now eapply rpre_weaken_rule.
-  Qed.
-
-
-  Lemma r_eq_symmetry : forall {A B} {P Q} (c₀ : raw_code A) (c₁ : raw_code B) (f : A -> B),
-      (forall (x y : heap), P (x, y) <-> P (y, x)) ->
-      (forall (x : A) (y : B), Q (f x) y <-> Q y (f x)) ->
-      ⊢ ⦃ P ⦄ c₁ ≈ c₀ ⦃ λ '(a, _) '(b, _), Q a (f b) ⦄ ->
-      ⊢ ⦃ P ⦄ c₀ ≈ c₁ ⦃ λ '(a, _) '(b, _), Q (f a) b ⦄.
-  Proof.
-    intros.
-    apply rsymmetry.
-    eapply r_swap_precond ; [ prop_fun_eq ; apply H | ].
-    eapply r_swap_post with (Q' := λ '(a, _) '(b, _), Q a (f b)); [ prop_fun_eq ; apply H0 | ].
-    apply H1.
-  Qed.
-
-  Theorem r_transR_both :
-    ∀ {A B : _} {x : raw_code A} {y z : both B}
-      (pre : precond) (post : postcond A B),
-      y ≈both z ->
-      ⊢ ⦃ pre ⦄ x ≈ is_state z ⦃ post ⦄ ->
-      ⊢ ⦃ pre ⦄ x ≈ is_state y ⦃ post ⦄.
-  Proof.
-    intros A B x y z pre post [] H_xz.
-    eapply r_transR.
-    2:{
-      apply H_xz.
-    }
-    destruct y as [[] []] , z as [[] []] ;  simpl in *.
-    inversion is_valid_both.
-    inversion is_valid_both0.
-    now apply r_ret.
-  Qed.
-
-  Corollary make_pure :
-    ∀ {A B : _} {x : raw_code A} {y : both B}
-      (pre : precond) (post : postcond A B),
-      ⊢ ⦃ pre ⦄ x ≈ ret (is_pure y) ⦃ post ⦄ ->
-      ⊢ ⦃ pre ⦄ x ≈ is_state y ⦃ post ⦄.
-  Proof.
-    intros.
-    eapply r_transR_both.
-    + apply ret_both_is_pure_cancel.
-    + simpl.
-      apply H.
-  Qed.
-
-  Lemma prod_both_pure_eta_3 : forall {A B C} (a : both A) (b : both B) (c : both C),
-      ((is_pure (both_prog a) : A,
-           is_pure (both_prog b) : B,
-             is_pure (both_prog c) : C)) =
-        is_pure (both_prog (prod_b( a , b, c ))).
-  Proof. reflexivity. Qed.
-
-
-  Ltac pattern_lhs_approx :=
-    match goal with | |- context [ ⊢ ⦃ _ ⦄ ?lhs ≈ ?rhs ⦃ _ ⦄ ] => let H_lhs := fresh in set (H_lhs := lhs) end.
-
-  Ltac pattern_lhs_approx_pat pat :=
-    match goal with | |- context [ ⊢ ⦃ _ ⦄ ?lhs ≈ ?rhs ⦃ _ ⦄ ] => let H_lhs := fresh in set (H_lhs := lhs) ; pattern pat in H_lhs ; subst H_lhs end.
-
-  Ltac pattern_lhs_both_pat pat :=
-    match goal with | |- context [ ?lhs ≈both ?rhs ] => let H_lhs := fresh in set (H_lhs := lhs) ; pattern pat in H_lhs ; subst H_lhs end.
-
-  Ltac pattern_rhs_approx :=
-    match goal with | |- context [ ⊢ ⦃ _ ⦄ ?lhs ≈ ?rhs ⦃ _ ⦄ ] => let H_rhs := fresh in set (H_rhs := rhs) end.
-
-  Ltac pattern_rhs_approx_pat pat :=
-    match goal with | |- context [ ⊢ ⦃ _ ⦄ ?lhs ≈ ?rhs ⦃ _ ⦄ ] => let H_rhs := fresh in set (H_rhs := rhs) ; pattern pat in H_rhs ; subst H_rhs end.
-
-  Ltac pattern_rhs_both_pat pat :=
-    match goal with | |- context [ ?lhs ≈both ?rhs ] => let H_rhs := fresh in set (H_rhs := rhs) ; pattern pat in H_rhs ; subst H_rhs end.
-
-  Lemma both_eta : forall {A : choice_type} (a : both A), a =
-      {|
-        both_prog := {| is_pure := is_pure a ; is_state := is_state a |};
-        both_prog_valid := ValidBoth_eta (both_prog_valid a)
-          ;
-        p_eq := p_eq a;
-      |}.
-  Proof. now intros ? [[] [] ?]. Qed.
-
-  Lemma valid_both_ext : forall {A : choice_type} {a b : both A},
-      a ≈both b ->
-      ValidBoth a = ValidBoth b.
-  Proof.
-    intros ? [[a_pure a_state] [a_code a_both] a_eq] [[b_pure b_state] [b_code b_both] b_eq] ?.
-    inversion H ; simpl in *.
-    subst.
-    rewrite boolp.propeqE.
-    split ; intros ; now refine {|
-          ChoiceEquality.is_valid_code := _;
-          is_valid_both := _
-        |}.
-  Qed.
-
-  Lemma unfold_both : (forall {A B : choice_type} (f : both A -> both B) (a : both A),
-      f a ≈both
-        {|
-             both_prog :=
-               {|
-                 is_pure := is_pure (f (ret_both (is_pure a)));
-                 is_state := x ← ret (is_pure a) ;;
-                   is_state (f (ret_both x))
-               |};
-             both_prog_valid := ValidBoth_eta (both_prog_valid (f (ret_both (is_pure a))));
-             p_eq := p_eq (f (ret_both (is_pure a)))
-        |}).
-  Proof.
-    intros.
-    setoid_rewrite <- both_eta.
-    apply both_eq_fun_ext.
-    apply ret_both_is_pure_cancel.
-  Qed.
-
-  Lemma prod_both_pure_eta_11 : forall {A B C D E F G H I J K} (a : both A) (b : both B) (c : both C) (d : both D) (e : both E) (f : both F) (g : both G) (h : both H) (i : both I) (j : both J) (k : both K),
-      ((is_pure (both_prog a) : A,
-           is_pure (both_prog b) : B,
-           is_pure (both_prog c) : C,
-           is_pure (both_prog d) : D,
-           is_pure (both_prog e) : E,
-           is_pure (both_prog f) : F,
-           is_pure (both_prog g) : G,
-           is_pure (both_prog h) : H,
-           is_pure (both_prog i) : I,
-           is_pure (both_prog j) : J,
-           is_pure (both_prog k) : K)) =
-        is_pure (both_prog (prod_b( a , b, c, d, e, f, g, h, i, j, k ))).
-  Proof. reflexivity. Qed.
-
-  Ltac get_both_sides H_lhs H_rhs :=
-    match goal with
-    | [ |- context [?lhs ≈both ?rhs ] ] =>
-        set (H_lhs := lhs) at 1 ;
-        set (H_rhs := rhs) at 1
-    | [ |- context [?lhs = ?rhs ] ] =>
-        set (H_lhs := lhs) at 1 ;
-        set (H_rhs := rhs) at 1
-   end.
-
-  Ltac apply_to_pure_sides H H_lhs H_rhs :=
-    match goal with
-    | [ |- context [ _ ≈both _ ] ] =>
-        rewrite both_equivalence_is_pure_eq ;
-        get_both_sides H_lhs H_rhs ;
-        H ;
-        rewrite <- both_equivalence_is_pure_eq
-    | [ |- context [ _ = _ ] ] =>
-        get_both_sides H_lhs H_rhs ;
-        H
-   end.
-
-  Ltac push_down :=
-    match goal with
-    | H := is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))) (ret_both (is_pure (both_prog ?b))))) : _ |- _  =>
-      subst H ;
-      set (is_pure a) ;
-      push_down ;
-      set (is_pure b) ;
-      push_down
-    | H := is_pure (both_prog (?f ?a ?b)) |- _  =>
-      subst H ;
-      rewrite (hacspec_function_guarantees2 f a b) ;
-      set (is_pure a) ;
-      push_down ;
-      set (is_pure b) ;
-      push_down
-    | H := is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))))) : _ |- _  =>
-      subst H ;
-      set (is_pure a) ;
-      push_down
-    | H := is_pure (both_prog (?f ?a)) : _ |- _  =>
-      subst H ;
-      rewrite (hacspec_function_guarantees f a) ;
-      set (is_pure a) ;
-      push_down
-   | H : _ |- _ => subst H
-    end ; simpl.
-
-  Ltac push_down_sides :=
-    let H_lhs := fresh in
-    let H_rhs := fresh in
-    get_both_sides H_lhs H_rhs ; subst H_rhs ;
-    push_down ; simpl ;
-
-    let H_lhs := fresh in
-    let H_rhs := fresh in
-    get_both_sides H_lhs H_rhs ; subst H_lhs ;
-    push_down ; simpl.
-
-   Ltac pull_up_assert :=
-     match goal with
-    | |- is_pure (both_prog (?f
-        (ret_both (is_pure (both_prog ?a)))
-        (ret_both (is_pure (both_prog ?b))))) = _ =>
-        let H_a := fresh in
-        let H_b := fresh in
-        eassert (H_a : (is_pure a) = _) ;
-        [ |
-          eassert (H_b : (is_pure b) = _) ;
-          [ | rewrite H_a ; rewrite H_b ; rewrite <- (hacspec_function_guarantees2 f) ; reflexivity ]
-          ]
-   | |- is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))))) = _ =>
-       let H_a := fresh in
-       eassert (H_a : (is_pure a) = _) ;
-       [ | rewrite H_a ; rewrite <- (hacspec_function_guarantees f) ; reflexivity ]
-    end.
-
-   Ltac pull_up H :=
-     let H_rewrite := fresh in
-     eassert (H_rewrite : H = _) by repeat (pull_up_assert ; reflexivity) ; rewrite H_rewrite ; clear H_rewrite.
-
-   Ltac pull_up_side H :=
-     let H_rewrite := fresh in
-     eassert (H_rewrite : H = _) ; subst H ; [ repeat pull_up_assert ; reflexivity | ] ; rewrite H_rewrite ; clear H_rewrite.
-
-  Ltac remove_solve_lift :=
-    repeat progress (rewrite (hacspec_function_guarantees2 _ (solve_lift _)) ; simpl) ;
-    repeat progress (rewrite (hacspec_function_guarantees2 _ _ (solve_lift _)) ; simpl) ;
-    repeat progress (rewrite (hacspec_function_guarantees _ (solve_lift _)) ; simpl).
-
-  Ltac normalize_lhs :=
-    let H_lhs := fresh in
-    let H_rhs := fresh in
-    get_both_sides H_lhs H_rhs ; subst H_rhs ;
-    push_down ; simpl ;
-    remove_solve_lift ; simpl ;
-    get_both_sides H_lhs H_rhs ; subst H_rhs ;
-    pull_up_side H_lhs.
-
-  Ltac normalize_rhs :=
-    let H_lhs := fresh in
-    let H_rhs := fresh in
-    get_both_sides H_lhs H_rhs ; subst H_lhs ;
-    push_down ; simpl ;
-    remove_solve_lift ; simpl ;
-    get_both_sides H_lhs H_rhs ; subst H_lhs ;
-    pull_up_side H_rhs.
-
-  Ltac normalize_equation :=
-    normalize_lhs ; normalize_rhs.
-
-End Misc.
-
-Definition lower1 {A B : choice_type} (f : both A -> both B) : A -> B :=
-  fun x => is_pure (f (ret_both x)).
-
-Definition lower2 {A B C : choice_type} (f : both A -> both B -> both C) : A -> B -> C :=
-  fun x y => is_pure (f (ret_both x) (ret_both y)).
-
-Lemma decidable_iff : forall P Q, (P <-> Q) -> decidable P -> decidable Q.
-Proof.
-  intros.
-  destruct H0.
-  - left.
-    now apply H.
-  - right.
-    red ; intros.
-    apply n.
-    apply H.
-    apply H0.
-Qed.
-
-Lemma running_state_is_pure : forall {A} (x : both A) h, fst (det_run (is_state x) (h := both_deterministic _) h) = is_pure x.
-Proof.
-  intros.
-  epose (p_eq x).
-  apply (sem_to_det _ _ _ _ (both_deterministic _) (deterministic_ret _)) in r.
-  unfold det_jdg in r.
-  specialize (r h h Logic.I).
-  destruct (det_run (is_state x) h) eqn:d_eq in r |- *.
-  unfold det_run in r.
-  unfold pre_to_post_ret in r.
-  simpl.
-  apply r.
-Qed.
-
-Lemma state_equality_is_decidable :
-  forall {A} (x y : both A),
-  decidable (⊢ ⦃ fun '(h0, h1) => h0 = h1 ⦄ is_state x ≈ is_state y ⦃ fun a b => fst a = fst b ⦄).
-Proof.
-  intros.
-  eapply (decidable_iff (det_jdg (λ '(h0, h1), h0 = h1) (fun a b => fst a = fst b) (is_state x) (is_state y) (both_deterministic _) (both_deterministic _))).
-  {
-    split.
-    - apply det_to_sem.
-    - apply sem_to_det.
-  }
-
-  unfold det_jdg.
-
-  intros.
-
-  destruct (is_pure x == is_pure y) eqn:is_eq ;
-    [ apply (ssrbool.elimT eqP) in is_eq ; left
-    | apply (ssrbool.elimF eqP) in is_eq ; right ].
-  - intros ? h ? ; subst.
-    now rewrite !running_state_is_pure.
-  - red ; intros.
-    specialize (H empty_heap empty_heap erefl).
-    now rewrite !running_state_is_pure in H.
-Qed.
+(******************************************************************************)
+(*                   OVN instances for Sigma protocols                        *)
+(*                                                                            *)
+(* Module GroupOperationProperties has all properties of group operations for *)
+(*   v_G, and field operations for f_Z                                        *)
+(******************************************************************************)
 
 Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
   Include OVN_impl.
   Export OVN_impl.
 
-  Axiom f_sub_by_opp : forall x y, f_sub x y ≈both f_add x (f_opp y).
+  Include Misc.
 
+  (* Axiom v_Z_pickle : f_Z → nat. *)
+  (* Axiom v_Z_unpickle : nat -> Datatypes.option f_Z. *)
+  (* Axiom v_Z_pickleK : pcancel v_Z_pickle v_Z_unpickle. *)
+
+  Definition v_G_type := Choice.sort (chElement v_G).
+  Definition f_Z_type := Choice.sort (chElement f_Z).
+
+  (* We assume that v_G and f_Z are finite and countable *)
+  Axiom v_G_countable : Choice_isCountable v_G_type.
+  Axiom v_G_isFinite : isFinite v_G_type.
+
+  Axiom v_Z_countable : Choice_isCountable f_Z_type.
+  Axiom v_Z_isFinite : isFinite f_Z_type.
+
+  (* Field and group operations defined in Hacspec_ovn_Ovn_traits.v *)
+  (* We require that these actually define a group / field          *)
+
+  (** Guarantees about the field operations *)
+
+  (* Addition is assoc, commutative and cancel with zero and opp *)
   Axiom f_addA : forall x y z, f_add x (f_add y z) ≈both f_add (f_add x y) z.
   Axiom f_addC: forall x y, f_add x y ≈both f_add y x.
-
   Axiom f_add0z: forall x, f_add f_field_zero x ≈both x.
   Axiom f_addNz: forall x, f_add (f_opp x) x ≈both f_field_zero.
 
-  Axiom prod_pow_add_mul : forall x y z, f_prod (f_g_pow x) (f_pow (f_g_pow z) y) ≈both f_g_pow (f_add x (f_mul z y)).
-  Axiom prod_pow_pow : forall h x a b, f_prod (f_pow h x) (f_pow (f_pow h a) b) ≈both f_pow h (f_add x (f_mul a b)).
-  Axiom div_prod_cancel : forall x y, f_div (f_prod x y) y ≈both x.
-
+  (* Multiplication is commutative *)
+  Axiom f_mulA : forall x y z, f_mul x (f_mul y z) ≈both f_mul (f_mul x y) z.
   Axiom f_mulC : forall x y, f_mul x y ≈both f_mul y x.
+  Axiom f_mul0 : forall x, f_mul f_field_zero x ≈both f_field_zero.
+  Axiom f_mul1 : forall x, f_mul f_field_one x ≈both x.
 
-  Axiom v_G_countable : Choice_isCountable (Choice.sort (chElement v_G)).
-  Axiom v_G_isFinite : isFinite (Choice.sort (chElement v_G)).
+  (* Mul distributes over addition *)
+  Axiom f_mul_addr : forall x y z, f_mul (f_add x y) z ≈both f_add (f_mul x z) (f_mul y z).
 
-  Axiom v_Z_countable : Choice_isCountable (Choice.sort (chElement v_G_t_Group.(f_Z))).
-  Axiom v_Z_isFinite : isFinite (Choice.sort (chElement v_G_t_Group.(f_Z))).
+  (* Sub is defined from add and opp *)
+  Axiom f_sub_by_opp : forall x y, f_sub x y ≈both f_add x (f_opp y).
+
+  (* Div cancel prod *)
+  (* Axiom f_div_prod_cancel : forall x y, f_div (f_prod x y) y ≈both x. *)
+  Axiom div_is_prod_inv : forall x y, f_div x y ≈both f_prod x (f_group_inv y).
 
   Axiom f_prodA : associative (lower2 f_prod).
-  Axiom f_prod1 : associative (lower2 f_prod).
-  Axiom f_prod_left_id : left_id (is_pure f_group_one) (lower2 f_prod).
+  Axiom f_prod1 : left_id (is_pure f_group_one) (lower2 f_prod).
   Axiom f_invK : involutive (lower1 f_group_inv).
   Axiom f_invM : {morph (lower1 f_group_inv)  : x y / (lower2 f_prod) x y >-> (lower2 f_prod)  y x}.
 
@@ -683,10 +134,6 @@ Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
 
   Axiom prod_inv_cancel : forall x, f_prod (f_group_inv x) x ≈both f_group_one.
 
-  Axiom f_mul0 : forall x, f_mul f_field_zero x ≈both f_field_zero.
-  Axiom f_mul1 : forall x, f_mul f_field_one x ≈both x.
-  Axiom f_mulA : forall x y z, f_mul x (f_mul y z) ≈both f_mul (f_mul x y) z.
-  Axiom f_mul_addr : forall x y z, f_mul (f_add x y) z ≈both f_add (f_mul x z) (f_mul y z).
   Axiom f_one_not_zero : ¬ (f_field_one ≈both f_field_zero).
   Axiom mul_inv_cancel : forall x, ¬ (x ≈both f_field_zero) -> f_mul (f_inv x) x ≈both f_field_one.
   Axiom f_inv0 : f_inv (f_field_zero) ≈both f_field_zero.
@@ -695,6 +142,8 @@ Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
 
   Axiom f_mulDr : forall x y z, f_mul x (f_add y z) ≈both f_add (f_mul x y) (f_mul x z).
   Axiom f_mulDl : forall x y z, f_mul (f_add x y) z ≈both f_add (f_mul x z) (f_mul y z).
+
+  Axiom pow_base : forall x, f_g_pow x ≈both f_pow f_g x.
 
 End GroupOperationProperties.
 
@@ -708,320 +157,166 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
 
   #[local] Open Scope hacspec_scope.
 
-  Definition add_sub_cancel : forall a b, f_add a (f_sub b a) ≈both b.
-  Proof.
-    intros.
-    eapply both_eq_trans ; [ apply both_eq_fun_ext; apply (f_sub_by_opp _ _) | ].
-    eapply both_eq_trans ; [ apply f_addC | ].
-    eapply both_eq_trans ; [ apply both_eq_symmetry ; apply f_addA | ].
-    eapply both_eq_trans ; [ apply both_eq_fun_ext ; apply f_addNz | ].
-    eapply both_eq_trans ; [ apply f_addC | ].
-    apply f_add0z.
-  Qed.
+  (** Helper tactics *)
+  Ltac remove_ret_both_is_pure_from_args :=
+    match goal with
+    | [ |- context [ ?f (ret_both (is_pure ?x)) ?y ] ] =>
+        rewrite (both_eq_fun_ext (fun k => f k y) (ret_both (is_pure x)) x) ; [ | now rewrite ret_both_is_pure_cancel]
+    | [ |- context [ ?f ?x (ret_both (is_pure ?y)) ] ] =>
+        rewrite (both_eq_fun_ext (fun k => f x k) (ret_both (is_pure y)) y) ; [ | now rewrite ret_both_is_pure_cancel]
+    end.
 
-  Definition add_sub_cancel2 : forall a b, f_add (f_sub b a) a ≈both b.
-  Proof.
-    intros.
-    eapply both_eq_trans ; [ apply f_addC | ].
-    apply add_sub_cancel.
-  Qed.
+  Ltac lower_proof proof :=
+    intros ;
+    unfold lower1 ;
+    unfold lower2 ;
+    apply (proj1 both_equivalence_is_pure_eq) ;
+    repeat remove_ret_both_is_pure_from_args ;
+    rewrite proof.
 
-  Definition v_G_Finite : Finite (Choice.sort (chElement v_G)) :=
-    {|
-      Finite.choice_hasChoice_mixin := Choice.choice_hasChoice_mixin (Choice.class v_G);
+  (*** Hierachy builder instances *)
+
+  (** Group instances *)
+
+  HB.instance Definition _ : Finite v_G_type := {|
+      Finite.choice_hasChoice_mixin := Choice.choice_hasChoice_mixin (Choice.class v_G_type);
       Finite.choice_Choice_isCountable_mixin := v_G_countable;
-      Finite.eqtype_hasDecEq_mixin := Choice.eqtype_hasDecEq_mixin (Choice.class v_G);
+      Finite.eqtype_hasDecEq_mixin := Choice.eqtype_hasDecEq_mixin (Choice.class v_G_type);
       Finite.fintype_isFinite_mixin := v_G_isFinite
     |}.
 
-  Definition v_Z_Finite : Finite (Choice.sort (chElement v_Z)) :=
-    {|
-      Finite.choice_hasChoice_mixin := Choice.choice_hasChoice_mixin (Choice.class v_Z);
-      Finite.choice_Choice_isCountable_mixin := v_Z_countable;
-      Finite.eqtype_hasDecEq_mixin := Choice.eqtype_hasDecEq_mixin (Choice.class v_Z);
-      Finite.fintype_isFinite_mixin := v_Z_isFinite
-    |}.
+  HB.instance Definition _ : isMulBaseGroup (v_G_type) :=
+    isMulBaseGroup.Build v_G_type f_prodA f_prod1 f_invK f_invM.
 
-
-  Definition f_field_finType : finType := Finite.Pack v_Z_Finite.
-  Definition f_group_finType : finType := Finite.Pack v_G_Finite.
-
-  Definition mul_group : isMulBaseGroup (v_G) :=
-    {|
-      isMulBaseGroup.mulg_subdef := lower2 f_prod;
-      isMulBaseGroup.oneg_subdef := is_pure f_group_one;
-      isMulBaseGroup.invg_subdef := lower1 f_group_inv;
-      isMulBaseGroup.mulgA_subproof := f_prodA;
-      isMulBaseGroup.mul1g_subproof := f_prod_left_id;
-      isMulBaseGroup.invgK_subproof := f_invK;
-      isMulBaseGroup.invMg_subproof := f_invM
-    |}.
-
-  Definition v_G_BaseFinGroup : baseFinGroupType :=
-    BaseFinGroup.Pack
-      {|
-        BaseFinGroup.fingroup_isMulBaseGroup_mixin := mul_group;
-        BaseFinGroup.choice_hasChoice_mixin := v_G_Finite;
-        BaseFinGroup.choice_Choice_isCountable_mixin := v_G_Finite;
-        BaseFinGroup.eqtype_hasDecEq_mixin := v_G_Finite;
-        BaseFinGroup.fintype_isFinite_mixin := v_G_Finite
-      |}.
-
-  Lemma inv_mul_inverse : left_inverse (T := v_G_BaseFinGroup) (R := v_G) (oneg v_G_BaseFinGroup) invg mulg.
+  Definition f_prodV : left_inverse (oneg GOP_v_G_type__canonical__fingroup_BaseFinGroup) invg mulg.
   Proof.
     unfold invg, mulg ; change 1%g with (is_pure f_group_one) ; simpl.
     intros x.
-    unfold lower1, lower2.
-    rewrite hacspec_function_guarantees ; rewrite <- hacspec_function_guarantees2.
-    rewrite <- (both_equivalence_is_pure_eq).
-    apply prod_inv_cancel.
+    now lower_proof prod_inv_cancel.
   Qed.
 
-  Definition v_G_is_group : finGroupType :=
-    FinGroup.Pack
-      {| FinGroup.fingroup_BaseFinGroup_isGroup_mixin :=
-          {| BaseFinGroup_isGroup.mulVg_subproof := inv_mul_inverse |} |}.
+  HB.instance Definition _ :=
+    BaseFinGroup_isGroup.Build v_G_type f_prodV.
 
-  Ltac cancel_operations :=
-    try apply both_eq_fun_ext ;
-      try apply both_eq_fun_ext2 ;
-      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_add_mul ]) ;
-      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel ]) ;
-      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply add_sub_cancel2 ]) ;
-      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply prod_pow_pow ]) ;
-      try (eapply both_eq_trans ; [ | apply both_eq_symmetry ; apply div_prod_cancel ]).
+  (* Use simpler notation for group *)
+  Notation v_G_is_group := GOP_v_G_type__canonical__fingroup_FinGroup.
 
+
+  (** Field instances *)
+
+  (* Finite *)
+  HB.instance Definition _ : Finite f_Z_type :=
+    {|
+      Finite.choice_hasChoice_mixin := Choice.choice_hasChoice_mixin (Choice.class f_Z);
+      Finite.choice_Choice_isCountable_mixin := v_Z_countable;
+      Finite.eqtype_hasDecEq_mixin := Choice.eqtype_hasDecEq_mixin (Choice.class f_Z);
+      Finite.fintype_isFinite_mixin := v_Z_isFinite
+    |}.
+
+  (* isNmodule *)
   Lemma f_lower_addA : forall x y z,
       lower2 f_add x (lower2 f_add y z) = lower2 f_add (lower2 f_add x y) z.
-  Proof.
-    intros.
-    unfold lower2.
-    rewrite hacspec_function_guarantees2.
-    simpl (ret_both (is_pure _)) at 2.
-    rewrite <- hacspec_function_guarantees2.
-
-    symmetry.
-    rewrite hacspec_function_guarantees2.
-    simpl (ret_both (is_pure _)) at 1.
-    rewrite <- hacspec_function_guarantees2.
-
-    symmetry.
-
-    apply (proj1 both_equivalence_is_pure_eq (f_addA (ret_both x) (ret_both y) (ret_both z))).
-  Qed.
+  Proof. now lower_proof f_addA. Qed.
 
   Lemma f_lower_addC : forall x y,
       lower2 f_add x y = lower2 f_add y x.
-  Proof.
-    intros.
-    unfold lower2.
-    apply (proj1 both_equivalence_is_pure_eq (f_addC (ret_both x) (ret_both y))).
-  Qed.
+  Proof. now lower_proof f_addC. Qed.
 
   Lemma f_lower_add0r : forall x,
       lower2 f_add (is_pure f_field_zero) x = x.
   Proof.
-    intros.
-    unfold lower2.
-
-    rewrite hacspec_function_guarantees2.
-    simpl (ret_both (is_pure _)) at 1.
-    rewrite <- hacspec_function_guarantees2.
-
-    apply (proj1 both_equivalence_is_pure_eq (f_add0z (ret_both x))).
+    intros. change (x) with (is_pure (ret_both x)).
+    now lower_proof f_add0z.
   Qed.
 
-  Definition v_Z_isNmodule : GRing.isNmodule.axioms_ f_Z :=
-    {|
-          GRing.isNmodule.zero := is_pure f_field_zero;
-          GRing.isNmodule.add := lower2 f_add;
-          GRing.isNmodule.addrA := f_lower_addA;
-          GRing.isNmodule.addrC := f_lower_addC;
-          GRing.isNmodule.add0r := f_lower_add0r
-    |}.
+  HB.instance Definition _ :=
+    GRing.isNmodule.Build f_Z_type f_lower_addA f_lower_addC f_lower_add0r.
 
-
-  Lemma f_lower_mulrA : forall x y z,
-      lower2 f_mul x (lower2 f_mul y z) = lower2 f_mul (lower2 f_mul x y) z.
+  (* isNmodule is (commutative) SemiRing *)
+  Lemma f_lower_mulrA :
+    associative (lower2 f_mul).
   Proof.
-    intros.
-    unfold lower2.
-
-    rewrite hacspec_function_guarantees2.
-    simpl (ret_both (is_pure _)) at 2.
-    rewrite <- hacspec_function_guarantees2.
-
-    symmetry.
-    rewrite hacspec_function_guarantees2.
-    simpl (ret_both (is_pure _)) at 1.
-    rewrite <- hacspec_function_guarantees2.
-
-    symmetry.
-
-    apply (proj1 both_equivalence_is_pure_eq (f_mulA (ret_both x) (ret_both y) (ret_both z))).
+    intros x y z.
+    now lower_proof f_mulA.
   Qed.
 
   Lemma f_lower_mulrC :
       commutative (lower2 f_mul).
   Proof.
     intros x y.
-    unfold lower2.
-
-    apply (proj1 both_equivalence_is_pure_eq (f_mulC (ret_both x) (ret_both y))).
+    now lower_proof f_mulC.
   Qed.
 
-  Lemma f_lower_mul1r : forall x,
-      lower2 f_mul (is_pure f_field_one) x = x.
+  Lemma f_lower_mul1r : left_id (is_pure f_field_one) (lower2 f_mul).
   Proof.
-    intros.
-    unfold lower2.
-
-    rewrite hacspec_function_guarantees2.
-    simpl (ret_both (is_pure _)) at 1.
-    rewrite <- hacspec_function_guarantees2.
-
-    apply (proj1 both_equivalence_is_pure_eq (f_mul1 (ret_both x))).
+    intros x. change (x) with (is_pure (ret_both x)).
+    now lower_proof f_mul1.
   Qed.
 
-  Lemma f_lower_mulr1 : forall x,
-      lower2 f_mul x (is_pure f_field_one) = x.
-  Proof.
-    intros.
-    rewrite f_lower_mulrC.
-    apply f_lower_mul1r.
-  Qed.
+  Lemma f_lower_mulr1 : right_id (is_pure f_field_one) (lower2 f_mul).
+  Proof. intros x. rewrite f_lower_mulrC. apply f_lower_mul1r. Qed.
 
-  Lemma f_lower_mul0r : forall x,
-      lower2 f_mul (is_pure f_field_zero) x = is_pure f_field_zero.
-  Proof.
-    intros.
-    unfold lower2.
+  Lemma f_lower_mul0r : forall x, lower2 f_mul (is_pure f_field_zero) x = is_pure f_field_zero.
+  Proof. now lower_proof f_mul0. Qed.
 
-    rewrite hacspec_function_guarantees2.
-    simpl (ret_both (is_pure _)) at 1.
-    rewrite <- hacspec_function_guarantees2.
-
-    apply (proj1 both_equivalence_is_pure_eq (f_mul0 (ret_both x))).
-  Qed.
-
-  Lemma f_lower_mulr0 : forall x,
-      lower2 f_mul x (is_pure f_field_zero) = is_pure f_field_zero.
-  Proof.
-    intros.
-    rewrite f_lower_mulrC.
-    apply f_lower_mul0r.
-  Qed.
+  Lemma f_lower_mulr0 : forall x, lower2 f_mul x (is_pure f_field_zero) = is_pure f_field_zero.
+  Proof. intros. rewrite f_lower_mulrC. apply f_lower_mul0r. Qed.
 
   Lemma f_lower_mulrDl : left_distributive (lower2 f_mul) (lower2 f_add).
   Proof.
-    intros.
-    unfold left_distributive, lower2.
-    intros.
-
-    rewrite hacspec_function_guarantees2.
-    simpl (ret_both (is_pure _)) at 1.
-    rewrite <- hacspec_function_guarantees2.
-
-    rewrite <- hacspec_function_guarantees2.
-
-    apply (proj1 both_equivalence_is_pure_eq (f_mulDl (ret_both x) (ret_both y) (ret_both z))).
+    intros x y z.
+    now lower_proof f_mulDl.
   Qed.
 
   Lemma f_lower_mulrDr : right_distributive (lower2 f_mul) (lower2 f_add).
   Proof.
-    intros.
-    unfold right_distributive, lower2.
-    intros.
-
-    rewrite hacspec_function_guarantees2.
-    simpl (ret_both (is_pure _)) at 2.
-    rewrite <- hacspec_function_guarantees2.
-
-    rewrite <- hacspec_function_guarantees2.
-
-    apply (proj1 both_equivalence_is_pure_eq (f_mulDr (ret_both x) (ret_both y) (ret_both z))).
+    intros x y z.
+    now lower_proof f_mulDr.
   Qed.
 
   Lemma f_lower_oner_neq0 : is_pure f_field_one != is_pure f_field_zero.
   Proof.
-    apply /eqP.
-    red ; intros.
+    apply /eqP ; red ; intros.
     apply f_one_not_zero.
     now apply (both_equivalence_is_pure_eq).
   Qed.
 
-  Program Definition v_Z_Nmodule_isSemiRing : GRing.Nmodule_isSemiRing.axioms_ f_Z v_Z_isNmodule (Choice.class v_Z) (Choice.class v_Z) :=
-    {|
-      GRing.Nmodule_isSemiRing.one := is_pure f_field_one;
-      GRing.Nmodule_isSemiRing.mul := lower2 f_mul;
-      GRing.Nmodule_isSemiRing.mulrA := f_lower_mulrA;
-      GRing.Nmodule_isSemiRing.mul1r := f_lower_mul1r;
-      GRing.Nmodule_isSemiRing.mulr1 := f_lower_mulr1;
-      GRing.Nmodule_isSemiRing.mulrDl := f_lower_mulrDl;
-      GRing.Nmodule_isSemiRing.mulrDr := f_lower_mulrDr;
-      GRing.Nmodule_isSemiRing.mul0r := f_lower_mul0r;
-      GRing.Nmodule_isSemiRing.mulr0 := f_lower_mulr0;
-      GRing.Nmodule_isSemiRing.oner_neq0 := f_lower_oner_neq0
-    |}.
-  Fail Next Obligation.
+  HB.instance Definition _ := GRing.Nmodule_isSemiRing.Build f_Z_type f_lower_mulrA f_lower_mul1r f_lower_mulr1 f_lower_mulrDl f_lower_mulrDr f_lower_mul0r f_lower_mulr0 f_lower_oner_neq0.
 
-  Program Definition v_Z_hasCommutativeMul :
-    GRing.SemiRing_hasCommutativeMul.axioms_ f_Z v_Z_isNmodule (Choice.class v_Z)
-      (Choice.class v_Z) v_Z_Nmodule_isSemiRing :=
-    {| GRing.SemiRing_hasCommutativeMul.mulrC := f_lower_mulrC |}.
+  HB.instance Definition _ := GRing.SemiRing_hasCommutativeMul.Build f_Z_type f_lower_mulrC.
 
-  Lemma f_lower_addNr : forall x, (lower2 f_add) (lower1 f_opp x) x = is_pure f_field_zero.
+  (* Nmodule is Zmodule *)
+  Lemma f_lower_addNr : left_inverse (is_pure f_field_zero) (lower1 f_opp) (lower2 f_add).
   Proof.
-    intros.
-    unfold lower2.
-    unfold lower1.
-    
-    rewrite hacspec_function_guarantees2.
-    simpl (ret_both (is_pure _)) at 1.
-    rewrite <- hacspec_function_guarantees2.
-
-    apply (proj1 both_equivalence_is_pure_eq (f_addNz (ret_both x))).
+    intros x. change (x) with (is_pure (ret_both x)).
+    now lower_proof f_addNz.
   Qed.
 
-  Program Definition v_Z_isZmodule : GRing.Nmodule_isZmodule.axioms_ f_Z v_Z_isNmodule (Choice.class v_Z) (Choice.class v_Z) :=
-    {| GRing.Nmodule_isZmodule.opp := lower1 f_opp; GRing.Nmodule_isZmodule.addNr := f_lower_addNr |}.
+  HB.instance Definition _ := GRing.Nmodule_isZmodule.Build f_Z_type f_lower_addNr.
 
+  (* field has mul inverse *)
   Lemma f_lower_mulVr : forall x, x != is_pure f_field_zero -> lower2 f_mul (lower1 f_inv x) x = is_pure f_field_one.
   Proof.
-    intros.
-    unfold lower1, lower2.
-
-    rewrite hacspec_function_guarantees2.
-    simpl (ret_both (is_pure _)) at 1.
-    rewrite <- hacspec_function_guarantees2.
-
-    refine (proj1 both_equivalence_is_pure_eq (mul_inv_cancel _ _)).
-
+    lower_proof mul_inv_cancel.
+    1: reflexivity.
     red ; intros.
     apply (ssrbool.elimN eqP H).
-    apply (proj1 both_equivalence_is_pure_eq H0).
+    apply H0.
   Qed.
 
-  Program Definition f_lower_mulVr_subproof : _ :=
-    proj2 (classical_sets.in_setP ( fun (x : f_Z) => x != is_pure f_field_zero ) (fun x => lower2 f_mul (lower1 f_inv x) x = is_pure f_field_one)) _.
-  Next Obligation.
-    apply f_lower_mulVr.
-    assumption.
-  Qed.
+  Definition f_lower_mulVr_subproof : _ :=
+    proj2 (classical_sets.in_setP ( fun (x : f_Z) => x != is_pure f_field_zero ) (fun x => lower2 f_mul (lower1 f_inv x) x = is_pure f_field_one)) (f_lower_mulVr).
 
-  Program Definition f_lower_mulrV_subproof : _ :=
-    proj2 (classical_sets.in_setP ( fun (x : f_Z) => x != is_pure f_field_zero ) (fun x => lower2 f_mul x (lower1 f_inv x) = is_pure f_field_one)) _.
-  Next Obligation.
-    rewrite f_lower_mulrC.
-    apply f_lower_mulVr.
-    assumption.
-  Qed.
+  Definition f_lower_mulrV_subproof : _ :=
+    proj2 (classical_sets.in_setP
+             (fun (x : f_Z) => x != is_pure f_field_zero )
+             (fun x => lower2 f_mul x (lower1 f_inv x) = is_pure f_field_one)) (fun x H => eq_ind_r (Logic.eq^~ (is_pure f_field_one)) (f_lower_mulVr x H) (f_lower_mulrC x (lower1 f_inv x))).
 
-  Definition f_lower_unitrP_subproof : forall (x y : f_Z), lower2 f_mul y x = is_pure f_field_one /\ lower2 f_mul x y = is_pure f_field_one -> classical_sets.in_set (λ x0 : f_Z, x0 != is_pure f_field_zero) x.
+  Definition f_lower_unitrP_subproof : forall (x y : f_Z),
+      lower2 f_mul y x = is_pure f_field_one /\ lower2 f_mul x y = is_pure f_field_one ->
+      classical_sets.in_set (λ x0 : f_Z, x0 != is_pure f_field_zero) x.
   Proof.
     intros ? ? [].
-
-    
     unfold classical_sets.in_set.
     unfold boolp.asbool.
     destruct boolp.pselect.
@@ -1052,22 +347,14 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     apply (proj1 both_equivalence_is_pure_eq f_inv0).
   Qed.
 
-  Program Definition v_Z_hasMulInverse : GRing.Ring_hasMulInverse.axioms_ f_Z v_Z_isNmodule (Choice.class v_Z) (Choice.class v_Z) v_Z_Nmodule_isSemiRing v_Z_isZmodule :=
-    {|
-      GRing.Ring_hasMulInverse.unit_subdef := classical_sets.in_set (λ x0 : f_Z, x0 != is_pure f_field_zero);
-      GRing.Ring_hasMulInverse.inv := lower1 f_inv;
-      GRing.Ring_hasMulInverse.mulVr_subproof := f_lower_mulVr_subproof;
-      GRing.Ring_hasMulInverse.divrr_subproof := f_lower_mulrV_subproof;
-      GRing.Ring_hasMulInverse.unitrP_subproof := f_lower_unitrP_subproof;
-      GRing.Ring_hasMulInverse.invr_out_subproof := f_lower_invr_out
-    |}.
-  Fail Next Obligation.
+  HB.instance Definition _ :=
+    GRing.Ring_hasMulInverse.Build f_Z_type (f_lower_mulVr_subproof) (f_lower_mulrV_subproof) (f_lower_unitrP_subproof) (f_lower_invr_out).
 
-  Program Definition v_Z_fieldP :
-    GRing.MathCompCompatField.Field.mixin_of f_Z v_Z_isNmodule (Choice.class v_Z)
-      (Choice.class v_Z) v_Z_Nmodule_isSemiRing v_Z_isZmodule v_Z_hasMulInverse :=
-    {| GRing.UnitRing_isField.fieldP := _ |}.
-  Next Obligation.
+  (* last field axiom, unit elements are not zero *)
+  (* thus a unit ring and a field *)
+  Lemma v_Z_fieldP : GRing.MathCompCompatField.Field.axiom f_Z_type.
+  Proof.
+    intros x H.
     rewrite unitrE.
     unfold "/".
     simpl.
@@ -1077,276 +364,11 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
     now rewrite f_lower_mulVr ; [ apply eqxx | ].
   Qed.
 
-  Program Definition v_Z_IntegralDomain :
-  GRing.MathCompCompatIntegralDomain.IntegralDomain.mixin_of f_Z v_Z_isNmodule
-    (Choice.class v_Z) (Choice.class v_Z) v_Z_Nmodule_isSemiRing v_Z_hasCommutativeMul v_Z_isZmodule
-    v_Z_hasMulInverse.
-  Proof.
-    constructor.
-    unfold GRing.MathCompCompatIntegralDomain.IntegralDomain.axiom.
-    intros.
-    admit.
-  Admitted.
+  HB.instance Definition _ := GRing.ComUnitRing_isIntegral.Build f_Z_type (GRing.IdomainMixin v_Z_fieldP).
+  HB.instance Definition _ := GRing.UnitRing_isField.Build f_Z_type v_Z_fieldP.
 
-  Program Definition v_Z_Field : GRing.Field (v_G_t_Group.(f_Z)) :=
-    {|
-      GRing.Field.GRing_isNmodule_mixin := v_Z_isNmodule;
-      GRing.Field.choice_hasChoice_mixin := v_Z_Finite;
-      GRing.Field.eqtype_hasDecEq_mixin := v_Z_Finite;
-      GRing.Field.GRing_Nmodule_isSemiRing_mixin := v_Z_Nmodule_isSemiRing;
-      GRing.Field.GRing_SemiRing_hasCommutativeMul_mixin := v_Z_hasCommutativeMul;
-      GRing.Field.GRing_Nmodule_isZmodule_mixin := v_Z_isZmodule;
-      GRing.Field.GRing_Ring_hasMulInverse_mixin := v_Z_hasMulInverse;
-      GRing.Field.GRing_UnitRing_isField_mixin := v_Z_fieldP;
-      GRing.Field.GRing_ComUnitRing_isIntegral_mixin := v_Z_IntegralDomain
-    |}.
-
-  Definition v_Z_is_field : fieldType := {| GRing.Field.sort := f_Z; GRing.Field.class := v_Z_Field |}.
-
-  Require Import Field.
-  Check Field_theory.field_theory.
-
-  Definition hacspec_ring_theory :
-    ring_theory (R := v_Z_is_field) (is_pure f_field_zero) (is_pure f_field_one)
-      (lower2 f_add) (lower2 f_mul)
-      (lower2 (fun x y => f_add x (f_opp y)))
-      (lower1 f_opp) eq_op.
-  Proof.
-    apply (mk_rt (is_pure f_field_zero) (is_pure f_field_one)
-      (lower2 f_add)
-      (lower2 f_mul)
-      (lower2 (fun x y => f_add x (f_opp y)))
-      (lower1 f_opp)
-      eq_op).
-    all: intros.
-    all: apply (ssrbool.introT eqP).
-    {
-      intros.
-      pose proof (proj1 both_equivalence_is_pure_eq (f_add0z (ret_both x))).
-      rewrite hacspec_function_guarantees2 in H.
-      apply H.
-    }
-    {
-      apply (proj1 both_equivalence_is_pure_eq (f_addC (ret_both x)  (ret_both y))).
-    }
-    {
-      pose proof (proj1 both_equivalence_is_pure_eq (f_addA (ret_both x)  (ret_both y) (ret_both z))).
-      rewrite (hacspec_function_guarantees2) in H.
-      rewrite (hacspec_function_guarantees2 _ (f_add _ _)) in H.
-      apply H.
-    }
-    {
-      pose proof (proj1 both_equivalence_is_pure_eq (f_mul1 (ret_both x))).
-      rewrite (hacspec_function_guarantees2) in H.
-      apply H.
-    }
-    {
-      apply (proj1 both_equivalence_is_pure_eq (f_mulC (ret_both x) (ret_both y))).
-    }
-    {
-      pose proof (proj1 both_equivalence_is_pure_eq (f_mulA (ret_both x) (ret_both y) (ret_both z))).
-      rewrite hacspec_function_guarantees2 in H.
-      rewrite (hacspec_function_guarantees2 _ (f_mul _ _)) in H.
-      apply H.
-    }
-    {
-      pose proof (proj1 both_equivalence_is_pure_eq (f_mul_addr (ret_both x) (ret_both y) (ret_both z))).
-      rewrite hacspec_function_guarantees2 in H.
-      rewrite (hacspec_function_guarantees2 _ (f_mul _ _)) in H.
-      apply H.
-    }
-    {
-      unfold lower2.
-      unfold lower1.
-      now rewrite hacspec_function_guarantees2.
-    }
-    {
-      pose proof (proj1 both_equivalence_is_pure_eq (f_addC (ret_both x) (f_opp (ret_both x))  )).
-      unfold lower2.
-      unfold lower1.
-      rewrite hacspec_function_guarantees2 in H.
-      rewrite H ; clear H.
-      apply (proj1 both_equivalence_is_pure_eq (f_addNz (ret_both x)  )).
-    }
-  Defined.
-
-  Definition hacspec_field_theory :
-    field_theory (R := v_Z_is_field) (is_pure f_field_zero) (is_pure f_field_one) (lower2 f_add)
-             (lower2 f_mul) (lower2 (fun x y => f_add x (f_opp y)))
-             (lower1 f_opp) (lower2 (fun x y => f_mul x (f_inv y)))
-             (lower1 f_inv) eq_op.
-  Proof.
-    apply (mk_field
-             (lower2 (fun x y => f_mul x (f_inv y)))
-             (lower1 f_inv)
-             hacspec_ring_theory
-          ).
-    {
-      intros x.
-      apply f_one_not_zero.
-      apply (ssrbool.elimT eqP) in x.
-      apply both_equivalence_is_pure_eq.
-      easy.
-    }
-    {
-      intros.
-      apply (ssrbool.introT eqP).
-      unfold lower2.
-      unfold lower1.
-      now rewrite hacspec_function_guarantees2.
-    }
-    {
-      intros.
-      apply (ssrbool.introT eqP).
-      unfold lower2.
-      unfold lower1.
-      epose proof (proj1 both_equivalence_is_pure_eq (mul_inv_cancel (ret_both p) _)).
-      rewrite hacspec_function_guarantees2 in H0.
-      refine H0.
-      Unshelve.
-      intros x.
-      apply H.
-      apply (ssrbool.introT eqP).
-      epose proof (proj1 both_equivalence_is_pure_eq x).
-      apply H0.
-    }
-  Defined.
-
-  Definition eqType_setoid_structure : forall {A : eqType}, Setoid.Setoid_Theory A eq_op.
-  Proof.
-    constructor.
-    - intros x.
-      apply eqxx.
-    - intros x y H.
-      now rewrite eq_sym.
-    - intros x y z H0 H1.
-      apply (ssrbool.introT eqP).
-      apply (ssrbool.elimT eqP) in H0, H1.
-      easy.
-  Defined.
-
-  Add Parametric Relation (A : eqType) :
-    A eq_op
-      reflexivity proved by (@RelationClasses.Equivalence_Reflexive A eq_op eqType_setoid_structure)
-      symmetry proved by  (@RelationClasses.Equivalence_Symmetric A eq_op eqType_setoid_structure)
-      transitivity  proved by (@RelationClasses.Equivalence_Transitive A eq_op eqType_setoid_structure)
-      as eqType_setoid.
-
-  Definition ring_eq_ext : Ring_theory.ring_eq_ext
-      (lower2 f_add) (lower2 f_mul)
-      (lower1 f_opp) eq_op.
-  Proof.
-    constructor.
-    - intros x y H.
-      intros z w H0.
-      apply (ssrbool.introT eqP).
-      apply (ssrbool.elimT eqP) in H , H0.
-      subst.
-      reflexivity.
-    - intros x y H.
-      intros z w H0.
-      apply (ssrbool.introT eqP).
-      apply (ssrbool.elimT eqP) in H , H0.
-      subst.
-      reflexivity.
-    - intros x y H.
-      apply (ssrbool.introT eqP).
-      apply (ssrbool.elimT eqP) in H.
-      subst.
-      reflexivity.
-  Defined.
-  
-  Add Ring v_Z_ring : hacspec_ring_theory ( setoid (eqType_setoid_structure (A := f_Z)) ring_eq_ext ).
-
-  Require Import Setoid.
-  Require Import Relation_Definitions.
-
-  Add Parametric Morphism : (+%R) with signature ((fun x y : v_Z_is_field => (x == y) = true) ==> (fun x y => (x == y) = true) ==> (fun x y => (x == y) = true)) as f_Z_add.
-  Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H , H0. now subst. Defined.
-
-  Add Parametric Morphism : ( *%R ) with signature ((fun x y : v_Z_is_field => (x == y) = true) ==> (fun x y => (x == y) = true) ==> (fun x y => (x == y) = true)) as f_Z_mul.
-  Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H , H0. now subst. Defined.
-
-  Add Parametric Morphism : ( -%R ) with signature ((fun x y : v_Z_is_field => (x == y) = true) ==> (fun x y => (x == y) = true)) as f_Z_opp.
-  Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H. now subst. Defined.
-
-  Add Parametric Morphism : ( fun x => (x ^-1)%R ) with signature ((fun x y : v_Z_is_field => (x == y) = true) ==> (fun x y => (x == y) = true)) as f_Z_inv.
-  Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H. now subst. Defined.
-
-  Add Field v_Z_field : hacspec_field_theory ( abstract ).
-
-  Definition zq_ring_theory `{R : fieldType} :
-    ring_theory (R := R) (0)%R (1)%R
-      (GRing.add) (GRing.mul)
-      (fun x y => GRing.add x (GRing.opp y))
-      (GRing.opp) eq_op.
-  Proof.
-    apply (mk_rt (R := R) (0)%R (1)%R
-      (GRing.add) (GRing.mul)
-      (fun x y => GRing.add x (GRing.opp y))
-      (GRing.opp) eq_op).
-    all: intros.
-    all: apply (ssrbool.introT eqP).
-    { apply add0r.}
-    { apply addrC.}
-    { apply addrA.}
-    { apply mul1r.}
-    { apply mulrC.}
-    { apply mulrA.}
-    { apply mulrDl.}
-    { reflexivity.}
-    {
-      apply (ssrbool.elimT eqP).
-      rewrite subr_eq0.
-      apply eqxx.
-    }
-  Defined.
-
-  Definition zq_field_theory {R : fieldType} :
-    field_theory (R := R) 0%R 1%R (GRing.add)
-             (GRing.mul) (fun x y => GRing.add x (GRing.opp y))
-             (GRing.opp) (fun x y => GRing.mul x (GRing.inv y))
-             (GRing.inv) eq_op.
-  Proof.
-    apply (mk_field
-             (fun x y => GRing.mul x (GRing.inv y))
-             (GRing.inv)
-             (zq_ring_theory)
-          ).
-    { now rewrite GRing.oner_eq0.}
-    { easy.}
-    {
-      intros.
-      apply (ssrbool.introT eqP).
-      apply mulVr.
-      now rewrite unitfE.
-    }
-  Defined.
-
-  Lemma zq_ring_eq_ext {R : fieldType} : Ring_theory.ring_eq_ext
-       (R := R) (GRing.add)
-       (GRing.mul)
-       (GRing.opp) eq_op.
-  Proof.
-    constructor.
-    - intros x y H.
-      intros z w H0.
-      apply (ssrbool.introT eqP).
-      apply (ssrbool.elimT eqP) in H , H0.
-      subst.
-      reflexivity.
-    - intros x y H.
-      intros z w H0.
-      apply (ssrbool.introT eqP).
-      apply (ssrbool.elimT eqP) in H , H0.
-      subst.
-      reflexivity.
-    - intros x y H.
-      apply (ssrbool.introT eqP).
-      apply (ssrbool.elimT eqP) in H.
-      subst.
-      reflexivity.
-  Qed.
+  (* Use simpler notation for field *)
+  Notation v_Z_is_field := GOP_f_Z_type__canonical__GRing_Field.
 
 End HacspecGroup.
 
@@ -1373,52 +395,46 @@ Module HacspecGroupParam (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupO
   (* order of g *)
   Definition q : nat := #[g].
 
-  Definition hacspec_zq_ring_theory := @zq_ring_theory 'F_q.
-  Definition hacspec_zq_field_theory := @zq_field_theory 'F_q.
+  (* Definition hacspec_zq_ring_theory := @zq_ring_theory 'F_q. *)
+  (* Definition hacspec_zq_field_theory := @zq_field_theory 'F_q. *)
 
-  Definition hacspec_zq_setoid_structure := (eqType_setoid_structure (A := 'F_q)).
-  Definition hacspec_zq_ring_eq_ext := @zq_ring_eq_ext 'F_q.
+  (* Definition hacspec_zq_setoid_structure := (eqType_setoid_structure (A := 'F_q)). *)
+  (* Definition hacspec_zq_ring_eq_ext := @zq_ring_eq_ext 'F_q. *)
 
-  Check sign_theory.
-  Check Ring_theory.sign_theory _ _ _.
-  Definition sign_zq (R : fieldType) : Ring_theory.sign_theory (GRing.opp) (eq_op) (fun x =>
-    Some (GRing.opp x : R)).
-  Proof.
-    constructor.
-    intros.
-    inversion H.
-    rewrite opprK.
-    apply eqxx.
-  Qed.
-
-  Locate "_ ?=! _".
-  (* Definition decidable_zq (R : fieldType) : (forall x y, (x ?=! y) = true -> x == y). *)
+  (* Check sign_theory. *)
+  (* Check Ring_theory.sign_theory _ _ _. *)
+  (* Definition sign_zq (R : fieldType) : Ring_theory.sign_theory (GRing.opp) (eq_op) (fun x => *)
+  (*   Some (GRing.opp x : R)). *)
   (* Proof. *)
-  (*   intros ; now apply /eqP. *)
+  (*   constructor. *)
+  (*   intros. *)
+  (*   inversion H. *)
+  (*   rewrite opprK. *)
+  (*   apply eqxx. *)
   (* Qed. *)
 
-  (* plugins/ring/InitialRing.v *)
-  Add Ring zq_ring : hacspec_zq_ring_theory ( setoid hacspec_zq_setoid_structure hacspec_zq_ring_eq_ext ).
+  (* (* plugins/ring/InitialRing.v *) *)
+  (* Add Ring zq_ring : hacspec_zq_ring_theory ( setoid hacspec_zq_setoid_structure hacspec_zq_ring_eq_ext ). *)
 
-  Require Import Field.
-  Check Field_theory.field_theory.
+  (* Require Import Field. *)
+  (* Check Field_theory.field_theory. *)
 
-  Require Import Setoid.
-  Require Import Relation_Definitions.
+  (* Require Import Setoid. *)
+  (* Require Import Relation_Definitions. *)
 
-  Add Parametric Morphism (R: fieldType) : (+%R) with signature ((fun x y : R => (x == y) = true) ==> (fun x y => (x == y) = true) ==> (fun x y => (x == y) = true)) as zq_add.
-  Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H , H0. now subst. Defined.
+  (* Add Parametric Morphism (R: fieldType) : (+%R) with signature ((fun x y : R => (x == y) = true) ==> (fun x y => (x == y) = true) ==> (fun x y => (x == y) = true)) as zq_add. *)
+  (* Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H , H0. now subst. Defined. *)
 
-  Add Parametric Morphism (R: fieldType) : ( *%R ) with signature ((fun x y : R => (x == y) = true) ==> (fun x y => (x == y) = true) ==> (fun x y => (x == y) = true)) as zq_mul.
-  Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H , H0. now subst. Defined.
+  (* Add Parametric Morphism (R: fieldType) : ( *%R ) with signature ((fun x y : R => (x == y) = true) ==> (fun x y => (x == y) = true) ==> (fun x y => (x == y) = true)) as zq_mul. *)
+  (* Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H , H0. now subst. Defined. *)
 
-  Add Parametric Morphism (R: fieldType) : ( -%R ) with signature ((fun x y : R => (x == y) = true) ==> (fun x y => (x == y) = true)) as zq_opp.
-  Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H. now subst. Defined.
+  (* Add Parametric Morphism (R: fieldType) : ( -%R ) with signature ((fun x y : R => (x == y) = true) ==> (fun x y => (x == y) = true)) as zq_opp. *)
+  (* Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H. now subst. Defined. *)
 
-  Add Parametric Morphism (R: fieldType) : ( fun x => (x ^-1)%R ) with signature ((fun x y : R => (x == y) = true) ==> (fun x y => (x == y) = true)) as zq_inv.
-  Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H. now subst. Defined.
+  (* Add Parametric Morphism (R: fieldType) : ( fun x => (x ^-1)%R ) with signature ((fun x y : R => (x == y) = true) ==> (fun x y => (x == y) = true)) as zq_inv. *)
+  (* Proof. intros. apply /eqP. apply (ssrbool.elimT eqP) in H. now subst. Defined. *)
 
-  Add Field zq_field : hacspec_zq_field_theory ( abstract ).
+  (* Add Field zq_field : hacspec_zq_field_theory ( abstract ). *)
 
 End HacspecGroupParam.
 
@@ -1494,7 +510,7 @@ Module OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupO
   Include proof_args.
   Export proof_args.
 
-  Include Misc.
+  (* Include Misc. *)
 
   Transparent OVN.schnorr_zkp.
 
@@ -1540,30 +556,31 @@ Module OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupO
     rewrite !otf_fto; unfold R; rewrite eqxx; unfold assertD.
 
     eapply rsymmetry ;
-    eapply r_uniform_bij with (f := fun x => fto (FieldToWitness(is_pure (f_random_field_elem (t_Field := v_G_t_Group.(f_Z_t_Field)) (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord x)))))))) ; [ apply randomness_sample_is_bijective | intros ] ;
+    eapply r_uniform_bij with (f := fun x => fto (FieldToWitness(is_pure (f_random_field_elem (t_Field := _) (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord x)))))))) ; [ apply randomness_sample_is_bijective | intros ] ;
     eapply rsymmetry.
 
     apply better_r_put_lhs.
 
-    eapply (r_transR_both).
+    eapply (Misc.r_transR_both).
     - apply both_equivalence_is_pure_eq.
       repeat unfold let_both at 1.
       Transparent lift1_both.
       Transparent OVN.Build_t_SchnorrZKPCommit.
       simpl.
       apply prod_both_pure_eta_3.
-    - eapply (r_transR_both).
-      + set (r := prod_b (_, _, _)).
+    - eapply (Misc.r_transR_both).
+      + symmetry.
+
+        set (r := prod_b (_, _, _)).
         set (f_hash _) in r.
         pattern b0 in r.
         subst r.
-        apply bind_both_eta.
+
+        apply (bind_both_eta _ b0).
       + hnf.
         simpl.
 
-        (* TODO : connect hash to random sample value ! *)
-        (* apply (r_const_sample_L) ; [ apply LosslessOp_uniform | intros ]. *)
-        eapply (hash_is_psudorandom _ _ (fun x => WitnessToField (otf x)) _ _ _ _ [:: _; _; _]).
+        eapply (hash_is_psudorandom i_random _ (fun x => WitnessToField (otf x)) _ _ _ _ [:: _; _; _]).
         {
           exists (fun x => fto (FieldToWitness x)).
           -- now intros n ; rewrite FieldToWitnessCancel ; rewrite fto_otf.
@@ -1770,7 +787,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
 
   Lemma div_cancel : forall (x : gT) (s : 'F_q), s <> 0 -> x ^+ nat_of_ord (s / s)%R = x.
   Proof.
-    clear ; intros.
+    intros.
     rewrite mulrV.
     2: now rewrite unitfE ; apply /eqP.
     now rewrite expg1.
@@ -2022,9 +1039,6 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
     forall (h : gT) (b : 'F_q),
       (h ^+ b = is_pure (f_pow (ret_both h) (ret_both (WitnessToField b)))).
 
-  Axiom pow_base : forall x, f_g_pow x ≈both f_pow (ret_both g) x.
-  Axiom div_is_prod_inv : forall x y, f_div x y ≈both f_prod x (f_group_inv y).
-
   Definition FieldToWitnessOpp : (forall (b : both _), Zp_opp (FieldToWitness (is_pure b)) = FieldToWitness (is_pure (f_opp b))).
   Proof.
     intros.
@@ -2035,16 +1049,16 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
     rewrite <- hacspec_function_guarantees.
     reflexivity.
   Qed.
-    
+
   (* (* Axiom FieldToWitnessInv : (forall (b : both (v_G_t_Group.(f_Z))), Zp_inv (FieldToWitness (is_pure b)) = FieldToWitness (is_pure (f_inv b))). *) *)
   (* Lemma FieldToWitnessInv : forall (b : f_Z), Zp_inv (FieldToWitness b) = FieldToWitness (is_pure (f_inv (ret_both b))). *)
   (* Proof. *)
   (*   intros. *)
   (*   simpl. *)
-    
-  
+
+
   Axiom WitnessToField_f_inv : forall s, (f_inv (ret_both (WitnessToField s)) = ret_both (WitnessToField (Zp_inv s))).
-  
+
   Lemma FieldToWitnessOne : FieldToWitness (is_pure f_field_one) = 1%R.
   Proof.
     intros.
@@ -2065,7 +1079,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
   Include proof_args.
   Export proof_args.
 
-  Include Misc.
+  (* Include Misc. *)
 
   Transparent OVN.zkp_one_out_of_two.
 

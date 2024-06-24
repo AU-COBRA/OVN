@@ -1,23 +1,11 @@
 -Q theories OVN
-# theories/Main.v
+
+theories/hacspec/Hacspec_helpers.v
+theories/hacspec/Hacspec_ovn_Ovn_traits.v
+#theories/hacspec/Hacspec_ovn_Ovn_z_89_.v
+theories/hacspec/Hacspec_ovn.v
+# theories/hacspec/Hacspec_ovn_to_sigma.v
 
 # -R theories/hacspec Examples
 # -arg -w
 # -arg all
-
-theories/hacspec/Hacspec_helpers.v
-theories/hacspec/Hacspec_ovn_Ovn_traits.v
-# theories/hacspec/Hacspec_ovn_Ovn_z_89_.v
-theories/hacspec/Hacspec_ovn.v
-theories/hacspec/Hacspec_ovn_to_sigma.v
-
-# theories/boardroomVoting/Egcd.v
-# theories/boardroomVoting/Euler.v
-# theories/boardroomVoting/BoardroomMath.v
-# theories/boardroomVoting/BoardroomVoting.v
-# theories/boardroomVoting/BoardroomVotingZ.v
-# theories/boardroomVoting/BoardroomVotingTest.v
-# theories/boardroomVoting/BoardroomVotingExtractionCameLIGO.v
-# theories/boardroomVoting/BoardroomVotingExtractionLiquidity.v
-
-theories/ovn/OVN.v

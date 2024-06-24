@@ -1,6 +1,8 @@
 From mathcomp Require Import all_ssreflect fingroup.fingroup ssreflect.
 Set Warnings "-notation-overridden,-ambiguous-paths".
+From Relational Require Import OrderEnrichedCategory .
 From Crypt Require Import choice_type Package Prelude.
+From Crypt Require Import Axioms ChoiceAsOrd RulesStateProb.
 Import PackageNotation.
 From extructures Require Import ord fset.
 From mathcomp Require Import word_ssrZ word.
@@ -337,9 +339,10 @@ Qed.
 
 
 Lemma ret_both_is_pure_cancel : forall {A} (a : both A),
-    a ≈both ret_both (is_pure a).
+    ret_both (is_pure a) ≈both a.
 Proof.
   intros.
+  symmetry.
   unfold bind_both.
   unfold both_equivalence ; simpl.
   split.
@@ -446,9 +449,10 @@ Proof.
 Qed.
 
 Lemma bind_both_eta : forall {A B} (f : both A -> both B) (x : both A),
-    f x ≈both bind_both x (fun x => f (ret_both x)).
+    bind_both x (fun x => f (ret_both x)) ≈both f x.
 Proof.
   intros.
+  symmetry.
   unfold bind_both.
   unfold both_equivalence ; simpl.
   split.
@@ -465,34 +469,32 @@ Lemma both_eq_andb_true : forall (a b : both 'bool),
     (andb a b) ≈both ret_both (true : 'bool).
 Proof.
   intros.
-  eapply (both_eq_trans) ; [ apply (both_eq_lift2_both H H0) | ] ; simpl.
-  apply both_eq_reflexivity.
+  setoid_rewrite both_eq_lift2_both ; [ | easy ..].
+  reflexivity.
 Qed.
 
 Lemma both_eq_andb_false : forall (a b : both 'bool),
     a ≈both ret_both (false : 'bool) \/ b ≈both ret_both (false : 'bool) ->
     (andb a b) ≈both ret_both (false : 'bool).
 Proof.
-  intros.
-  destruct H ; eapply (both_eq_trans) ; [
-      eapply (both_eq_lift2_both H (ret_both_is_pure_cancel _)) | simpl |
-      eapply (both_eq_lift2_both (ret_both_is_pure_cancel _) H) |
-      simpl ; rewrite Bool.andb_false_r ] ; apply both_eq_reflexivity.
+  now intros ? ? [] ;
+    eapply (both_eq_trans) ; [
+      refine (both_eq_lift2_both (vb := (is_pure b)) H _) ; rewrite (ret_both_is_pure_cancel _)
+    | simpl
+    | refine (both_eq_lift2_both (va := (is_pure a)) _ H) ; rewrite (ret_both_is_pure_cancel _)
+    | simpl ; rewrite Bool.andb_false_r ].
 Qed.
 
 Lemma both_eq_eqb_true : forall {A : choice_type} `{t_Eq A} (a b : both A), a ≈both b <-> a =.? b ≈both ret_both (true : 'bool).
 Proof.
   split ; intros [].
   - unfold eqb.
-    eapply both_eq_trans ; [ eapply (both_eq_lift2_both (ret_both_is_pure_cancel _) (ret_both_is_pure_cancel _)) | ].
-    rewrite H0.
-    rewrite eqb_refl.
-    apply both_eq_reflexivity.
+    rewrite (both_eq_lift2_both (va := is_pure a) (vb := is_pure b)).
+    2, 3: now rewrite ret_both_is_pure_cancel.
+    now rewrite H0 eqb_refl.
   - apply both_equivalence_is_pure_eq.
     now apply eqb_leibniz.
 Qed.
-
-Check chList.
 
 Fixpoint both_list {A} (l : list (both A)) : both (chList A) :=
   match l with
@@ -509,10 +511,7 @@ Lemma array_from_list_helper_base :
     array_from_list_helper x [] k ≈both array_from_list_helper y [] k.
 Proof.
   intros.
-  apply both_equivalence_is_pure_eq.
-  destruct H.
-  rewrite hacspec_function_guarantees.
-  now rewrite H.
+  now apply (both_eq_fun_ext (fun x => array_from_list_helper x [] k)).
 Qed.
 
 Lemma array_from_list_helper_eq_succ :
@@ -522,27 +521,15 @@ Lemma array_from_list_helper_eq_succ :
     array_from_list_helper x xs k ≈both array_from_list_helper y ys k ->
     array_from_list_helper a (x :: xs) k ≈both array_from_list_helper b (y :: ys) k.
 Proof.
-  Print array_from_list_helper.
-
   intros.
+
   rewrite !array_from_list_helper_equation_2.
 
-  eapply both_eq_trans ; [ apply both_eq_bind ; apply ret_both_is_pure_cancel | ].
-  eapply both_eq_trans ; [ apply both_eq_bind ; apply ret_both_is_pure_cancel | ].
-  eapply both_eq_trans ; [ apply both_eq_solve_lift | ].
-
-  apply both_eq_symmetry.
-
-  eapply both_eq_trans ; [ apply both_eq_bind ; apply ret_both_is_pure_cancel | ].
-  eapply both_eq_trans ; [ apply both_eq_bind ; apply ret_both_is_pure_cancel | ].
-  eapply both_eq_trans ; [ apply both_eq_solve_lift | ].
-
-  apply both_equivalence_is_pure_eq.
+  rewrite (both_eq_fun_ext (fun x => bind_both x _) _ _ H0).
+  rewrite !(both_eq_bind _ _ (is_pure b)) ; [ | now rewrite ret_both_is_pure_cancel..].
+  rewrite (both_eq_fun_ext (fun x => bind_both x _) _ _ H1).
+  rewrite !(both_eq_bind _ _ (is_pure (array_from_list_helper y ys k))) ; [ | now rewrite ret_both_is_pure_cancel..].
   simpl.
-
-  rewrite (proj1 both_equivalence_is_pure_eq H0).
-  rewrite (proj1 both_equivalence_is_pure_eq H1).
-
   rewrite H.
   reflexivity.
 Qed.
@@ -559,8 +546,7 @@ Proof.
   generalize dependent x.
   generalize dependent y.
   induction xs, ys ; intros ; try discriminate.
-  - apply array_from_list_helper_base.
-    apply H0.
+  - now apply (both_eq_fun_ext (fun x => array_from_list_helper x [] k)).
   - inversion H.
     apply array_from_list_helper_eq_succ ; try assumption.
     inversion H1 ; subst.
@@ -580,10 +566,571 @@ Proof.
   - rewrite array_from_list_equation_1.
     apply array_from_list_helper_eq.
     + now rewrite List.map_length.
-    + apply ret_both_is_pure_cancel.
+    + now rewrite ret_both_is_pure_cancel.
     + induction l.
       * apply List.Forall_nil.
       * apply List.Forall_cons.
-        -- apply ret_both_is_pure_cancel.
+        -- now rewrite ret_both_is_pure_cancel.
         -- apply IHl.
+Qed.
+
+Module Misc.
+
+  Lemma hasChoice_surjective : forall {A B : Type},
+    forall {f : A -> B} {f_inv : B -> A} `(η : cancel f_inv f),
+      hasChoice.axioms_ A ->
+      hasChoice.axioms_ B.
+  Proof.
+    intros A B f f_inv η [].
+    refine ({| hasChoice.find_subdef := (fun P n => match find_subdef (fun x => P (f x)) n with
+                                                 | Some x => Some (f x)
+                                                 | None => None
+                                                 end) |}).
+    - intros.
+      destruct (find_subdef (fun x => P (f x)) n) eqn:Heq.
+      + inversion H.
+        subst.
+        apply (choice_correct_subdef (fun x => P (f x)) n a Heq).
+      + discriminate H.
+    - intros.
+      destruct (choice_complete_subdef (fun x => P (f x)) (match H with ex_intro _ x H_P => ex_intro _ (f_inv x) (eq_ind_r P H_P (η x)) end )).
+      exists x.
+      now destruct (find_subdef _ _).
+    - intros P Q H_eq n.
+      now rewrite (choice_extensional_subdef (fun x => P (f x)) (fun x => Q (f x)) (fun x => H_eq (f x)) n).
+  Qed.
+
+  Lemma Choice_isCountable_surjective : forall {A B},
+    forall {f : A -> B} {f_inv : B -> A} `(η : cancel f_inv f),
+      Choice_isCountable.axioms_ A ->
+      Choice_isCountable.axioms_ B.
+  Proof.
+    intros A B f f_inv η [].
+    refine {|
+        Choice_isCountable.pickle := fun x => pickle (f_inv x);
+        Choice_isCountable.unpickle := fun x => Option.map f (unpickle x);
+        Choice_isCountable.pickleK := _
+      |}.
+    intros x.
+    rewrite (pickleK (f_inv x)).
+    simpl.
+    now rewrite η.
+  Qed.
+
+  Lemma equality_surjective : forall {A B},
+    forall {f : A -> B} {f_inv : B -> A} `(η : cancel f_inv f),
+      hasDecEq.axioms_ A ->
+      hasDecEq.axioms_ B.
+  Proof.
+    intros A B f f_inv η H_eq.
+    assert (@injective (Equality.sort (@Equality.Pack A (@Equality.Class A H_eq))) _ f_inv) by easy.
+    apply (eqtype_inj_type__canonical__eqtype_Equality H).
+  Qed.
+
+  Lemma bijection_is_adjoint : forall {A B : eqType},
+    forall (f : A -> B) (f_inv : B -> A),
+      (forall (x : B), f (f_inv x) == x) /\ (forall x, f_inv (f x) == x) <-> forall x y, (f y == x) = (y == f_inv x).
+  Proof.
+    intros.
+    split.
+    - intros [] x y.
+      specialize (H x).
+      specialize (H0 y).
+      apply (ssrbool.elimT eqP) in H.
+      apply (ssrbool.elimT eqP) in H0.
+      apply Bool.eq_iff_eq_true.
+      now split ; intros ; apply (ssrbool.elimT eqP) in H1 ; apply (ssrbool.introT eqP).
+    - intros.
+      split ; [ intros x ; set (y := f_inv x) |
+                intros y ; set (x := f y) ; rewrite eq_sym ; symmetry in H ] ;
+        specialize (H x y) ;
+        now rewrite H.
+  Qed.
+
+  Lemma isFinite_bijective : forall {A B},
+    forall {f : A -> B} {f_inv : B -> A} `(η : cancel f_inv f) `(β : cancel f f_inv),
+    forall (H_eq : Equality.mixin_of A),
+      isFinite.axioms_ A H_eq ->
+      isFinite.axioms_ B (equality_surjective η H_eq).
+  Proof.
+    intros A B f f_inv η β H_eq [].
+
+    pose (eqA := @Equality.Pack A (@Equality.Class A H_eq)).
+    pose (eqB := @Equality.Pack B (@Equality.Class B (@equality_surjective A B f f_inv η H_eq))).
+
+    refine {|
+        isFinite.enum_subdef := [ seq f i | i <- enum_subdef ];
+        isFinite.enumP_subdef := _;
+      |}.
+
+    assert (H : injective (aT := Equality.sort eqA) (rT := Equality.sort eqB) f) by easy ; epose proof (H_inj := eqtype.inj_eq H) ; simpl in H_inj ; clear H.
+
+    assert (H : injective (aT := Equality.sort eqB) (rT := Equality.sort eqA) f_inv) by easy ; epose proof (H_inv_inj := eqtype.inj_eq H) ; simpl in H_inv_inj ; clear H.
+
+    intros x ; simpl in x.
+    rewrite count_map.
+    rewrite <- (enumP_subdef (f_inv x)).
+    clear -H_inj β.
+    induction enum_subdef as [ | y ] ; [ reflexivity | ] ; simpl in *.
+    rewrite (IHenum_subdef).
+    f_equal.
+    f_equal.
+    apply (proj1 (bijection_is_adjoint (A := eqA) (B := eqB) f f_inv)).
+    now split ; intros ; [ rewrite η | rewrite β ].
+  Qed.
+
+  Definition finite_bijective : forall {A B},
+    forall (f : A -> B) (f_inv : B -> A) `(η : cancel f_inv f) `(β : cancel f f_inv),
+      Finite.axioms_ A ->
+      Finite.axioms_ B.
+  Proof.
+    intros A B f f_inv η β H.
+    refine {|
+        Finite.choice_hasChoice_mixin := hasChoice_surjective η H ;
+        Finite.choice_Choice_isCountable_mixin := Choice_isCountable_surjective η H;
+        Finite.fintype_isFinite_mixin := isFinite_bijective η β H H
+      |}.
+  Qed.
+
+  Lemma is_pure_cancel_ret_both : forall {A : choice_type}, cancel (@ret_both A) (@is_pure A).
+  Proof. easy. Qed.
+
+  Definition finite_to_word {n} (x : 'I_(Z.to_nat (modulus n)).-1.+1) : n.-word :=
+    mkword _ (Z.of_nat (nat_of_ord x)).
+
+  Definition word_to_finite {n} (x : n.-word) : 'I_((Z.to_nat (modulus n)).-1.+1) := inord (Z.to_nat (toword x)).
+
+  Lemma finite_word_cancel : forall {n}, cancel word_to_finite (finite_to_word (n := n)).
+  Proof.
+    intros.
+    unfold word_to_finite, finite_to_word.
+    intros x ; clear.
+    rewrite inordK.
+    - rewrite Z2Nat.id.
+      + now rewrite ureprK.
+      + now destruct x as [[] ?].
+    - destruct x.
+      simpl.
+      apply (ssrbool.elimT andP) in i as [].
+      apply Z.leb_le in H.
+      apply Z.ltb_lt in H0.
+      apply (ssrbool.introT (jasmin_util.ZNltP _ _)).
+      rewrite Nat.succ_pred.
+      + now rewrite !Z2Nat.id.
+      + unfold modulus.
+        unfold two_power_nat.
+        easy.
+  Qed.
+
+  Lemma word_finite_cancel : forall {n}, cancel (finite_to_word (n := n)) word_to_finite.
+  Proof.
+    intros.
+    unfold finite_to_word, word_to_finite.
+    intros x.
+
+    destruct n.
+    {
+      simpl in x |- *.
+      rewrite Z.mod_1_r.
+      unfold Z.to_nat.
+      destruct x as [[]].
+      + unfold inord, insubd, odflt, oapp, insub.
+        destruct idP ; now apply ord_ext.
+      + discriminate i.
+    }
+
+    rewrite mkword_val_small.
+    2:{
+      destruct x ; simpl.
+      rewrite <- modulusE.
+      rewrite Nat.succ_pred in i. 2: now unfold modulus, two_power_nat .
+      apply (ssrbool.introT andP) ; split ; [ apply Z.leb_le | apply Z.ltb_lt ].
+      - eapply (ssrbool.elimT (isword_ofnatZP _ _)).
+        apply (ltn_expl m).
+        easy.
+      - eapply Z.lt_le_trans ; [ apply (ssrbool.elimT (jasmin_util.ZNltP _ _) i) | ].
+        clear.
+        rewrite !Z2Nat.id. 2: easy.
+        unfold modulus.
+        now rewrite two_power_nat_equiv.
+    }
+    rewrite Nat2Z.id.
+    now rewrite inord_val.
+  Qed.
+
+  (* A slightly more general version where we don't fix the precondition *)
+  Theorem rsame_head_cmd_alt :
+    forall {A B C : ord_choiceType} {f₀ : A -> raw_code B} {f₁ : A -> raw_code C}
+      (m : command A) pre (post : postcond B C),
+      ⊢ ⦃ pre ⦄
+        x ← cmd m ;; ret x ≈ x ← cmd m ;; ret x
+                                            ⦃ fun '(a₀, s₀) '(a₁, s₁) => pre (s₀, s₁) /\ a₀ = a₁ ⦄ ->
+      (forall a, ⊢ ⦃ pre ⦄ f₀ a ≈ f₁ a ⦃ post ⦄) ->
+      ⊢ ⦃ pre ⦄ x ← cmd m ;; f₀ x ≈ x ← cmd m ;; f₁ x ⦃ post ⦄.
+  Proof.
+    intros A B C f₀ f₁ m pre post hm hf.
+    eapply from_sem_jdg. rewrite !repr_cmd_bind.
+    eapply (bind_rule_pp (repr_cmd m) (repr_cmd m)).
+    - eapply to_sem_jdg in hm. rewrite !repr_cmd_bind in hm.
+      rewrite bindrFree_ret in hm. eauto.
+    - intros a₀ a₁. eapply to_sem_jdg.
+      eapply rpre_hypothesis_rule.
+      intros s₀ s₁ [h e]. subst.
+      eapply rpre_weaken_rule. 1: eapply hf.
+      simpl. intros ? ? [? ?]. subst. auto.
+  Qed.
+
+  (* One-sided sampling rule. *)
+  (* Removes the need for intermediate games in some cases. *)
+  Lemma r_const_sample_L :
+    forall {A B : choiceType} (op : Op) c₀ c₁ (pre : precond) (post : postcond A B),
+      LosslessOp op ->
+      (forall x, ⊢ ⦃ pre ⦄ c₀ x ≈ c₁ ⦃ post ⦄) ->
+      ⊢ ⦃ pre ⦄ x ← sample op ;; c₀ x ≈ c₁ ⦃ post ⦄.
+  Proof.
+    intros A B op c₀ c₁ pre post hop h.
+    eapply r_transR with (x ← sample op ;; (fun _ => c₁) x).
+    - apply r_dead_sample_L. 1: auto.
+      apply rreflexivity_rule.
+    - apply (rsame_head_cmd_alt (cmd_sample op)).
+      + eapply rpre_weaken_rule. 1: eapply cmd_sample_preserve_pre.
+        auto.
+      + apply h.
+  Qed.
+
+  Lemma r_const_sample_R :
+    forall {A B : choiceType} (op : Op) c₀ c₁ (pre : precond) (post : postcond A B),
+      LosslessOp op ->
+      (forall x, ⊢ ⦃ pre ⦄ c₀ ≈ c₁ x ⦃ post ⦄) ->
+      ⊢ ⦃ pre ⦄ c₀ ≈ x ← sample op ;; c₁ x ⦃ post ⦄.
+  Proof.
+    intros A B op c₀ c₁ pre post hop h.
+    eapply r_transL with (x ← sample op ;; (fun _ => c₀) x).
+    - apply r_dead_sample_L. 1: auto.
+      apply rreflexivity_rule.
+    - apply (rsame_head_cmd_alt (cmd_sample op)).
+      + eapply rpre_weaken_rule. 1: eapply cmd_sample_preserve_pre.
+        auto.
+      + apply h.
+  Qed.
+
+  Theorem forget_precond {A B} (x : raw_code A) (y : raw_code B) P Q :
+    ⊢ ⦃ true_precond ⦄ x ≈ y ⦃ Q ⦄ ->
+    ⊢ ⦃ P ⦄ x ≈ y ⦃ Q ⦄.
+  Proof.
+    intros.
+    now apply (rpre_weaken_rule _ _ _ H).
+  Qed.
+
+  Theorem rpre_hypothesis_rule' :
+    forall {A₀ A₁ : _} {p₀ : raw_code A₀} {p₁ : raw_code A₁}
+      (pre : precond) (post : postcond A₀ A₁),
+      (forall s₀ s₁,
+          pre (s₀, s₁) -> ⊢ ⦃ fun '(s₀', s₁') => s₀' = s₀ /\ s₁' = s₁ ⦄ p₀ ≈ p₁ ⦃ post ⦄
+      ) ->
+      ⊢ ⦃ pre ⦄ p₀ ≈ p₁ ⦃ post ⦄.
+  Proof.
+    intros A₀ A₁ p₀ p₁ pre post h.
+    eapply rpre_hypothesis_rule.
+    intros s0 s1 H. now eapply rpre_weaken_rule.
+  Qed.
+
+  Lemma r_eq_symmetry : forall {A B} {P Q} (c₀ : raw_code A) (c₁ : raw_code B) (f : A -> B),
+      (forall (x y : heap), P (x, y) <-> P (y, x)) ->
+      (forall (x : A) (y : B), Q (f x) y <-> Q y (f x)) ->
+      ⊢ ⦃ P ⦄ c₁ ≈ c₀ ⦃ fun '(a, _) '(b, _) => Q a (f b) ⦄ ->
+      ⊢ ⦃ P ⦄ c₀ ≈ c₁ ⦃ fun '(a, _) '(b, _) => Q (f a) b ⦄.
+  Proof.
+    intros.
+    apply rsymmetry.
+    eapply r_swap_precond ; [ prop_fun_eq ; apply H | ].
+    eapply r_swap_post with (Q' := fun '(a, _) '(b, _) => Q a (f b)); [ prop_fun_eq ; apply H0 | ].
+    apply H1.
+  Qed.
+
+  Theorem r_transR_both :
+    forall {A B : _} {x : raw_code A} {y z : both B}
+      (pre : precond) (post : postcond A B),
+      y ≈both z ->
+      ⊢ ⦃ pre ⦄ x ≈ is_state z ⦃ post ⦄ ->
+      ⊢ ⦃ pre ⦄ x ≈ is_state y ⦃ post ⦄.
+  Proof.
+    intros A B x y z pre post [] H_xz.
+    eapply r_transR.
+    2:{
+      apply H_xz.
+    }
+    destruct y as [[] []] , z as [[] []] ;  simpl in *.
+    inversion is_valid_both.
+    inversion is_valid_both0.
+    now apply r_ret.
+  Qed.
+
+  Corollary make_pure :
+    forall {A B : _} {x : raw_code A} {y : both B}
+      (pre : precond) (post : postcond A B),
+      ⊢ ⦃ pre ⦄ x ≈ ret (is_pure y) ⦃ post ⦄ ->
+      ⊢ ⦃ pre ⦄ x ≈ is_state y ⦃ post ⦄.
+  Proof.
+    intros.
+    eapply r_transR_both.
+    + now rewrite <- ret_both_is_pure_cancel.
+    + simpl.
+      apply H.
+  Qed.
+
+  Lemma prod_both_pure_eta_3 : forall {A B C} (a : both A) (b : both B) (c : both C),
+      ((is_pure (both_prog a) : A,
+           is_pure (both_prog b) : B,
+             is_pure (both_prog c) : C)) =
+        is_pure (both_prog (prod_b( a , b, c ))).
+  Proof. reflexivity. Qed.
+
+
+  Ltac pattern_lhs_approx :=
+    match goal with | |- context [ ⊢ ⦃ _ ⦄ ?lhs ≈ ?rhs ⦃ _ ⦄ ] => let H_lhs := fresh in set (H_lhs := lhs) end.
+
+  Ltac pattern_lhs_approx_pat pat :=
+    match goal with | |- context [ ⊢ ⦃ _ ⦄ ?lhs ≈ ?rhs ⦃ _ ⦄ ] => let H_lhs := fresh in set (H_lhs := lhs) ; pattern pat in H_lhs ; subst H_lhs end.
+
+  Ltac pattern_lhs_both_pat pat :=
+    match goal with | |- context [ ?lhs ≈both ?rhs ] => let H_lhs := fresh in set (H_lhs := lhs) ; pattern pat in H_lhs ; subst H_lhs end.
+
+  Ltac pattern_rhs_approx :=
+    match goal with | |- context [ ⊢ ⦃ _ ⦄ ?lhs ≈ ?rhs ⦃ _ ⦄ ] => let H_rhs := fresh in set (H_rhs := rhs) end.
+
+  Ltac pattern_rhs_approx_pat pat :=
+    match goal with | |- context [ ⊢ ⦃ _ ⦄ ?lhs ≈ ?rhs ⦃ _ ⦄ ] => let H_rhs := fresh in set (H_rhs := rhs) ; pattern pat in H_rhs ; subst H_rhs end.
+
+  Ltac pattern_rhs_both_pat pat :=
+    match goal with | |- context [ ?lhs ≈both ?rhs ] => let H_rhs := fresh in set (H_rhs := rhs) ; pattern pat in H_rhs ; subst H_rhs end.
+
+  Lemma both_eta : forall {A : choice_type} (a : both A), a =
+      {|
+        both_prog := {| is_pure := is_pure a ; is_state := is_state a |};
+        both_prog_valid := ValidBoth_eta (both_prog_valid a)
+          ;
+        p_eq := p_eq a;
+      |}.
+  Proof. now intros ? [[] [] ?]. Qed.
+
+  Lemma valid_both_ext : forall {A : choice_type} {a b : both A},
+      a ≈both b ->
+      ValidBoth a = ValidBoth b.
+  Proof.
+    intros ? [[a_pure a_state] [a_code a_both] a_eq] [[b_pure b_state] [b_code b_both] b_eq] ?.
+    inversion H ; simpl in *.
+    subst.
+    rewrite boolp.propeqE.
+    split ; intros ; now refine {|
+          ChoiceEquality.is_valid_code := _;
+          is_valid_both := _
+        |}.
+  Qed.
+
+  Lemma unfold_both : (forall {A B : choice_type} (f : both A -> both B) (a : both A),
+      f a ≈both
+        {|
+             both_prog :=
+               {|
+                 is_pure := is_pure (f (ret_both (is_pure a)));
+                 is_state := x ← ret (is_pure a) ;;
+                   is_state (f (ret_both x))
+               |};
+             both_prog_valid := ValidBoth_eta (both_prog_valid (f (ret_both (is_pure a))));
+             p_eq := p_eq (f (ret_both (is_pure a)))
+        |}).
+  Proof.
+    intros.
+    setoid_rewrite <- both_eta.
+    apply both_eq_fun_ext.
+    now rewrite ret_both_is_pure_cancel.
+  Qed.
+
+  Lemma prod_both_pure_eta_11 : forall {A B C D E F G H I J K} (a : both A) (b : both B) (c : both C) (d : both D) (e : both E) (f : both F) (g : both G) (h : both H) (i : both I) (j : both J) (k : both K),
+      ((is_pure (both_prog a) : A,
+           is_pure (both_prog b) : B,
+           is_pure (both_prog c) : C,
+           is_pure (both_prog d) : D,
+           is_pure (both_prog e) : E,
+           is_pure (both_prog f) : F,
+           is_pure (both_prog g) : G,
+           is_pure (both_prog h) : H,
+           is_pure (both_prog i) : I,
+           is_pure (both_prog j) : J,
+           is_pure (both_prog k) : K)) =
+        is_pure (both_prog (prod_b( a , b, c, d, e, f, g, h, i, j, k ))).
+  Proof. reflexivity. Qed.
+
+  Ltac get_both_sides H_lhs H_rhs :=
+    match goal with
+    | [ |- context [?lhs ≈both ?rhs ] ] =>
+        set (H_lhs := lhs) at 1 ;
+        set (H_rhs := rhs) at 1
+    | [ |- context [?lhs = ?rhs ] ] =>
+        set (H_lhs := lhs) at 1 ;
+        set (H_rhs := rhs) at 1
+   end.
+
+  Ltac apply_to_pure_sides H H_lhs H_rhs :=
+    match goal with
+    | [ |- context [ _ ≈both _ ] ] =>
+        rewrite both_equivalence_is_pure_eq ;
+        get_both_sides H_lhs H_rhs ;
+        H ;
+        rewrite <- both_equivalence_is_pure_eq
+    | [ |- context [ _ = _ ] ] =>
+        get_both_sides H_lhs H_rhs ;
+        H
+   end.
+
+  Ltac push_down :=
+    match goal with
+    | H := is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))) (ret_both (is_pure (both_prog ?b))))) : _ |- _  =>
+      subst H ;
+      set (is_pure a) ;
+      push_down ;
+      set (is_pure b) ;
+      push_down
+    | H := is_pure (both_prog (?f ?a ?b)) |- _  =>
+      subst H ;
+      rewrite (hacspec_function_guarantees2 f a b) ;
+      set (is_pure a) ;
+      push_down ;
+      set (is_pure b) ;
+      push_down
+    | H := is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))))) : _ |- _  =>
+      subst H ;
+      set (is_pure a) ;
+      push_down
+    | H := is_pure (both_prog (?f ?a)) : _ |- _  =>
+      subst H ;
+      rewrite (hacspec_function_guarantees f a) ;
+      set (is_pure a) ;
+      push_down
+   | H : _ |- _ => subst H
+    end ; simpl.
+
+  Ltac push_down_sides :=
+    let H_lhs := fresh in
+    let H_rhs := fresh in
+    get_both_sides H_lhs H_rhs ; subst H_rhs ;
+    push_down ; simpl ;
+
+    let H_lhs := fresh in
+    let H_rhs := fresh in
+    get_both_sides H_lhs H_rhs ; subst H_lhs ;
+    push_down ; simpl.
+
+   Ltac pull_up_assert :=
+     match goal with
+    | |- is_pure (both_prog (?f
+        (ret_both (is_pure (both_prog ?a)))
+        (ret_both (is_pure (both_prog ?b))))) = _ =>
+        let H_a := fresh in
+        let H_b := fresh in
+        eassert (H_a : (is_pure a) = _) ;
+        [ |
+          eassert (H_b : (is_pure b) = _) ;
+          [ | rewrite H_a ; rewrite H_b ; rewrite <- (hacspec_function_guarantees2 f) ; reflexivity ]
+          ]
+   | |- is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))))) = _ =>
+       let H_a := fresh in
+       eassert (H_a : (is_pure a) = _) ;
+       [ | rewrite H_a ; rewrite <- (hacspec_function_guarantees f) ; reflexivity ]
+    end.
+
+   Ltac pull_up H :=
+     let H_rewrite := fresh in
+     eassert (H_rewrite : H = _) by repeat (pull_up_assert ; reflexivity) ; rewrite H_rewrite ; clear H_rewrite.
+
+   Ltac pull_up_side H :=
+     let H_rewrite := fresh in
+     eassert (H_rewrite : H = _) ; subst H ; [ repeat pull_up_assert ; reflexivity | ] ; rewrite H_rewrite ; clear H_rewrite.
+
+  Ltac remove_solve_lift :=
+    repeat progress (rewrite (hacspec_function_guarantees2 _ (solve_lift _)) ; simpl) ;
+    repeat progress (rewrite (hacspec_function_guarantees2 _ _ (solve_lift _)) ; simpl) ;
+    repeat progress (rewrite (hacspec_function_guarantees _ (solve_lift _)) ; simpl).
+
+  Ltac normalize_lhs :=
+    let H_lhs := fresh in
+    let H_rhs := fresh in
+    get_both_sides H_lhs H_rhs ; subst H_rhs ;
+    push_down ; simpl ;
+    remove_solve_lift ; simpl ;
+    get_both_sides H_lhs H_rhs ; subst H_rhs ;
+    pull_up_side H_lhs.
+
+  Ltac normalize_rhs :=
+    let H_lhs := fresh in
+    let H_rhs := fresh in
+    get_both_sides H_lhs H_rhs ; subst H_lhs ;
+    push_down ; simpl ;
+    remove_solve_lift ; simpl ;
+    get_both_sides H_lhs H_rhs ; subst H_lhs ;
+    pull_up_side H_rhs.
+
+  Ltac normalize_equation :=
+    normalize_lhs ; normalize_rhs.
+
+End Misc.
+
+Definition lower1 {A B : choice_type} (f : both A -> both B) : A -> B :=
+  fun x => is_pure (f (ret_both x)).
+
+Definition lower2 {A B C : choice_type} (f : both A -> both B -> both C) : A -> B -> C :=
+  fun x y => is_pure (f (ret_both x) (ret_both y)).
+
+Lemma decidable_iff : forall P Q, (P <-> Q) -> decidable P -> decidable Q.
+Proof.
+  intros.
+  destruct H0.
+  - left.
+    now apply H.
+  - right.
+    red ; intros.
+    apply n.
+    apply H.
+    apply H0.
+Qed.
+
+Lemma running_state_is_pure : forall {A} (x : both A) h, fst (det_run (is_state x) (h := both_deterministic _) h) = is_pure x.
+Proof.
+  intros.
+  epose (p_eq x).
+  apply (sem_to_det _ _ _ _ (both_deterministic _) (deterministic_ret _)) in r.
+  unfold det_jdg in r.
+  specialize (r h h Logic.I).
+  destruct (det_run (is_state x) h) eqn:d_eq in r |- *.
+  unfold det_run in r.
+  unfold pre_to_post_ret in r.
+  simpl.
+  apply r.
+Qed.
+
+Lemma state_equality_is_decidable :
+  forall {A} (x y : both A),
+  decidable (⊢ ⦃ fun '(h0, h1) => h0 = h1 ⦄ is_state x ≈ is_state y ⦃ fun a b => fst a = fst b ⦄).
+Proof.
+  intros.
+  eapply (decidable_iff (det_jdg (fun '(h0, h1) => h0 = h1) (fun a b => fst a = fst b) (is_state x) (is_state y) (both_deterministic _) (both_deterministic _))).
+  {
+    split.
+    - apply det_to_sem.
+    - apply sem_to_det.
+  }
+
+  unfold det_jdg.
+
+  intros.
+
+  destruct (is_pure x == is_pure y) eqn:is_eq ;
+    [ apply (ssrbool.elimT eqP) in is_eq ; left
+    | apply (ssrbool.elimF eqP) in is_eq ; right ].
+  - intros ? h ? ; subst.
+    now rewrite !running_state_is_pure.
+  - red ; intros.
+    specialize (H empty_heap empty_heap erefl).
+    now rewrite !running_state_is_pure in H.
 Qed.
