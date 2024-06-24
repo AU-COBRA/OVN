@@ -134,8 +134,6 @@ Module Type GroupOperationProperties (OVN_impl : Hacspec_ovn.HacspecOVNParams).
   Axiom f_invK : involutive (lower1 f_group_inv).
   Axiom f_invM : {morph (lower1 f_group_inv)  : x y / (lower2 f_prod) x y >-> (lower2 f_prod)  y x}.
 
-  (* Axiom v_Z_Field : GRing.Field (v_G_t_Group.(f_Z)). *)
-
   Axiom prod_inv_cancel : forall x, f_prod (f_group_inv x) x ≈both f_group_one.
 
   Axiom f_one_not_zero : ¬ (f_field_one ≈both f_field_zero).
@@ -545,7 +543,7 @@ Module OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupO
     clear e e1.
     inversion_clear H.
     rewrite !otf_fto; unfold R; rewrite eqxx; unfold assertD.
-    
+
     (* Unfold rhs *)
     unfold OVN.schnorr_zkp.
 
