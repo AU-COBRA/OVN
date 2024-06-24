@@ -161,9 +161,11 @@ Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
   Ltac remove_ret_both_is_pure_from_args :=
     match goal with
     | [ |- context [ ?f (ret_both (is_pure ?x)) ?y ] ] =>
-        rewrite (both_eq_fun_ext (fun k => f k y) (ret_both (is_pure x)) x) ; [ | now rewrite ret_both_is_pure_cancel]
+        setoid_rewrite (both_eq_fun_ext (fun k => f k y) (ret_both (is_pure x)) x) ; [ | now rewrite ret_both_is_pure_cancel]
     | [ |- context [ ?f ?x (ret_both (is_pure ?y)) ] ] =>
-        rewrite (both_eq_fun_ext (fun k => f x k) (ret_both (is_pure y)) y) ; [ | now rewrite ret_both_is_pure_cancel]
+        setoid_rewrite (both_eq_fun_ext (fun k => f x k) (ret_both (is_pure y)) y) ; [ | now rewrite ret_both_is_pure_cancel]
+    | [ |- context [ ?f (ret_both (is_pure ?y)) ] ] =>
+        setoid_rewrite (both_eq_fun_ext f (ret_both (is_pure y)) y) ; [ | now rewrite ret_both_is_pure_cancel]
     end.
 
   Ltac lower_proof proof :=
@@ -1268,8 +1270,8 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       simpl.
       Transparent Build_t_OrZKPCommit.
       unfold Build_t_OrZKPCommit; hnf.
-
-      eapply (r_transR_both (B := t_OrZKPCommit)) ; [ set (H_hash := f_hash _); pattern_lhs_both_pat H_hash ; apply (bind_both_eta) |  hnf ; unfold bind_both at 1, bind_raw_both, both_prog at 1, is_state at 1; set (f_or := fun _ => is_state (bind_both _ _)) ].
+      
+      eapply (r_transR_both (B := t_OrZKPCommit)) ; [ set (H_hash := f_hash _); pattern_lhs_both_pat H_hash ; now rewrite <- (bind_both_eta _ H_hash) |  hnf ; unfold bind_both at 1, bind_raw_both, both_prog at 1, is_state at 1; set (f_or := fun _ => is_state (bind_both _ _)) ].
 
       (* TODO : connect hash to random sample value ! *)
       (* apply (r_const_sample_L) ; [ apply LosslessOp_uniform | intros ]. *)
@@ -1312,18 +1314,19 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
           all: clear ; simpl; push_down_sides.
           all: repeat setoid_rewrite <- expgnE.
 
-          - (* g ^ r * g ^ s ^ d = f_prod (f_g_pow r) (f_pow (f_g_pow s) d) *)
+          (* TODO: some group tactic here ? *)
+          - rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
             rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-            rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-            rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
             rewrite pow_witness_to_field.
-            reflexivity.
+            rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+            now push_down_sides.
           - rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
             rewrite (pow_witness_to_field (is_pure (f_prod _ _))) ; rewrite WitnessToFieldCancel.
             rewrite !pow_witness_to_field.
             now push_down_sides.
           - rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-            now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+            rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+            now push_down_sides.
           - now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
         }
         (* Challenges *)
@@ -1338,8 +1341,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
           all: repeat setoid_rewrite <- expgnE.
           - reflexivity.
           - reflexivity.
-          -
-            rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
+          - rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
             rewrite hacspec_function_guarantees2.
             rewrite !rmorphD.
             rewrite <- !FieldToWitnessOpp.
@@ -1408,7 +1410,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
       Transparent Build_t_OrZKPCommit.
       unfold Build_t_OrZKPCommit; hnf.
 
-      eapply (r_transR_both (B := t_OrZKPCommit)) ; [ set (H_hash := f_hash _); pattern_lhs_both_pat H_hash ; apply (bind_both_eta) |  hnf ; unfold bind_both at 1, bind_raw_both, both_prog at 1, is_state at 1; set (f_or := fun _ => is_state (bind_both _ _)) ].
+      eapply (r_transR_both (B := t_OrZKPCommit)) ; [ set (H_hash := f_hash _); pattern_lhs_both_pat H_hash ; now rewrite <- (bind_both_eta _ H_hash) |  hnf ; unfold bind_both at 1, bind_raw_both, both_prog at 1, is_state at 1; set (f_or := fun _ => is_state (bind_both _ _)) ].
 
       (* TODO : connect hash to random sample value ! *)
       (* apply (r_const_sample_L) ; [ apply LosslessOp_uniform | intros ]. *)
@@ -1447,28 +1449,22 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperat
           all: repeat setoid_rewrite <- expgnE.
 
           + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-            now rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+            rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+            now push_down_sides.
           + now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
           + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
             rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+            unfold g.
             rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-            (* rewrite prod_witness_to_field. *)
-            rewrite <- pow_witness_to_field.
-            reflexivity.
+            rewrite pow_witness_to_field.
+            now push_down_sides.
           + rewrite expg0.
             rewrite mulg1.
-
             rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-            (* rewrite prod_witness_to_field. *)
             rewrite pow_witness_to_field.
-            unfold lower1.
             rewrite (proj1 both_equivalence_is_pure_eq (div_is_prod_inv _ _)).
-
-            (* rewrite WitnessToFieldCancel. *)
             rewrite pow_witness_to_field.
             rewrite WitnessToFieldCancel.
-            (* rewrite pow_witness_to_field. *)
-            (* rewrite prod_witness_to_field. *)
             now push_down_sides.
         }
         (* Challenges *)
