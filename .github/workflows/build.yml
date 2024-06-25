@@ -51,6 +51,7 @@ jobs:
         run: |
           opam repo add coq-released https://coq.inria.fr/opam/released
           opam install --deps-only -j${{ env.JOBS }} .github/coq-ovn.opam.locked
+          opam pin coq-hacspec-ssprove https://github.com/hacspec/hax.git#ssprove_backend_lib
           opam clean -a -c -s --logs
 
       - name: Set up environment
