@@ -30,13 +30,16 @@ all: theory
 # Do not forward these files
 Makefile _CoqProject: ;
 
+html-clean:
+	rm -rf docs
+
 html: all
 	rm -rf docs
 	mkdir docs
 	coqdoc --html --interpolate --parse-comments \
 		--with-header extra/header.html --with-footer extra/footer.html \
 		--toc \
-		--external https://au-cobra.github.io/ConCert/ ConCert \
+		--external ConCert https://au-cobra.github.io/ConCert/ \
 		-R theories OVN \
 		-d docs `find . -type f \( -wholename "*theories/*" \) -name "*.v" ! -wholename "./_opam/*"`
 	cp extra/resources/coqdocjs/*.js docs
