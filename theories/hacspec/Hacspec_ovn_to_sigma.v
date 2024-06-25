@@ -69,7 +69,7 @@ Import GroupScope GRing.Theory.
 
 Import PackageNotation.
 
-From mathcomp Require Import ring.
+(* From mathcomp Require Import ring. *)
 
 (******************************************************************************)
 (*                   OVN instances for Sigma protocols                        *)
