@@ -1,0 +1,46 @@
+Order in type class of generated elements from trait
+- f_Z_t_Field moved up, and t_PartialEq got an extra f_Z added
+
+Import names changed:
+```
+Require Import Crate_Ovn_traits.
+Export Crate_Ovn_traits.
+```
+becomes
+```
+From OVN Require Import Hacspec_ovn_Ovn_traits.
+Export Hacspec_ovn_Ovn_traits.
+```
+
+Put type class instances into section context, that is move function arguments of the form
+```
+ {v_Z : _} `{ t_Sized v_Z} `{ t_Field v_Z}
+```
+to the top of the section. Helps Coq resolve call dependencies. This also requires fixing one some type annotations, by removing the extra arguments.
+
+
+Add:
+```coq
+  Solve All Obligations with now intros ; destruct from_uint_size.
+```
+to help resolve obligations, for memory loctions.
+
+Comment away `t_ParseError` from `letm[ _ ]` (incorrect infered type)
+
+Comment away `t_ControlFlow` (does not exists)
+
+Comment away `ParseError` does not exists and incorrect type.
+
+Replace not with negb, incorrect name!
+
+Add Result_Ok to accumulator for foldi_both_list, incorrect type?
+
+List of replacements or removed objects.
+  (* {v_Z : _} `{ t_Sized v_Z} `{ t_Field v_Z} *)
+  (* {v_G : _} `{ t_Sized v_G} `{ t_Group v_G} *)
+  (* t_SchnorrZKPCommit v_G *)
+  (* t_OrZKPCommit v_G *)
+  (* {v_G : _} {n : both uint_size} `{ t_Sized v_G} `{ t_Group v_G} *)
+  (* t_OvnContractState v_G (both uint_size) *)
+  (*  {v_G : _} {n : both uint_size} {v_A : _} {impl_574521470_ : _} `{ t_Sized v_G} `{ t_Sized v_A} `{ t_Sized impl_574521470_} `{ t_Group v_G} `{ t_HasActions v_A} `{ t_HasReceiveContext impl_574521470_ 'unit} *)
+  (* impl_574521470_ -> t_CastVoteParam or t_RegisterParam or t_TallyParameter *)

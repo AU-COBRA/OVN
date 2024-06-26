@@ -143,7 +143,7 @@ HB.mixin Record is_setoid_lower (S : Type) of eqR S :=
   {
     T : Type ;
 
-    _ : Equality T ;
+    (* _ : Equality T ; *)
 
     F : S -> T ;
     U : T -> S ;
@@ -159,83 +159,180 @@ HB.mixin Record is_setoid_lower (S : Type) of eqR S :=
 
 HB.instance Definition _ (SG : lower_rel) : Finite (T (s := SG)) :=  _.
 
-Definition setoid_lower2 {G : lower_rel} :=
-  fun (op : G -> G -> G) => fun (x y : T) => F (s := G) (op (U (s := G) x) (U (s := G) y)).
+Section setoid_lower_properties.
+  Context {G : lower_rel}.
 
-Definition setoid_lower1 {G : lower_rel} :=
-  fun (op : G -> G) => fun (x : T) => F (s := G) (op (U (s := G) x)).
+  Definition setoid_lower2 :=
+    fun (op : G -> G -> G) => fun (x y : T) => F (s := G) (op (U (s := G) x) (U (s := G) y)).
 
-Definition setoid_lower0 {G : lower_rel} :=
-  fun (x : G) => F (s := G) x.
+  Definition setoid_lower1 :=
+    fun (op : G -> G) => fun (x : T) => F (s := G) (op (U (s := G) x)).
 
-Lemma setoid_lowerA :
-  forall {G : lower_rel} {op : G -> G -> G},
-    setoid_associative (eq_relation := eq_relation) op -> associative (setoid_lower2 op).
-Proof.
-  intros.
-  intros x y z.
-  apply lower_to_eq.
-  unfold setoid_lower2.
-  pose (H (U x) (U y) (U z)).
+  Definition setoid_lower0 :=
+    fun (x : G) => F (s := G) x.
 
-  eapply eqR_trans ; [ apply lower_ext ; apply U_F_cancel | ].
-  eapply eqR_trans ; [ | apply eqR_sym ; eapply (lower_ext _ _ (op^~ (U z))) ; apply U_F_cancel ].
-  apply e.
-Qed.
+  Lemma setoid_lowerA :
+    forall {op : G -> G -> G},
+      setoid_associative (eq_relation := eq_relation) op ->
+      associative (setoid_lower2 op).
+  Proof.
+    intros.
+    intros x y z.
+    apply lower_to_eq.
+    unfold setoid_lower2.
+    pose (H (U x) (U y) (U z)).
 
-Lemma setoid_lower_left_id :
-  forall {G : lower_rel} {e : G} {op : G -> G -> G},
-    setoid_left_id (eq_relation := @eq_relation G) (e) (op) -> left_id (setoid_lower0 e) (setoid_lower2 op).
-Proof.
-  intros.
-  intros x.
-  unfold setoid_lower2, setoid_lower0.
-  replace (x) with (F (U x)) at 2 by apply F_U_cancel.
-  apply lower_to_eq.
-  eapply eqR_trans ; [ eapply (lower_ext _ _ (op^~ (U x))) ; apply U_F_cancel | ].
-  apply (H (U x)).
-Qed.
+    eapply eqR_trans ; [ apply lower_ext ; apply U_F_cancel | ].
+    eapply eqR_trans ; [ | apply eqR_sym ; eapply (lower_ext _ _ (op^~ (U z))) ; apply U_F_cancel ].
+    apply e.
+  Qed.
 
-Lemma setoid_lower_involutive :
-  forall {G : lower_rel} {op : G -> G},
-    setoid_involutive (eq_relation := @eq_relation G) (op) -> involutive (setoid_lower1 op).
-Proof.
-  intros.
-  intros x.
-  unfold setoid_lower1.
-  replace (x) with (F (U x)) at 2 by apply F_U_cancel.
-  apply lower_to_eq.
-  eapply eqR_trans ; [ eapply (lower_ext) ; apply U_F_cancel | ].
-  apply (H (U x)).
-Qed.
+  Lemma setoid_lower_left_id :
+    forall {e : G} {op : G -> G -> G},
+      setoid_left_id (eq_relation := @eq_relation G) (e) (op) ->
+      left_id (setoid_lower0 e) (setoid_lower2 op).
+  Proof.
+    intros.
+    intros x.
+    unfold setoid_lower2, setoid_lower0.
+    replace (x) with (F (U x)) at 2 by apply F_U_cancel.
+    apply lower_to_eq.
+    eapply eqR_trans ; [ eapply (lower_ext _ _ (op^~ (U x))) ; apply U_F_cancel | ].
+    apply (H (U x)).
+  Qed.
 
-Lemma setoid_lower_prod_morph :
-  forall {G : lower_rel} {inv : G -> G} {op : G -> G -> G},
-    (forall x y, eq_relation (inv (op x y)) (op (inv y) (inv x))) ->
-    {morph (setoid_lower1 inv)  : x y / (setoid_lower2 op) x y >-> (setoid_lower2 op) y x}.
-Proof.
-  intros.
-  intros x y.
-  unfold setoid_lower1, setoid_lower2.
-  apply lower_to_eq.
-  eapply eqR_trans ; [ eapply (lower_ext) ; apply U_F_cancel | ].
-  eapply eqR_trans ; [ | apply (eqR_sym) ; eapply (lower_ext _ _ (op _)) ; apply U_F_cancel ].
-  eapply eqR_trans ; [ | apply (eqR_sym) ; eapply (lower_ext _ _ (op^~ _)) ; apply U_F_cancel ].
-  apply (H (U x) (U y)).
-Qed.
+  Lemma setoid_lower_involutive :
+    forall {op : G -> G},
+      setoid_involutive (eq_relation := @eq_relation G) (op) ->
+      involutive (setoid_lower1 op).
+  Proof.
+    intros.
+    intros x.
+    unfold setoid_lower1.
+    replace (x) with (F (U x)) at 2 by apply F_U_cancel.
+    apply lower_to_eq.
+    eapply eqR_trans ; [ eapply (lower_ext) ; apply U_F_cancel | ].
+    apply (H (U x)).
+  Qed.
 
-Lemma setoid_lower_left_inverse :
-  forall {G : lower_rel} {e : G} {inv : G -> G} {op : G -> G -> G},
-    setoid_left_inverse (eq_relation := eq_relation) e inv op -> left_inverse (setoid_lower0 e) (setoid_lower1 inv) (setoid_lower2 op).
-Proof.
-  intros.
-  intros x.
-  unfold setoid_lower0, setoid_lower1, setoid_lower2.
-  apply lower_to_eq.
-  eapply eqR_trans ; [ eapply (lower_ext _ _ (op^~ _)) ; apply U_F_cancel | ].
-  apply (H (U x)).
-Qed.
+  Lemma setoid_lower_prod_morph :
+    forall {inv : G -> G} {op : G -> G -> G},
+      (forall x y, eq_relation (inv (op x y)) (op (inv y) (inv x))) ->
+      {morph (setoid_lower1 inv)  : x y / (setoid_lower2 op) x y >-> (setoid_lower2 op) y x}.
+  Proof.
+    intros.
+    intros x y.
+    unfold setoid_lower1, setoid_lower2.
+    apply lower_to_eq.
+    eapply eqR_trans ; [ eapply (lower_ext) ; apply U_F_cancel | ].
+    eapply eqR_trans ; [ | apply (eqR_sym) ; eapply (lower_ext _ _ (op _)) ; apply U_F_cancel ].
+    eapply eqR_trans ; [ | apply (eqR_sym) ; eapply (lower_ext _ _ (op^~ _)) ; apply U_F_cancel ].
+    apply (H (U x) (U y)).
+  Qed.
 
+  Lemma setoid_lower_left_inverse :
+    forall {e : G} {inv : G -> G} {op : G -> G -> G},
+      setoid_left_inverse (eq_relation := eq_relation) e inv op -> left_inverse (setoid_lower0 e) (setoid_lower1 inv) (setoid_lower2 op).
+  Proof.
+    intros.
+    intros x.
+    unfold setoid_lower0, setoid_lower1, setoid_lower2.
+    apply lower_to_eq.
+    eapply eqR_trans ; [ eapply (lower_ext _ _ (op^~ _)) ; apply U_F_cancel | ].
+    apply (H (U x)).
+  Qed.
+
+  Lemma setoid_lowerC :
+    forall {op : G -> G -> G},
+      setoid_commutative (eq_relation := eq_relation) op ->
+      commutative (setoid_lower2 op).
+  Proof.
+    intros.
+    intros x y.
+    apply lower_to_eq.
+    apply (H (U x) (U y)).
+  Qed.
+
+  Lemma setoid_lower_right_id :
+    forall {e : G} {op : G -> G -> G},
+      setoid_right_id (eq_relation := @eq_relation G) (e) (op) -> right_id (setoid_lower0 e) (setoid_lower2 op).
+  Proof.
+    intros.
+    intros x.
+    unfold setoid_lower2, setoid_lower0.
+    replace (x) with (F (U x)) at 2 by apply F_U_cancel.
+    apply lower_to_eq.
+    eapply eqR_trans ; [ eapply (lower_ext _ _ (op (U x))) ; apply U_F_cancel | ].
+    apply (H (U x)).
+  Qed.
+
+  Lemma setoid_lower_neq :
+    forall x y, ¬ (@eq_relation G x y) -> setoid_lower0 x != setoid_lower0 y.
+  Proof.
+    intros.
+    apply /eqP.
+    red ; intros.
+    apply H.
+    eapply eqR_trans ; [ apply eqR_sym ; apply U_F_cancel | ].
+    eapply eqR_trans ; [ | apply U_F_cancel ].
+    unfold setoid_lower0 in H0.
+    rewrite H0.
+    apply eqR_refl.
+  Qed.
+
+  Lemma setoid_lower_left_zero :
+    forall (z : G) (op : G -> G -> G),
+      setoid_left_zero (eq_relation := @eq_relation G) z op -> left_zero (setoid_lower0 z) (setoid_lower2 op).
+  Proof.
+    intros.
+    intros x.
+    unfold setoid_lower2, setoid_lower0.
+    apply lower_to_eq.
+    eapply eqR_trans ; [ eapply (lower_ext _ _ (op^~ (U x))) ; apply U_F_cancel | ].
+    apply (H (U x)).
+  Qed.
+
+  Lemma setoid_lower_right_zero :
+    forall (z : G) (op : G -> G -> G),
+      setoid_right_zero (eq_relation := @eq_relation G) z op -> right_zero (setoid_lower0 z) (setoid_lower2 op).
+  Proof.
+    intros.
+    intros x.
+    unfold setoid_lower2, setoid_lower0.
+    apply lower_to_eq.
+    eapply eqR_trans ; [ eapply (lower_ext _ _ (op (U x))) ; apply U_F_cancel | ].
+    apply (H (U x)).
+  Qed.
+
+  Lemma setoid_lower_left_distributive :
+    forall (opM : G -> G -> G) (opA : G -> G -> G),
+      setoid_left_distributive (eq_relation := @eq_relation G) opM opA -> left_distributive (setoid_lower2 opM) (setoid_lower2 opA).
+  Proof.
+    intros.
+    intros x y z.
+    unfold setoid_lower2.
+    apply lower_to_eq.
+    eapply eqR_trans ; [ eapply (lower_ext _ _ (opM^~ (U z))) ; apply U_F_cancel | ].
+    eapply eqR_trans ; [ | apply eqR_sym ; eapply (lower_ext _ _ (opA _)) ; apply U_F_cancel ].
+    eapply eqR_trans ; [ | apply eqR_sym ; eapply (lower_ext _ _ (opA^~ _)) ; apply U_F_cancel ].
+    apply (H (U x) (U y) (U z)).
+  Qed.
+
+  Lemma setoid_lower_right_distributive :
+    forall (opM : G -> G -> G) (opA : G -> G -> G),
+      setoid_right_distributive (eq_relation := @eq_relation G) opM opA -> right_distributive (setoid_lower2 opM) (setoid_lower2 opA).
+  Proof.
+    intros.
+    intros x y z.
+    unfold setoid_lower2.
+    apply lower_to_eq.
+    eapply eqR_trans ; [ eapply (lower_ext _ _ (opM _)) ; apply U_F_cancel | ].
+    eapply eqR_trans ; [ | apply eqR_sym ; eapply (lower_ext _ _ (opA _)) ; apply U_F_cancel ].
+    eapply eqR_trans ; [ | apply eqR_sym ; eapply (lower_ext _ _ (opA^~ _)) ; apply U_F_cancel ].
+    apply (H (U x) (U y) (U z)).
+  Qed.
+
+End setoid_lower_properties.
 
 (** Group from setoid *)
 
@@ -243,7 +340,7 @@ HB.mixin Record is_group_op (V : Type) :=
   {
     sg_prod : V -> V -> V ;
     sg_inv : V -> V ;
-    sg_div : V -> V -> V ;
+    (* sg_div : V -> V -> V ; *)
     sg_one : V ;
     sg_g : V ;
   }.
@@ -259,8 +356,7 @@ HB.mixin Record is_setoid_group_properties (V : Type) of group_op V & eqR V :=
     sg_invK : setoid_involutive (eq_relation := @eq_relation V) (sg_inv) ;
     sg_invM : forall x y, eq_relation (sg_inv ((@sg_prod V) x y)) ((@sg_prod V) (sg_inv y) (sg_inv x)) ;
 
-    generator_is_not_one : @eq_relation V sg_one sg_g -> False ;
-    div_is_prod_inv : forall x y, @eq_relation V (sg_div x y) (sg_prod x (sg_inv y)) ;
+    (* div_is_prod_inv : forall x y, @eq_relation V (sg_div x y) (sg_prod x (sg_inv y)) ; *)
   }.
 
 HB.structure Definition setoid_group := { V of group_op V & eqR V & is_setoid_group_properties V }.
@@ -268,12 +364,15 @@ HB.structure Definition setoid_group := { V of group_op V & eqR V & is_setoid_gr
 #[short(type="lowerToGroup")]
   HB.structure Definition setoid_lower_to_group := { V of setoid_lower V & setoid_group V }.
 
-HB.instance Definition _ (SG : lowerToGroup) : isMulBaseGroup T :=
+Definition mul_base_group (SG : lowerToGroup) (* : isMulBaseGroup.phant_axioms T *) :=
   isMulBaseGroup.Build (T (s := SG))
     (setoid_lowerA sg_prodA)
     (setoid_lower_left_id sg_prod1)
     (setoid_lower_involutive sg_invK)
     (setoid_lower_prod_morph sg_invM).
+
+(* TODO: issues here?! *)
+HB.instance Definition _ (SG : lowerToGroup) : isMulBaseGroup T := mul_base_group SG.
 
 HB.instance Definition _ (SG : lowerToGroup) :=
   BaseFinGroup_isGroup.Build (T (s := SG)) (setoid_lower_left_inverse sg_prodV).
@@ -284,12 +383,10 @@ HB.mixin Record is_setoid_field_op (V : Type) :=
   {
     sf_mul : V -> V -> V ;
     sf_inv : V -> V ;
-    sf_div : V -> V -> V ;
     sf_one : V ;
 
     sf_add : V -> V -> V ;
     sf_opp : V -> V ;
-    sf_sub : V -> V -> V ;
     sf_zero : V ;
   }.
 
@@ -322,11 +419,12 @@ HB.mixin Record is_setoid_field_properties (V : Type) of setoid_field_op V & eqR
 
     sf_mulV : forall x, ¬ (@eq_relation V x sf_zero)  -> @eq_relation V (sf_mul (sf_inv x) x) sf_one ;
 
-    (* Sub is defined from add and opp *)
-    sf_sub_by_opp : forall (x y : V), @eq_relation V (sf_sub x y) (sf_add x (sf_opp y)) ;
+    (* (** Extra properties *) *)
+    (* (* Sub is defined from add and opp *) *)
+    (* sf_sub_by_opp : forall (x y : V), @eq_relation V (sf_sub x y) (sf_add x (sf_opp y)) ; *)
 
-    (* Div cancel prod *)
-    sf_div_by_inv : forall (x y : V), @eq_relation V (sf_div x y) (sf_mul x (sf_inv y)) ;
+    (* (* Div cancel prod *) *)
+    (* sf_div_by_inv : forall (x y : V), @eq_relation V (sf_div x y) (sf_mul x (sf_inv y)) ; *)
   }.
 
 HB.structure Definition setoid_field := { V of is_setoid_field_op V & eqR V & is_setoid_field_properties V }.
@@ -334,130 +432,39 @@ HB.structure Definition setoid_field := { V of is_setoid_field_op V & eqR V & is
 #[short(type="lowerToField")]
   HB.structure Definition setoid_lower_to_field := { V of setoid_lower V & setoid_field V }.
 
-Lemma setoid_lowerC :
-  forall {G : lower_rel} {op : G -> G -> G},
-    setoid_commutative (eq_relation := eq_relation) op -> commutative (setoid_lower2 op).
-Proof.
-  intros.
-  intros x y.
-  apply lower_to_eq.
-  apply (H (U x) (U y)).
-Qed.
+  Corollary mul1r_from_mul1_mulC :
+    forall {A} {eq_relation : A -> A -> Prop} {one : A} {opM : A -> A -> A},
+      RelationClasses.Transitive eq_relation ->
+      setoid_left_id (eq_relation := eq_relation) one opM ->
+      setoid_commutative (eq_relation := eq_relation) opM ->
+      setoid_right_id (eq_relation := eq_relation) one opM.
+  Proof.
+    intros.
+    intros x.
+    eapply H ; [ apply H1 | apply H0 ].
+  Qed.
+
+  Corollary mulr0_from_mul0_mulC :
+    forall {A} {eq_relation : A -> A -> Prop} {zero : A} {opM : A -> A -> A},
+      RelationClasses.Transitive eq_relation ->
+      setoid_left_zero (eq_relation := eq_relation) zero opM ->
+      setoid_commutative (eq_relation := eq_relation) opM ->
+      setoid_right_zero (eq_relation := eq_relation) zero opM.
+  Proof.
+    intros.
+    intros x.
+    eapply H ; [ apply H1 | apply H0 ].
+  Qed.
+  
+Definition sf_mul1l {SG : lowerToField} := (sf_mul1 (s := SG)).
+Definition sf_mul1r {SG : lowerToField} := (mul1r_from_mul1_mulC eqR_trans (sf_mul1 (s := SG)) (sf_mulC)).
+Definition sf_mul0r {SG : lowerToField} := (mulr0_from_mul0_mulC eqR_trans (sf_mul0 (s := SG)) (sf_mulC)).
 
 HB.instance Definition _ (SG : lowerToField) :=
   GRing.isNmodule.Build (T (s := SG))
     (setoid_lowerA sf_addA)
     (setoid_lowerC sf_addC)
     (setoid_lower_left_id sf_add0).
-
-Corollary mul1r_from_mul1_mulC :
-  forall {A} {eq_relation : A -> A -> Prop} {one : A} {opM : A -> A -> A},
-    RelationClasses.Transitive eq_relation ->
-  setoid_left_id (eq_relation := eq_relation) one opM ->
-  setoid_commutative (eq_relation := eq_relation) opM ->
-  setoid_right_id (eq_relation := eq_relation) one opM.
-Proof.
-  intros.
-  intros x.
-  eapply H ; [ apply H1 | apply H0 ].
-Qed.
-
-Lemma setoid_lower_right_id :
-  forall {G : lower_rel} {e : G} {op : G -> G -> G},
-    setoid_right_id (eq_relation := @eq_relation G) (e) (op) -> right_id (setoid_lower0 e) (setoid_lower2 op).
-Proof.
-  intros.
-  intros x.
-  unfold setoid_lower2, setoid_lower0.
-  replace (x) with (F (U x)) at 2 by apply F_U_cancel.
-  apply lower_to_eq.
-  eapply eqR_trans ; [ eapply (lower_ext _ _ (op (U x))) ; apply U_F_cancel | ].
-  apply (H (U x)).
-Qed.
-
-Lemma setoid_lower_neq :
-  forall {G : lower_rel},
-  forall x y, ¬ (@eq_relation G x y) -> setoid_lower0 x != setoid_lower0 y.
-Proof.
-  intros.
-  apply /eqP.
-  red ; intros.
-  apply H.
-  eapply eqR_trans ; [ apply eqR_sym ; apply U_F_cancel | ].
-  eapply eqR_trans ; [ | apply U_F_cancel ].
-  unfold setoid_lower0 in H0.
-  rewrite H0.
-  apply eqR_refl.
-Qed.
-
-Lemma setoid_lower_left_zero :
-  forall {G : lower_rel} (z : G) (op : G -> G -> G),
-  setoid_left_zero (eq_relation := @eq_relation G) z op -> left_zero (setoid_lower0 z) (setoid_lower2 op).
-Proof.
-  intros.
-  intros x.
-  unfold setoid_lower2, setoid_lower0.
-  apply lower_to_eq.
-  eapply eqR_trans ; [ eapply (lower_ext _ _ (op^~ (U x))) ; apply U_F_cancel | ].
-  apply (H (U x)).
-Qed.
-
-Corollary mulr0_from_mul0_mulC :
-  forall {A} {eq_relation : A -> A -> Prop} {zero : A} {opM : A -> A -> A},
-    RelationClasses.Transitive eq_relation ->
-  setoid_left_zero (eq_relation := eq_relation) zero opM ->
-  setoid_commutative (eq_relation := eq_relation) opM ->
-  setoid_right_zero (eq_relation := eq_relation) zero opM.
-Proof.
-  intros.
-  intros x.
-  eapply H ; [ apply H1 | apply H0 ].
-Qed.
-
-Lemma setoid_lower_right_zero :
-  forall {G : lower_rel} (z : G) (op : G -> G -> G),
-  setoid_right_zero (eq_relation := @eq_relation G) z op -> right_zero (setoid_lower0 z) (setoid_lower2 op).
-Proof.
-  intros.
-  intros x.
-  unfold setoid_lower2, setoid_lower0.
-  apply lower_to_eq.
-  eapply eqR_trans ; [ eapply (lower_ext _ _ (op (U x))) ; apply U_F_cancel | ].
-  apply (H (U x)).
-Qed.
-
-Lemma setoid_lower_left_distributive :
-  forall {G : lower_rel} (opM : G -> G -> G) (opA : G -> G -> G),
-  setoid_left_distributive (eq_relation := @eq_relation G) opM opA -> left_distributive (setoid_lower2 opM) (setoid_lower2 opA).
-Proof.
-  intros.
-  intros x y z.
-  unfold setoid_lower2.
-  apply lower_to_eq.
-  eapply eqR_trans ; [ eapply (lower_ext _ _ (opM^~ (U z))) ; apply U_F_cancel | ].
-  eapply eqR_trans ; [ | apply eqR_sym ; eapply (lower_ext _ _ (opA _)) ; apply U_F_cancel ].
-  eapply eqR_trans ; [ | apply eqR_sym ; eapply (lower_ext _ _ (opA^~ _)) ; apply U_F_cancel ].
-  apply (H (U x) (U y) (U z)).
-Qed.
-
-Lemma setoid_lower_right_distributive :
-  forall {G : lower_rel} (opM : G -> G -> G) (opA : G -> G -> G),
-  setoid_right_distributive (eq_relation := @eq_relation G) opM opA -> right_distributive (setoid_lower2 opM) (setoid_lower2 opA).
-Proof.
-  intros.
-  intros x y z.
-  unfold setoid_lower2.
-  apply lower_to_eq.
-  eapply eqR_trans ; [ eapply (lower_ext _ _ (opM _)) ; apply U_F_cancel | ].
-  eapply eqR_trans ; [ | apply eqR_sym ; eapply (lower_ext _ _ (opA _)) ; apply U_F_cancel ].
-  eapply eqR_trans ; [ | apply eqR_sym ; eapply (lower_ext _ _ (opA^~ _)) ; apply U_F_cancel ].
-  apply (H (U x) (U y) (U z)).
-Qed.
-
-Definition sf_mul1l {SG : lowerToField} := (sf_mul1 (s := SG)).
-Definition sf_mul1r {SG : lowerToField} := (mul1r_from_mul1_mulC eqR_trans (sf_mul1 (s := SG)) (sf_mulC)).
-
-Definition sf_mul0r {SG : lowerToField} := (mulr0_from_mul0_mulC eqR_trans (sf_mul0 (s := SG)) (sf_mulC)).
 
 HB.instance Definition _ (SG : lowerToField) :=
   GRing.Nmodule_isSemiRing.Build (T (s := SG))
@@ -588,77 +595,123 @@ Section OVN_instantiation.
     is_group_op.Build (both_C)
       (group.(f_prod))
       (group.(f_group_inv))
-      (group.(f_div))
+      (* (group.(div)) *)
       (group.(f_group_one))
       (group.(f_g)).
 
-  Parameter both_group_properties : is_setoid_group_properties.axioms_ (both_C) (group_op.class Hacspec_ovn_to_sigma_both_C__canonical__Hacspec_ovn_to_sigma_group_op) (eqR.class Hacspec_ovn_to_sigma_both_C__canonical__Hacspec_ovn_to_sigma_eqR).
+  Variable both_group_properties : is_setoid_group_properties.axioms_ (both_C) (group_op.class Hacspec_ovn_to_sigma_both_C__canonical__Hacspec_ovn_to_sigma_group_op) (eqR.class Hacspec_ovn_to_sigma_both_C__canonical__Hacspec_ovn_to_sigma_eqR).
 
   HB.instance Definition _ := both_group_properties.
 
   Definition both_setoid_group := Hacspec_ovn_to_sigma_both_C__canonical__Hacspec_ovn_to_sigma_group_op.
 
-  HB.instance Definition _ : setoid_lower_to_group C_type := _.
+  HB.instance Definition _ : is_setoid_lower both_C :=
+    is_setoid_lower.Build both_C C_type (fun x => is_pure x) ret_both ret_both_is_pure_cancel (fun x => erefl)  (fun x y H => proj1 both_equivalence_is_pure_eq H)  (fun x y H => both_eq_fun_ext _ _ _).
 
-  HB.instance Definition _ : fingroup.BaseFinGroup C_type :=
-    _.
-  HB.instance Definition _ : fingroup.BaseFinGroup_isGroup C_type := _.
+  HB.instance Definition _ : fingroup.FinGroup C_type := fingroup.FinGroup.class (Hacspec_ovn_to_sigma_T__canonical__fingroup_FinGroup Hacspec_ovn_to_sigma_both_C__canonical__Hacspec_ovn_to_sigma_setoid_lower_to_group).
 
   Notation v_G_is_group := Hacspec_ovn_to_sigma_C_type__canonical__fingroup_FinGroup.
-
-
-  Check is_setoid_field_op.Build (both_C) f_mul f_inv f_div f_field_one f_add f_opp f_sub f_field_zero.
 
   Definition both_Z : Type := both f_Z.
   Definition Z_type : Type := f_Z.
 
-  Definition f_div := fun x y => (group.(f_Z_t_Field).(f_mul)) x ((group.(f_Z_t_Field).(f_inv)) y).
+  (* Definition f_div := fun x y => (group.(f_Z_t_Field).(f_mul)) x ((group.(f_Z_t_Field).(f_inv)) y). *)
 
   HB.instance Definition _ :=
     is_eq_rel.Build (both_Z) both_equivalence _ _ _.
 
-  HB.instance Definition _ :=
+  HB.instance Definition _ : is_setoid_field_op both_Z :=
     is_setoid_field_op.Build
       both_Z
       (group.(f_Z_t_Field).(f_mul))
       (group.(f_Z_t_Field).(f_inv))
-      f_div
+      (* f_div *)
       (group.(f_Z_t_Field).(f_field_one))
       (group.(f_Z_t_Field).(f_add))
       (group.(f_Z_t_Field).(f_opp))
-      (group.(f_Z_t_Field).(f_sub))
+      (* (group.(f_Z_t_Field).(f_sub)) *)
       (group.(f_Z_t_Field).(f_field_zero)).
 
-  Parameter both_field_properties : is_setoid_field_properties.axioms_ (both_Z) (setoid_field_op.class Hacspec_ovn_to_sigma_both_Z__canonical__Hacspec_ovn_to_sigma_setoid_field_op) (eqR.class Hacspec_ovn_to_sigma_both_Z__canonical__Hacspec_ovn_to_sigma_eqR).
-  
+  Variable both_field_properties : is_setoid_field_properties.axioms_ (both_Z) (setoid_field_op.class Hacspec_ovn_to_sigma_both_Z__canonical__Hacspec_ovn_to_sigma_setoid_field_op) (eqR.class Hacspec_ovn_to_sigma_both_Z__canonical__Hacspec_ovn_to_sigma_eqR).
+
   HB.instance Definition _ := both_field_properties.
-  
+
   Definition both_setoid_field := Hacspec_ovn_to_sigma_both_Z__canonical__Hacspec_ovn_to_sigma_setoid_field.
 
-  HB.instance Definition _ : GRing.Nmodule Z_type := _.
-  HB.instance Definition _ : GRing.Nmodule_isSemiRing Z_type := _.
-  HB.instance Definition _ : GRing.SemiRing_hasCommutativeMul Z_type := _.
-  HB.instance Definition _ : GRing.Nmodule_isZmodule Z_type := _.
-  HB.instance Definition _ : GRing.Ring_hasMulInverse Z_type := _.
-  HB.instance Definition _ : GRing.ComUnitRing_isIntegral Z_type := _. 
-  HB.instance Definition _ : GRing.UnitRing_isField Z_type := _.
+  HB.instance Definition _ : is_setoid_lower both_Z :=
+    is_setoid_lower.Build both_Z Z_type (fun x => is_pure x) ret_both ret_both_is_pure_cancel (fun x => erefl)  (fun x y H => proj1 both_equivalence_is_pure_eq H)  (fun x y H => both_eq_fun_ext _ _ _).
+
+  HB.instance Definition _t : GRing.Field Z_type := GRing.Field.class (Hacspec_ovn_to_sigma_T__canonical__FinRing_Field Hacspec_ovn_to_sigma_both_Z__canonical__Hacspec_ovn_to_sigma_setoid_lower_to_field).
 
   Notation v_Z_is_field := Hacspec_ovn_to_sigma_Z_type__canonical__GRing_Field.
 End OVN_instantiation.
 
-Module HacspecGroup (OVN_impl : Hacspec_ovn.HacspecOVNParams).
-  Module OVN := HacspecOVN OVN_impl.
-  Include OVN.
-  Export OVN.
+Module HacspecGroup (* (OVN_impl : Hacspec_ovn.HacspecOVNParams) *).
+  (* Module OVN := HacspecOVN OVN_impl. *)
+  (* Include OVN. *)
+  (* Export OVN. *)
+Context {v_G : choice_type}.
+
+  Context {v_G_t_Copy : t_Copy v_G}.
+  Instance v_G_t_Copy_instance : t_Copy v_G := v_G_t_Copy.
+
+  Context {v_G_t_PartialEq : t_PartialEq v_G v_G}.
+  Instance v_G_t_PartialEq_temp : t_PartialEq v_G v_G := v_G_t_PartialEq.
+
+  Context {v_G_t_Clone : t_Clone v_G}.
+  Instance v_G_t_Clone_temp : t_Clone v_G := v_G_t_Clone.
+
+  Context {v_G_t_Serialize : t_Serialize v_G}.
+  Instance v_G_t_Serialize_temp : t_Serialize v_G := v_G_t_Serialize.
+
+  Context {v_G_t_Eq : t_Eq v_G}.
+  Instance v_G_t_Eq_temp : t_Eq v_G := v_G_t_Eq.
+
+  Context {v_G_t_Group : t_Group v_G}.
+  Instance v_G_t_Group_temp : t_Group v_G := v_G_t_Group.
+
+  Context {v_A : choice_type}.
+  Context {v_A_t_Sized : t_Sized v_A}.
+  Instance v_A_t_Sized_temp : t_Sized v_A := v_A_t_Sized.
+
+  Context {v_A_t_HasActions : t_HasActions v_A}.
+  Instance v_A_t_HasActions_temp : t_HasActions v_A := v_A_t_HasActions.
+
+  Context {n : both uint_size}.
+  Context {f_field_type_Serializable : Serializable.Serializable v_G_t_Group.(f_Z)}.
+  Instance f_field_type_Serializable_temp : Serializable.Serializable v_G_t_Group.(f_Z) := f_field_type_Serializable.
+
+  Context {f_group_type_Serializable : Serializable.Serializable v_G}.
+  Instance f_group_type_Serializable_temp : Serializable.Serializable v_G := f_group_type_Serializable.
+
+  (* Extra from code *)
+  Context {v_G_t_Sized : t_Sized v_G}.
+  Instance v_G_t_Sized_temp : t_Sized v_G := v_G_t_Sized.
 
   #[local] Open Scope hacspec_scope.
 
-  Definition v_G_is_group := (Hacspec_ovn_to_sigma_C_type__canonical__fingroup_FinGroup (C := v_G)).
-  Definition v_Z_is_field := Hacspec_ovn_to_sigma_Z_type__canonical__GRing_Field v_G_t_Group.
+  Parameter t : is_setoid_group_properties.axioms_ both_C
+                              (group_op.class
+                                 (Hacspec_ovn_to_sigma_both_C__canonical__Hacspec_ovn_to_sigma_group_op
+                                    v_G_t_Group))
+                              (eqR.class
+                                 Hacspec_ovn_to_sigma_both_C__canonical__Hacspec_ovn_to_sigma_eqR).
+
+  Definition v_G_is_group : finGroupType :=
+    (Hacspec_ovn_to_sigma_C_type__canonical__fingroup_FinGroup (C := v_G) v_G_t_Group t).
+
+
+  Parameter t2 : is_setoid_field_properties.axioms_ (both_Z v_G_t_Group) (setoid_field_op.class (Hacspec_ovn_to_sigma_both_Z__canonical__Hacspec_ovn_to_sigma_setoid_field_op v_G_t_Group)) (eqR.class (Hacspec_ovn_to_sigma_both_Z__canonical__Hacspec_ovn_to_sigma_eqR v_G_t_Group)).
+
+  Definition v_Z_is_field : fieldType :=
+    Hacspec_ovn_to_sigma_Z_type__canonical__GRing_Field (C := v_G) v_G_t_Group t2.
+
+  Parameter pow_base : forall x, f_g_pow x ≈both f_pow f_g x. (* TODO: just have this as a definition *)
+  Parameter generator_is_not_one : f_group_one ≈both f_g -> False.
 End HacspecGroup.
 
-Module Type SecureGroup  (OVN_impl : Hacspec_ovn.HacspecOVNParams).
-  Module Group := HacspecGroup OVN_impl.
+Module Type SecureGroup.
+  Module Group := HacspecGroup.
   Export Group.
   Include Group.
   
@@ -668,7 +721,7 @@ Module Type SecureGroup  (OVN_impl : Hacspec_ovn.HacspecOVNParams).
 
 End SecureGroup.
 
-Module HacspecGroupParam (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup OVN_impl) <: GroupParam.
+Module HacspecGroupParam (SG : SecureGroup) <: GroupParam.
   Include SG.
   Export SG.
 
@@ -685,9 +738,9 @@ Module HacspecGroupParam (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureG
 
 End HacspecGroupParam.
 
-Module Type FieldEquality (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup OVN_impl).
+Module Type FieldEquality (SG : SecureGroup).
 
-  Module HacspecGroup := HacspecGroupParam OVN_impl SG.
+  Module HacspecGroup := HacspecGroupParam SG.
   Include HacspecGroup.
   Export HacspecGroup.
 
@@ -740,9 +793,16 @@ Module Type FieldEquality (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : Secure
     cancel WitnessToField FieldToWitness.
 
   (* Properties of the field isomorphism *)
-  Parameter WitnessToFieldAdd : forall x y, WitnessToField (x + y) = is_pure (f_add (ret_both (WitnessToField x)) (ret_both (WitnessToField y))).
+  Definition WitnessToFieldAdd : forall x y, WitnessToField (x + y) = is_pure (f_add (ret_both (WitnessToField x)) (ret_both (WitnessToField y))).
+  Proof.
+    intros. now rewrite rmorphD.
+  Qed.
 
-  Parameter WitnessToFieldMul : forall x y, WitnessToField (Zp_mul x y) = is_pure (f_mul (ret_both (WitnessToField x)) (ret_both (WitnessToField y))).
+  Definition WitnessToFieldMul : forall x y,
+      WitnessToField (Zp_mul x y) = is_pure (f_mul (ret_both (WitnessToField x)) (ret_both (WitnessToField y))).
+  Proof.
+    intros. now rewrite rmorphM.
+  Qed.
 
   Parameter conversion_is_true :
     forall (b : both (v_G_t_Group.(f_Z))),
@@ -774,34 +834,40 @@ Module Type FieldEquality (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : Secure
   (** Field equality *)
   (* the field is given by the Z/#[g]Z, so the OVN field should be equal to this, same as for Schnorr *)
 
+  (* pow spec, could be omitted by using iterated mul in hax code instead *)
   Parameter pow_witness_to_field :
     forall (h : gT) (b : 'Z_q),
       (h ^+ b = is_pure (f_pow (ret_both h) (ret_both (WitnessToField b)))).
 
   Definition FieldToWitnessOpp : (forall (b : both _), Zp_opp (FieldToWitness (is_pure b)) = FieldToWitness (is_pure (f_opp b))).
-  Proof.
     intros.
     setoid_rewrite <- (rmorphN FieldToWitness).
-    unfold "- _".
-    simpl.
-    unfold GRing.Nmodule_isZmodule.opp.
-    Check HB_unnamed_factory_2244.
-    simpl.
-    unfold lower1.
-    rewrite <- hacspec_function_guarantees.
-    reflexivity.
-  Qed.
+    unfold "- _"%R ; simpl.
+    unfold setoid_lower1, U, F, sf_opp ; simpl.
+    f_equal.
+    now Misc.push_down_sides.
+  Defined.
 
-  Parameter WitnessToField_f_inv : forall s, (f_inv (ret_both (WitnessToField s)) = ret_both (WitnessToField (Zp_inv s))).
-
-  Lemma FieldToWitnessOne : FieldToWitness (is_pure f_field_one) = 1%R.
+  Definition WitnessToField_f_inv : forall s, (is_pure (f_inv (ret_both (WitnessToField s))) = (WitnessToField (Zp_inv s))).
   Proof.
     intros.
-    now rewrite GRing.rmorph1.
-  Qed.
+    rewrite <- (F_to_Z_cancel s) at 1.
+
+    setoid_rewrite <- (fmorphV (WitnessToField \o F_to_Z)).
+    simpl.
+    setoid_rewrite (fmorphV (F_to_Z)).
+    now rewrite F_to_Z_cancel.
+  Defined.
+
+  Definition FieldToWitnessOne : FieldToWitness (is_pure f_field_one) = 1%R.
+  Proof.
+    rewrite rmorph1.
+    reflexivity.
+  Defined.
+
 End FieldEquality.
 
-Module OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup OVN_impl) (field_equality : FieldEquality OVN_impl SG).
+Module OVN_schnorr_proof (SG : SecureGroup) (field_equality : FieldEquality SG).
   Module Schnorr := Schnorr field_equality.HacspecGroup.
 
   Import Schnorr.MyParam.
@@ -813,15 +879,15 @@ Module OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureG
   Include field_equality.
   Export field_equality.
 
-  Transparent OVN.schnorr_zkp.
+  Transparent schnorr_zkp.
 
-  Transparent OVN.schnorr_zkp.
+  (* Transparent OVN.schnorr_zkp. *)
   Transparent run.
 
   (* Function mapping between results, to define what equal output means *)
   Definition schnorr_run_post_cond :
     tgt (RUN, (choiceStatement × choiceWitness, choiceTranscript))
-    → OVN.t_SchnorrZKPCommit → Prop.
+    → t_SchnorrZKPCommit → Prop.
   Proof.
     simpl.
     intros [[[l1 l2] l3] l4] [[r1 r2] r3] ; cbn in *.
@@ -836,7 +902,7 @@ Module OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureG
         c (fto (HacspecGroup.g ^+ b), fto b)
         ≈
         r ← sample uniform (2^32) ;;
-        is_state (OVN.schnorr_zkp (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord r)))) (ret_both ((HacspecGroup.g ^+ b))) (ret_both (WitnessToField b)))
+        is_state (schnorr_zkp (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord r)))) (ret_both ((HacspecGroup.g ^+ b))) (ret_both (WitnessToField b)))
           ⦃ fun '(x,_) '(y,_) => schnorr_run_post_cond x y  ⦄.
   Proof.
     intros.
@@ -851,7 +917,7 @@ Module OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureG
     rewrite !otf_fto; unfold R; rewrite eqxx; unfold assertD.
 
     (* Unfold rhs *)
-    unfold OVN.schnorr_zkp.
+    unfold schnorr_zkp.
 
     (* Equate randomness *)
     eapply rsymmetry ;
@@ -866,9 +932,9 @@ Module OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureG
       apply both_equivalence_is_pure_eq.
       repeat unfold let_both at 1.
       Transparent lift1_both.
-      Transparent OVN.Build_t_SchnorrZKPCommit.
+      Transparent Build_t_SchnorrZKPCommit.
       simpl.
-      apply prod_both_pure_eta_3.
+      apply Misc.prod_both_pure_eta_3.
     }
 
     (* Pull out definition of f_hash from triple *)
@@ -896,7 +962,7 @@ Module OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureG
     (* Make rhs pure *)
     set (ret _) ;
     set (prod_b (_,_,_)) ;
-    apply (make_pure (x := r) (y := b0)) ;
+    apply (Misc.make_pure (x := r) (y := b0)) ;
     subst r b0.
 
     (* Show equality of return values *)
@@ -912,11 +978,11 @@ Module OVN_schnorr_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureG
       rewrite WitnessToFieldMul.
 
       (* Equality up to `ret_both (is_pure _)` *)
-      now push_down_sides.
+      now Misc.push_down_sides.
   Qed.
 End OVN_schnorr_proof.
 
-Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup OVN_impl) (field_equality : FieldEquality OVN_impl SG).
+Module Type OVN_or_proof_preconditions (SG : SecureGroup) (field_equality : FieldEquality SG).
 
   Include field_equality.
   Export field_equality.
@@ -1289,7 +1355,7 @@ Module Type OVN_or_proof_preconditions (OVN_impl : Hacspec_ovn.HacspecOVNParams)
 
 End OVN_or_proof_preconditions.
 
-Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup OVN_impl) (field_equality : FieldEquality OVN_impl SG) (proof_args : OVN_or_proof_preconditions OVN_impl SG field_equality).
+Module OVN_or_proof (SG : SecureGroup) (field_equality : FieldEquality SG) (proof_args : OVN_or_proof_preconditions SG field_equality).
   Import field_equality.
   Import proof_args.
 
@@ -1302,7 +1368,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup 
   Include proof_args.
   Export proof_args.
 
-  Transparent OVN.zkp_one_out_of_two.
+  Transparent zkp_one_out_of_two.
 
   (* Mapping between d2, r2 and w, d for sampled randomness *)
   Definition f_d2r2_to_wd : 'Z_q -> 'I_MyAlg.i_witness -> Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)) → Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)) :=
@@ -1388,7 +1454,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup 
 
   (* Mapping between return values for the two OR protocols *)
   Transparent run.
-  Definition hacspec_ret_to_or_sigma_ret : Statement -> OVN.t_OrZKPCommit -> choiceTranscript.
+  Definition hacspec_ret_to_or_sigma_ret : Statement -> t_OrZKPCommit -> choiceTranscript.
   Proof.
     intros hy [[[[[[[[[[r1x r2y] r3a1] r4b1] r5a2] r6b2] r7c] r8d1] r9d2] r10r1] r11r2].
     refine (fto _, fto _, fto _, fto _).
@@ -1408,7 +1474,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup 
   Definition or_run_post_cond :
     choiceStatement ->
     tgt (RUN, (choiceStatement × choiceWitness, choiceTranscript))
-    → OVN.t_OrZKPCommit → Prop.
+    → t_OrZKPCommit → Prop.
   Proof.
     intros stmt a b.
     refine (a = hacspec_ret_to_or_sigma_ret (otf stmt) b).
@@ -1425,7 +1491,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup 
         wr ← sample uniform (2^32) ;;
         dr ← sample uniform (2^32) ;;
         rr ← sample uniform (2^32) ;;
-        is_state (OVN.zkp_one_out_of_two
+        is_state (zkp_one_out_of_two
                     (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord wr))))
                     (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord rr))))
                     (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord dr))))
@@ -1447,7 +1513,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup 
     inversion_clear H.
 
     (* Unfold rhs *)
-    unfold OVN.zkp_one_out_of_two.
+    unfold zkp_one_out_of_two.
 
     rewrite !otf_fto; unfold R.
     apply r_assertD ; [ reflexivity | ].
@@ -1491,7 +1557,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup 
       unfold Build_t_OrZKPCommit; hnf.
 
       (* isolate f_hash *)
-      eapply (r_transR_both (B := t_OrZKPCommit)) ; [ set (H_hash := f_hash _); pattern_lhs_both_pat H_hash ; now rewrite <- (bind_both_eta _ H_hash) |  hnf ; unfold bind_both at 1, bind_raw_both, both_prog at 1, is_state at 1; set (f_or := fun _ => is_state (bind_both _ _)) ].
+      eapply (Misc.r_transR_both (B := t_OrZKPCommit)) ; [ set (H_hash := f_hash _); Misc.pattern_lhs_both_pat H_hash ; now rewrite <- (bind_both_eta _ H_hash) |  hnf ; unfold bind_both at 1, bind_raw_both, both_prog at 1, is_state at 1; set (f_or := fun _ => is_state (bind_both _ _)) ].
 
       (* replace f_hash with random sampling *)
       eapply (hash_is_psudorandom _ _ (fun x => WitnessToField (otf x)) _ _ _ _ [:: _; _; _; _; _; _]).
@@ -1500,7 +1566,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup 
       (* get value from memory *)
       apply getr_set_lhs.
       (* get return value *)
-      apply make_pure ; simpl.
+      apply Misc.make_pure ; simpl.
 
       (* Compare result values *)
       apply r_ret.
@@ -1527,7 +1593,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup 
         {
           apply f_equal.
           repeat rewrite pair_equal_spec ; repeat split.
-          all: clear ; simpl; push_down_sides.
+          all: clear ; simpl; Misc.push_down_sides.
           all: repeat setoid_rewrite <- expgnE.
 
           (* TODO: some group tactic here ? *)
@@ -1535,14 +1601,13 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup 
             rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
             rewrite pow_witness_to_field.
             rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-            now push_down_sides.
+            now Misc.push_down_sides.
           - rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-            rewrite (pow_witness_to_field (is_pure (f_prod _ _))) ; rewrite WitnessToFieldCancel.
-            rewrite !pow_witness_to_field.
-            now push_down_sides.
+            rewrite !pow_witness_to_field; rewrite WitnessToFieldCancel.
+            now Misc.push_down_sides.
           - rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
             rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-            now push_down_sides.
+            now Misc.push_down_sides.
           - now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
         }
         (* Challenges *)
@@ -1553,36 +1618,43 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup 
         {
           apply f_equal.
           repeat (rewrite pair_equal_spec ; split).
-          all: clear ; simpl; push_down_sides.
+          all: clear ; simpl; Misc.push_down_sides.
           all: repeat setoid_rewrite <- expgnE.
           - reflexivity.
           - reflexivity.
-          - rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
-            rewrite hacspec_function_guarantees2.
-            rewrite !rmorphD.
-            rewrite <- !FieldToWitnessOpp.
-            apply f_equal.
-            apply f_equal.
-            rewrite  hacspec_function_guarantees2.
-            simpl.
-            rewrite (rmorphM).
-            rewrite !FieldToWitnessCancel.
-            apply f_equal.
-            rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
-            rewrite hacspec_function_guarantees2.
-            rewrite rmorphD.
-            rewrite <- FieldToWitnessOpp.
-            simpl.
-            rewrite !FieldToWitnessCancel.
-            reflexivity.
-          - rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
-            rewrite hacspec_function_guarantees2.
-            rewrite rmorphD.
-            rewrite <- FieldToWitnessOpp.
+          - fold (both_prog b1).
+            (* assert (forall (x y : 'Z_q), (x - y)%R = (x + (GRing.opp y))%R) by reflexivity. *)
+            (* rewrite H. *)
+            (* rewrite !(proj1 both_equivalence_is_pure_eq (sf_sub_by_opp (s := both_setoid_field v_G_t_Group _) _ _)). *)
 
+            Transparent Hacspec_ovn.sub.
+            unfold Hacspec_ovn.sub.
+
+            rewrite <- (FieldToWitnessCancel (GRing.opp (m * _))%R).
+            setoid_rewrite <- (rmorphD FieldToWitness).
             simpl.
-            rewrite FieldToWitnessCancel.
-            reflexivity.
+            rewrite hacspec_function_guarantees2.
+            rewrite <- (WitnessToFieldCancel (is_pure b1)).
+            setoid_rewrite <- (rmorphD WitnessToField).
+            rewrite (WitnessToFieldAdd).
+
+            setoid_rewrite (rmorphN WitnessToField).
+            rewrite (rmorphM WitnessToField).
+            setoid_rewrite (rmorphD WitnessToField).
+            setoid_rewrite (rmorphN WitnessToField).
+
+            rewrite !WitnessToFieldCancel.
+
+            apply f_equal.
+            now Misc.push_down_sides.
+          - unfold Hacspec_ovn.sub.
+
+            rewrite <- (FieldToWitnessCancel (otf _)%R).
+            setoid_rewrite <- (rmorphN FieldToWitness).
+            setoid_rewrite <- (rmorphD FieldToWitness).
+
+            apply f_equal.
+            now Misc.push_down_sides.
         }
       - clear -H.
         destruct H.
@@ -1628,7 +1700,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup 
       unfold Build_t_OrZKPCommit; hnf.
 
       (* isolate f_hash *)
-      eapply (r_transR_both (B := t_OrZKPCommit)) ; [ set (H_hash := f_hash _); pattern_lhs_both_pat H_hash ; now rewrite <- (bind_both_eta _ H_hash) |  hnf ; unfold bind_both at 1, bind_raw_both, both_prog at 1, is_state at 1; set (f_or := fun _ => is_state (bind_both _ _)) ].
+      eapply (Misc.r_transR_both (B := t_OrZKPCommit)) ; [ set (H_hash := f_hash _); Misc.pattern_lhs_both_pat H_hash ; now rewrite <- (bind_both_eta _ H_hash) |  hnf ; unfold bind_both at 1, bind_raw_both, both_prog at 1, is_state at 1; set (f_or := fun _ => is_state (bind_both _ _)) ].
 
       (* replace f_hash with random sampling *)
       eapply (hash_is_psudorandom _ _ (fun x => WitnessToField (otf x)) _ _ _ _ [:: _; _; _; _; _; _]).
@@ -1637,7 +1709,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup 
       (* get value from memory *)
       apply getr_set_lhs.
       (* get return value *)
-      apply make_pure ; simpl.
+      apply Misc.make_pure ; simpl.
 
       (* Compare result values *)
       apply r_ret.
@@ -1660,27 +1732,29 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup 
         {
           apply f_equal.
           repeat rewrite pair_equal_spec ; repeat split.
-          all: clear ; simpl; push_down_sides.
+          all: clear ; simpl; Misc.push_down_sides.
           all: repeat setoid_rewrite <- expgnE.
 
           + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
             rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-            now push_down_sides.
+            now Misc.push_down_sides.
           + now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
           + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
             rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
             unfold g.
             rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
             rewrite pow_witness_to_field.
-            now push_down_sides.
+            now Misc.push_down_sides.
           + rewrite expg0.
             rewrite mulg1.
             rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
             rewrite pow_witness_to_field.
-            rewrite (proj1 both_equivalence_is_pure_eq (div_is_prod_inv _ _)).
+            Transparent Hacspec_ovn.div.
+            unfold Hacspec_ovn.div.
+            (* rewrite (proj1 both_equivalence_is_pure_eq (div_is_prod_inv _ _)). *)
             rewrite pow_witness_to_field.
             rewrite WitnessToFieldCancel.
-            now push_down_sides.
+            now Misc.push_down_sides.
         }
         (* Challenges *)
         {
@@ -1690,26 +1764,31 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup 
         {
           apply f_equal.
           repeat (rewrite pair_equal_spec ; split).
-          all: clear ; simpl; push_down_sides.
+          all: clear ; simpl; Misc.push_down_sides.
           all: repeat setoid_rewrite <- expgnE.
-          - rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
-            rewrite hacspec_function_guarantees2.
-            rewrite rmorphD.
-            rewrite <- FieldToWitnessOpp.
-            simpl.
-            apply f_equal.
+          - fold (both_prog b0).
+            rewrite <- (FieldToWitnessCancel (GRing.opp (m * _))%R).
+            setoid_rewrite <- (rmorphD FieldToWitness).
+            rewrite <- (WitnessToFieldCancel (is_pure b0)).
+            setoid_rewrite <- (rmorphD WitnessToField).
+
+            rewrite !FieldToWitnessCancel.
+            rewrite <- (FieldToWitnessCancel (m * _)%R).
+
+            setoid_rewrite <- (rmorphN FieldToWitness).
+            setoid_rewrite <- (rmorphD FieldToWitness).
+
+            setoid_rewrite (rmorphM WitnessToField).
+            setoid_rewrite (rmorphD WitnessToField).
+            setoid_rewrite (rmorphN WitnessToField).
+
+            rewrite !WitnessToFieldCancel.
             apply f_equal.
 
-            rewrite hacspec_function_guarantees2.
-            rewrite rmorphM.
+            cbn.
 
-            rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
-            rewrite hacspec_function_guarantees2.
-            rewrite rmorphD.
-            rewrite <- FieldToWitnessOpp.
-            simpl.
-            now rewrite !FieldToWitnessCancel.
-          - rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)).
+            now repeat (Misc.push_down_sides ; apply f_equal).
+          - (* rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)). *)
             rewrite hacspec_function_guarantees2.
             rewrite rmorphD.
             rewrite <- FieldToWitnessOpp.
@@ -1748,7 +1827,7 @@ Module OVN_or_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (SG : SecureGroup 
           wr ← sample uniform (2^32) ;;
           dr ← sample uniform (2^32) ;;
           rr ← sample uniform (2^32) ;;
-          v ← is_state (OVN.zkp_one_out_of_two
+          v ← is_state (zkp_one_out_of_two
                       (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord wr))))
                       (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord rr))))
                       (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord dr))))

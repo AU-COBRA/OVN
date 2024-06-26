@@ -31,7 +31,6 @@ Class t_Field (v_Self : _) `{ t_Copy v_Self} `{ t_PartialEq v_Self v_Self} `{ t_
   f_field_one : (both v_Self) ;
   f_add : (both v_Self -> both v_Self -> both v_Self) ;
   f_opp : (both v_Self -> both v_Self) ;
-  f_sub : (both v_Self -> both v_Self -> both v_Self) ;
   f_mul : (both v_Self -> both v_Self -> both v_Self) ;
   f_inv : (both v_Self -> both v_Self) ;
 }.
@@ -53,6 +52,5 @@ Class t_Group (v_Self : _) `{ t_Copy v_Self} `{ t_PartialEq v_Self v_Self} `{ t_
   f_group_one : (both v_Self) ;
   f_prod : (both v_Self -> both v_Self -> both v_Self) ;
   f_group_inv : (both v_Self -> both v_Self) ;
-  f_div : (both v_Self -> both v_Self -> both v_Self) ;
   f_hash : (both (t_Vec v_Self t_Global) -> both f_Z) ;
 }.
