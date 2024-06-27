@@ -1,3 +1,4 @@
+(* begin details: Imports *)
 From mathcomp Require Import all_ssreflect fingroup.fingroup ssreflect.
 Set Warnings "-notation-overridden,-ambiguous-paths".
 From Crypt Require Import choice_type Package Prelude.
@@ -70,23 +71,34 @@ Import GroupScope GRing.Theory.
 Import PackageNotation.
 
 (* From mathcomp Require Import ring. *)
+(* end details *)
 
 (******************************************************************************)
 (*                   OVN instances for Sigma protocols                        *)
 (*                                                                            *)
-(* Module GroupOperationProperties  has all properties of group operations for*)
-(* - has all properties of group operations for v_G, and field operations for f_Z *)
-(* - Module HacspecGroup ovn implementation with proofs of group operation, to  *)
+(* Module GroupOperationProperties                                            *)
+(* - has all properties of group operations for v_G, and field operations for *)
+(*   f_Z                                                                      *)
+(*                                                                            *)
+(* Module HacspecGroup                                                        *)
+(* - ovn implementation with proofs of group operation, to                    *)
 (*   instantiate HB instances for group and field using hacspec OVN impl      *)
-(* - Module SecureGroup properties for security of group, e.g. prime fields     *)
-(* - Module FieldEquality equality between group field Z/#[g]Z and OVN field and*)
-(*   some properties about the equality                                       *)
-(* - Module OVN_schnorr_proof instantiation of Schnorr proof                    *)
-(* - Module OVN_or_proof_preconditions            *)
-(*   some properties about the equality                                       *)
+(*                                                                            *)
+(* Module SecureGroup                                                         *)
+(* - properties for security of group, e.g. prime fields                      *)
+(*                                                                            *)
+(* Module FieldEquality                                                       *)
+(* - equality between group field Z/#[g]Z and OVN field and some properties   *)
+(*   about the equality                                                       *)
+(*                                                                            *)
+(* Module OVN_schnorr_proof                                                   *)
+(* - instantiation of Schnorr proof                                           *)
+(*                                                                            *)
+(* Module OVN_or_proof_preconditions                                          *)
+(* - some properties about the equality                                       *)
 (******************************************************************************)
 
-(** * GroupOperationProperties. *)
+(** * Setoid relations. *)
 Section setoid_relations.
   Context {S T : Type}.
 
@@ -126,6 +138,8 @@ Section setoid_relations.
   Definition setoid_involutive {eq_relation : S -> S -> Prop} (op : S -> S) := forall x, eq_relation (op (op x)) x.
 End setoid_relations.
 
+(** * Setoid lowering *)
+
 HB.mixin Record is_eq_rel (V : Type) := {
     eq_relation : V -> V -> Prop ;
 
@@ -134,10 +148,9 @@ HB.mixin Record is_eq_rel (V : Type) := {
     eqR_trans : RelationClasses.Transitive eq_relation ;
   }.
 
-(** * Setoid lowering *)
-
 HB.structure Definition eqR := { V of is_eq_rel V }.
 
+(* Quotiented setoid S into T given an equivalence on S *)
 HB.mixin Record is_setoid_lower (S : Type) of eqR S :=
   {
     T : Type ;
@@ -156,6 +169,7 @@ HB.mixin Record is_setoid_lower (S : Type) of eqR S :=
 
 HB.instance Definition _ (SG : lower_rel) : Finite (T (s := SG)) :=  _.
 
+(* * Properties from setoid lower to equality for quotiented type *)
 Section setoid_lower_properties.
   Context {G : lower_rel}.
 
@@ -672,21 +686,18 @@ Module HacspecGroup.
 
   #[local] Open Scope hacspec_scope.
 
-  Parameter t : is_setoid_group_properties.axioms_ both_C
-                              (group_op.class
-                                 (Hacspec_ovn_to_sigma_both_C__canonical__Hacspec_ovn_to_sigma_group_op
-                                    v_G_t_Group))
-                              (eqR.class
-                                 Hacspec_ovn_to_sigma_both_C__canonical__Hacspec_ovn_to_sigma_eqR).
+  Parameter v_G_group_properties : is_setoid_group_properties.axioms_ both_C
+                                     (group_op.class (Hacspec_ovn_to_sigma_both_C__canonical__Hacspec_ovn_to_sigma_group_op v_G_t_Group))
+                                     (eqR.class Hacspec_ovn_to_sigma_both_C__canonical__Hacspec_ovn_to_sigma_eqR).
 
   Definition v_G_is_group : finGroupType :=
-    (Hacspec_ovn_to_sigma_C_type__canonical__fingroup_FinGroup (C := v_G) v_G_t_Group t).
+    (Hacspec_ovn_to_sigma_C_type__canonical__fingroup_FinGroup (C := v_G) v_G_t_Group v_G_group_properties).
 
 
-  Parameter t2 : is_setoid_field_properties.axioms_ (both_Z v_G_t_Group) (setoid_field_op.class (Hacspec_ovn_to_sigma_both_Z__canonical__Hacspec_ovn_to_sigma_setoid_field_op v_G_t_Group)) (eqR.class (Hacspec_ovn_to_sigma_both_Z__canonical__Hacspec_ovn_to_sigma_eqR v_G_t_Group)).
+  Parameter v_Z_field_properties : is_setoid_field_properties.axioms_ (both_Z v_G_t_Group) (setoid_field_op.class (Hacspec_ovn_to_sigma_both_Z__canonical__Hacspec_ovn_to_sigma_setoid_field_op v_G_t_Group)) (eqR.class (Hacspec_ovn_to_sigma_both_Z__canonical__Hacspec_ovn_to_sigma_eqR v_G_t_Group)).
 
   Definition v_Z_is_field : fieldType :=
-    Hacspec_ovn_to_sigma_Z_type__canonical__GRing_Field (C := v_G) v_G_t_Group t2.
+    Hacspec_ovn_to_sigma_Z_type__canonical__GRing_Field (C := v_G) v_G_t_Group v_Z_field_properties.
 
   Parameter pow_base : forall x, f_g_pow x ≈both f_pow f_g x. (* TODO: just have this as a definition *)
   Parameter generator_is_not_one : f_group_one ≈both f_g -> False.
