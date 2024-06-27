@@ -75,8 +75,10 @@ Import PackageNotation.
 (* From mathcomp Require Import ring. *)
 (* end details *)
 
-Module OVN_schnorr_proof (SG : SecureGroup) (field_equality : FieldEquality SG).
-  Module Schnorr := Schnorr field_equality.HacspecGroup.
+(** * Instantiate Schnorr proof *)
+
+Module OVN_schnorr_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
+  Module Schnorr := Schnorr HGPA.HacspecGroup.
 
   Import Schnorr.MyParam.
   Import Schnorr.MyAlg.
@@ -84,8 +86,8 @@ Module OVN_schnorr_proof (SG : SecureGroup) (field_equality : FieldEquality SG).
   Import Schnorr.Sigma.Oracle.
   Import Schnorr.Sigma.
 
-  Include field_equality.
-  Export field_equality.
+  Include HGPA.
+  Export HGPA.
 
   Transparent schnorr_zkp.
 
@@ -181,9 +183,9 @@ Module OVN_schnorr_proof (SG : SecureGroup) (field_equality : FieldEquality SG).
       apply conversion_is_true.
     * rewrite! otf_fto.
       (* Field isomorphism properties *)
-      rewrite WitnessToFieldAdd.
+      rewrite rmorphD.
       rewrite WitnessToFieldCancel.
-      rewrite WitnessToFieldMul.
+      rewrite rmorphM.
 
       (* Equality up to `ret_both (is_pure _)` *)
       now Misc.push_down_sides.

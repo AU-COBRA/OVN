@@ -368,7 +368,7 @@ HB.instance Definition _ (SG : lowerToGroup) : isMulBaseGroup T := mul_base_grou
 HB.instance Definition _ (SG : lowerToGroup) :=
   BaseFinGroup_isGroup.Build (T (s := SG)) (setoid_lower_left_inverse sg_prodV).
 
-(** * Field instation *)
+(** * Field from setoid *)
 
 HB.mixin Record is_setoid_field_op (V : Type) :=
   {

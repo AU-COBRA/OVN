@@ -75,10 +75,10 @@ Import PackageNotation.
 (* From mathcomp Require Import ring. *)
 (* end details *)
 
-Module Type OVN_or_proof_preconditions (SG : SecureGroup) (field_equality : FieldEquality SG).
+Module OVN_or_proof_preconditions (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
+  Include HGPA.
+  Export HGPA.
 
-  Include field_equality.
-  Export field_equality.
   (** * Helper properties *)
 
   Lemma order_ge1 : succn (succn (Zp_trunc q)) = q.
@@ -146,7 +146,7 @@ Module Type OVN_or_proof_preconditions (SG : SecureGroup) (field_equality : Fiel
       rewrite addSn.
       rewrite add0n.
       set (subn _ _).
-      now rewrite (Nat.lt_succ_pred 0 n1).
+      now rewrite (Nat.lt_succ_pred 0 n0).
   Qed.
 
   Lemma mulg_cancel : forall (x : gT) (y : 'Z_q),
@@ -444,12 +444,18 @@ Module Type OVN_or_proof_preconditions (SG : SecureGroup) (field_equality : Fiel
 
   End MyAlg.
 
+  (* * Instantiate sigma protocol *)
   Module Sigma := SigmaProtocol MyParam MyAlg.
 
 End OVN_or_proof_preconditions.
 
-Module OVN_or_proof (SG : SecureGroup) (field_equality : FieldEquality SG) (proof_args : OVN_or_proof_preconditions SG field_equality).
-  Import field_equality.
+(** * OR protocol proofs *)
+(* Shows equality between above code and Hax generated code.   *)
+(* Then proofs SHVZK and extractor correctness for OR protocol *)
+Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
+  Module proof_args := OVN_or_proof_preconditions SG HGPA.
+    
+  Import HGPA.
   Import proof_args.
 
   Import MyParam.
@@ -730,8 +736,8 @@ Module OVN_or_proof (SG : SecureGroup) (field_equality : FieldEquality SG) (proo
             simpl.
             rewrite hacspec_function_guarantees2.
             rewrite <- (WitnessToFieldCancel (is_pure b1)).
-            setoid_rewrite <- (rmorphD WitnessToField).
-            rewrite (WitnessToFieldAdd).
+            (* setoid_rewrite <- (rmorphD WitnessToField). *)
+            (* rewrite (WitnessToFieldAdd). *)
 
             setoid_rewrite (rmorphN WitnessToField).
             rewrite (rmorphM WitnessToField).
@@ -886,9 +892,12 @@ Module OVN_or_proof (SG : SecureGroup) (field_equality : FieldEquality SG) (proo
           - (* rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)). *)
             rewrite hacspec_function_guarantees2.
             rewrite rmorphD.
-            rewrite <- FieldToWitnessOpp.
-            simpl.
-            now rewrite !FieldToWitnessCancel.
+            setoid_rewrite <- (rmorphN FieldToWitness).
+            rewrite !FieldToWitnessCancel.
+            cbn.
+            f_equal.
+            f_equal.
+            now Misc.push_down_sides.
           - reflexivity.
           - reflexivity.
         }

@@ -1,3 +1,5 @@
+`:>` becomes `::` (version based syntax)
+
 Order in type class of generated elements from trait
 - f_Z_t_Field moved up, and t_PartialEq got an extra f_Z added
 

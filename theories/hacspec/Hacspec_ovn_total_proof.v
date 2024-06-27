@@ -87,11 +87,16 @@ Import PackageNotation.
 
 From mathcomp Require Import ring.
 
-From OVN Require Import Hacspec_ovn_to_sigma.
+From OVN Require Import Hacspec_ovn.
+From OVN Require Import Hacspec_helpers.
+From OVN Require Import Hacspec_ovn_group_and_field.
+From OVN Require Import Hacspec_ovn_sigma_setup.
+From OVN Require Import Hacspec_ovn_schnorr.
+From OVN Require Import Hacspec_ovn_or.
 
-Module OVN_proof (OVN_impl : Hacspec_ovn.HacspecOVNParams) (GOP : GroupOperationProperties OVN_impl) (SG : SecureGroup OVN_impl GOP) (schnorr_proof_args : OVN_schnorr_proof_preconditions OVN_impl GOP SG) (or_proof_args : OVN_or_proof_preconditions OVN_impl GOP SG).
-  Module Schnorr_ZKP := OVN_schnorr_proof OVN_impl GOP SG schnorr_proof_args.
-  Module OR_ZKP := OVN_or_proof OVN_impl GOP SG or_proof_args.
+Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
+  Module Schnorr_ZKP := OVN_schnorr_proof SG HGPA.
+  Module OR_ZKP := OVN_or_proof SG HGPA.
 
   Import OR_ZKP.
   Import Schnorr_ZKP.
