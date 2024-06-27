@@ -74,20 +74,19 @@ Import PackageNotation.
 (******************************************************************************)
 (*                   OVN instances for Sigma protocols                        *)
 (*                                                                            *)
-(* Module GroupOperationProperties has all properties of group operations for *)
-(*   v_G, and field operations for f_Z                                        *)
-(* Module HacspecGroup ovn implementation with proofs of group operation, to  *)
+(* Module GroupOperationProperties  has all properties of group operations for*)
+(* - has all properties of group operations for v_G, and field operations for f_Z *)
+(* - Module HacspecGroup ovn implementation with proofs of group operation, to  *)
 (*   instantiate HB instances for group and field using hacspec OVN impl      *)
-(* Module SecureGroup properties for security of group, e.g. prime fields     *)
-(* Module FieldEquality equality between group field Z/#[g]Z and OVN field and*)
+(* - Module SecureGroup properties for security of group, e.g. prime fields     *)
+(* - Module FieldEquality equality between group field Z/#[g]Z and OVN field and*)
 (*   some properties about the equality                                       *)
-(* Module OVN_schnorr_proof instantiation of Schnorr proof                    *)
-(* Module OVN_or_proof_preconditions            *)
+(* - Module OVN_schnorr_proof instantiation of Schnorr proof                    *)
+(* - Module OVN_or_proof_preconditions            *)
 (*   some properties about the equality                                       *)
 (******************************************************************************)
 
-(*** GroupOperationProperties. *)
-
+(** * GroupOperationProperties. *)
 Section setoid_relations.
   Context {S T : Type}.
 
@@ -135,15 +134,13 @@ HB.mixin Record is_eq_rel (V : Type) := {
     eqR_trans : RelationClasses.Transitive eq_relation ;
   }.
 
-(** Setoid lowering *)
+(** * Setoid lowering *)
 
 HB.structure Definition eqR := { V of is_eq_rel V }.
 
 HB.mixin Record is_setoid_lower (S : Type) of eqR S :=
   {
     T : Type ;
-
-    (* _ : Equality T ; *)
 
     F : S -> T ;
     U : T -> S ;
@@ -334,13 +331,12 @@ Section setoid_lower_properties.
 
 End setoid_lower_properties.
 
-(** Group from setoid *)
+(** * Group from setoid *)
 
 HB.mixin Record is_group_op (V : Type) :=
   {
     sg_prod : V -> V -> V ;
     sg_inv : V -> V ;
-    (* sg_div : V -> V -> V ; *)
     sg_one : V ;
     sg_g : V ;
   }.
@@ -355,8 +351,6 @@ HB.mixin Record is_setoid_group_properties (V : Type) of group_op V & eqR V :=
 
     sg_invK : setoid_involutive (eq_relation := @eq_relation V) (sg_inv) ;
     sg_invM : forall x y, eq_relation (sg_inv ((@sg_prod V) x y)) ((@sg_prod V) (sg_inv y) (sg_inv x)) ;
-
-    (* div_is_prod_inv : forall x y, @eq_relation V (sg_div x y) (sg_prod x (sg_inv y)) ; *)
   }.
 
 HB.structure Definition setoid_group := { V of group_op V & eqR V & is_setoid_group_properties V }.
@@ -364,20 +358,19 @@ HB.structure Definition setoid_group := { V of group_op V & eqR V & is_setoid_gr
 #[short(type="lowerToGroup")]
   HB.structure Definition setoid_lower_to_group := { V of setoid_lower V & setoid_group V }.
 
-Definition mul_base_group (SG : lowerToGroup) (* : isMulBaseGroup.phant_axioms T *) :=
+Definition mul_base_group (SG : lowerToGroup) :=
   isMulBaseGroup.Build (T (s := SG))
     (setoid_lowerA sg_prodA)
     (setoid_lower_left_id sg_prod1)
     (setoid_lower_involutive sg_invK)
     (setoid_lower_prod_morph sg_invM).
 
-(* TODO: issues here?! *)
 HB.instance Definition _ (SG : lowerToGroup) : isMulBaseGroup T := mul_base_group SG.
 
 HB.instance Definition _ (SG : lowerToGroup) :=
   BaseFinGroup_isGroup.Build (T (s := SG)) (setoid_lower_left_inverse sg_prodV).
 
-(*** Field instation *)
+(** * Field instation *)
 
 HB.mixin Record is_setoid_field_op (V : Type) :=
   {
@@ -418,13 +411,6 @@ HB.mixin Record is_setoid_field_properties (V : Type) of setoid_field_op V & eqR
     sf_one_not_zero : ¬ (@eq_relation V sf_one sf_zero) ;
 
     sf_mulV : forall x, ¬ (@eq_relation V x sf_zero)  -> @eq_relation V (sf_mul (sf_inv x) x) sf_one ;
-
-    (* (** Extra properties *) *)
-    (* (* Sub is defined from add and opp *) *)
-    (* sf_sub_by_opp : forall (x y : V), @eq_relation V (sf_sub x y) (sf_add x (sf_opp y)) ; *)
-
-    (* (* Div cancel prod *) *)
-    (* sf_div_by_inv : forall (x y : V), @eq_relation V (sf_div x y) (sf_mul x (sf_inv y)) ; *)
   }.
 
 HB.structure Definition setoid_field := { V of is_setoid_field_op V & eqR V & is_setoid_field_properties V }.
@@ -432,33 +418,36 @@ HB.structure Definition setoid_field := { V of is_setoid_field_op V & eqR V & is
 #[short(type="lowerToField")]
   HB.structure Definition setoid_lower_to_field := { V of setoid_lower V & setoid_field V }.
 
-  Corollary mul1r_from_mul1_mulC :
-    forall {A} {eq_relation : A -> A -> Prop} {one : A} {opM : A -> A -> A},
-      RelationClasses.Transitive eq_relation ->
-      setoid_left_id (eq_relation := eq_relation) one opM ->
-      setoid_commutative (eq_relation := eq_relation) opM ->
-      setoid_right_id (eq_relation := eq_relation) one opM.
-  Proof.
-    intros.
-    intros x.
-    eapply H ; [ apply H1 | apply H0 ].
-  Qed.
+Corollary mul1r_from_mul1_mulC :
+  forall {A} {eq_relation : A -> A -> Prop} {one : A} {opM : A -> A -> A},
+    RelationClasses.Transitive eq_relation ->
+    setoid_left_id (eq_relation := eq_relation) one opM ->
+    setoid_commutative (eq_relation := eq_relation) opM ->
+    setoid_right_id (eq_relation := eq_relation) one opM.
+Proof.
+  intros.
+  intros x.
+  eapply H ; [ apply H1 | apply H0 ].
+Qed.
 
-  Corollary mulr0_from_mul0_mulC :
-    forall {A} {eq_relation : A -> A -> Prop} {zero : A} {opM : A -> A -> A},
-      RelationClasses.Transitive eq_relation ->
-      setoid_left_zero (eq_relation := eq_relation) zero opM ->
-      setoid_commutative (eq_relation := eq_relation) opM ->
-      setoid_right_zero (eq_relation := eq_relation) zero opM.
-  Proof.
-    intros.
-    intros x.
-    eapply H ; [ apply H1 | apply H0 ].
-  Qed.
-  
-Definition sf_mul1l {SG : lowerToField} := (sf_mul1 (s := SG)).
-Definition sf_mul1r {SG : lowerToField} := (mul1r_from_mul1_mulC eqR_trans (sf_mul1 (s := SG)) (sf_mulC)).
-Definition sf_mul0r {SG : lowerToField} := (mulr0_from_mul0_mulC eqR_trans (sf_mul0 (s := SG)) (sf_mulC)).
+Corollary mulr0_from_mul0_mulC :
+  forall {A} {eq_relation : A -> A -> Prop} {zero : A} {opM : A -> A -> A},
+    RelationClasses.Transitive eq_relation ->
+    setoid_left_zero (eq_relation := eq_relation) zero opM ->
+    setoid_commutative (eq_relation := eq_relation) opM ->
+    setoid_right_zero (eq_relation := eq_relation) zero opM.
+Proof.
+  intros.
+  intros x.
+  eapply H ; [ apply H1 | apply H0 ].
+Qed.
+
+Definition sf_mul1l {SG : lowerToField} :=
+  (sf_mul1 (s := SG)).
+Definition sf_mul1r {SG : lowerToField} :=
+  (mul1r_from_mul1_mulC eqR_trans (sf_mul1 (s := SG)) (sf_mulC)).
+Definition sf_mul0r {SG : lowerToField} :=
+  (mulr0_from_mul0_mulC eqR_trans (sf_mul0 (s := SG)) (sf_mulC)).
 
 HB.instance Definition _ (SG : lowerToField) :=
   GRing.isNmodule.Build (T (s := SG))
@@ -477,115 +466,121 @@ HB.instance Definition _ (SG : lowerToField) :=
     (setoid_lower_right_zero _ _ sf_mul0r)
     (setoid_lower_neq _ _  sf_one_not_zero).
 
-HB.instance Definition _ (SG : lowerToField) := GRing.SemiRing_hasCommutativeMul.Build (T (s := SG)) (setoid_lowerC sf_mulC).
+HB.instance Definition _ (SG : lowerToField) :=
+  GRing.SemiRing_hasCommutativeMul.Build (T (s := SG)) (setoid_lowerC sf_mulC).
 
-  (* Nmodule is Zmodule *)
-  HB.instance Definition _  (SG : lowerToField) := GRing.Nmodule_isZmodule.Build  (T (s := SG)) (setoid_lower_left_inverse sf_addN).
+(* Nmodule is Zmodule *)
+HB.instance Definition _  (SG : lowerToField) :=
+  GRing.Nmodule_isZmodule.Build  (T (s := SG)) (setoid_lower_left_inverse sf_addN).
 
-  (* Property of equality for fields ! *)
-  Parameter zero_to_zero : forall (SG : lowerToField), forall x, (@eq_relation _ (U (s := SG) x) sf_zero) -> x = setoid_lower0 sf_zero.
-  
-  (* field has mul inverse *)
-  Lemma setoid_lower_mulVr :
-    forall {G : lowerToField},
+(* Property of equality for fields ! *)
+Parameter zero_to_zero : forall (SG : lowerToField), forall x, (@eq_relation _ (U (s := SG) x) sf_zero) -> x = setoid_lower0 sf_zero.
+
+(* field has mul inverse *)
+Lemma setoid_lower_mulVr :
+  forall {G : lowerToField},
     (forall (x : G), ¬ (@eq_relation _ x sf_zero)  -> @eq_relation _ (sf_mul (sf_inv (s := G) x) x) sf_one) ->
     (forall (x : _), (x != setoid_lower0 sf_zero)  -> ((setoid_lower2 sf_mul) ((setoid_lower1 (sf_inv (s := G))) x) x) = setoid_lower0 sf_one).
-  Proof.
-    intros ? ?.
-    intros x Hneq.
-    unfold setoid_lower0 , setoid_lower1 , setoid_lower2.
-    apply lower_to_eq.
-    eapply eqR_trans ; [ eapply (lower_ext _ _ (sf_mul^~ _)) ; apply U_F_cancel | ].
-    apply (H (U x)).
+Proof.
+  intros ? ?.
+  intros x Hneq.
+  unfold setoid_lower0 , setoid_lower1 , setoid_lower2.
+  apply lower_to_eq.
+  eapply eqR_trans ; [ eapply (lower_ext _ _ (sf_mul^~ _)) ; apply U_F_cancel | ].
+  apply (H (U x)).
+  red ; intros.
+  apply (ssrbool.elimN eqP Hneq) ; clear Hneq.
+  now apply zero_to_zero.
+Qed.
+
+Definition f_lower_mulVr_subproof {G : lowerToField} : _ :=
+  proj2 (classical_sets.in_setP ( fun (x : T (s := G)) => x != setoid_lower0 sf_zero ) (fun x => (setoid_lower2 sf_mul) ((setoid_lower1 sf_inv) x) x = setoid_lower0 sf_one)) (setoid_lower_mulVr sf_mulV).
+
+Definition f_lower_mulrV_subproof {G : lowerToField} : _ :=
+  proj2 (classical_sets.in_setP
+           (fun (x : T (s := G)) => x != setoid_lower0 sf_zero )
+           (fun x => setoid_lower2 sf_mul x ((setoid_lower1 sf_inv) x) = setoid_lower0 sf_one)) (fun x H => eq_ind_r (Logic.eq^~ (setoid_lower0 sf_one)) (setoid_lower_mulVr sf_mulV x H) ((setoid_lowerC sf_mulC) x (setoid_lower1 sf_inv x))).
+
+Definition f_lower_unitrP_subproof{G : lowerToField} : forall (x y : T(s := G)),
+    setoid_lower2 sf_mul y x = setoid_lower0 sf_one /\ setoid_lower2 sf_mul x y = setoid_lower0 sf_one ->
+    classical_sets.in_set (λ x0 : _, x0 != setoid_lower0 sf_zero) x.
+Proof.
+  intros ? ? [].
+  unfold classical_sets.in_set.
+  unfold boolp.asbool.
+  destruct boolp.pselect.
+  - reflexivity.
+  - exfalso.
+
+    apply n.
+    apply /eqP.
     red ; intros.
-    apply (ssrbool.elimN eqP Hneq) ; clear Hneq.
-    now apply zero_to_zero.
-  Qed.
+    subst x.
+    rewrite (setoid_lower_right_zero _ _ sf_mul0r) in H.
+    unfold setoid_lower0, setoid_lower2 in *.
+    apply (sf_one_not_zero (s := G)).
 
-  Definition f_lower_mulVr_subproof {G : lowerToField} : _ :=
-    proj2 (classical_sets.in_setP ( fun (x : T (s := G)) => x != setoid_lower0 sf_zero ) (fun x => (setoid_lower2 sf_mul) ((setoid_lower1 sf_inv) x) x = setoid_lower0 sf_one)) (setoid_lower_mulVr sf_mulV).
+    eapply eqR_trans ; [ apply eqR_sym ; apply (U_F_cancel (s := G)) | ].
+    eapply eqR_trans ; [ | apply (U_F_cancel (s := G)) ].
+    rewrite H.
+    apply eqR_refl.
+Qed.
 
-  Definition f_lower_mulrV_subproof {G : lowerToField} : _ :=
-    proj2 (classical_sets.in_setP
-             (fun (x : T (s := G)) => x != setoid_lower0 sf_zero )
-             (fun x => setoid_lower2 sf_mul x ((setoid_lower1 sf_inv) x) = setoid_lower0 sf_one)) (fun x H => eq_ind_r (Logic.eq^~ (setoid_lower0 sf_one)) (setoid_lower_mulVr sf_mulV x H) ((setoid_lowerC sf_mulC) x (setoid_lower1 sf_inv x))).
+Definition f_lower_invr_out{G : lowerToField} : {in [predC classical_sets.in_set (λ x0 : (T (s := G)), x0 != setoid_lower0 sf_zero)],
+      setoid_lower1 sf_inv =1 id}.
+Proof.
+  intros ? ?.
+  rewrite inE in H.
+  rewrite classical_sets.notin_set in H.
+  destruct (x == setoid_lower0 sf_zero) eqn:H0 ; [ clear H | now exfalso ].
+  apply (ssrbool.elimT eqP) in H0.
+  rewrite H0.
 
-  Definition f_lower_unitrP_subproof{G : lowerToField} : forall (x y : T(s := G)),
-      setoid_lower2 sf_mul y x = setoid_lower0 sf_one /\ setoid_lower2 sf_mul x y = setoid_lower0 sf_one ->
-      classical_sets.in_set (λ x0 : _, x0 != setoid_lower0 sf_zero) x.
-  Proof.
-    intros ? ? [].
-    unfold classical_sets.in_set.
-    unfold boolp.asbool.
-    destruct boolp.pselect.
-    - reflexivity.
-    - exfalso.
+  unfold setoid_lower1, setoid_lower0.
+  apply lower_to_eq.
+  eapply eqR_trans ; [ eapply (lower_ext _ _ _) ; apply (U_F_cancel (s := G)) | ].
+  apply (sf_inv0 (s := G)).
+Qed.
 
-      apply n.
-      apply /eqP.
-      red ; intros.
-      subst x.
-      rewrite (setoid_lower_right_zero _ _ sf_mul0r) in H.
-      unfold setoid_lower0, setoid_lower2 in *.
-      apply (sf_one_not_zero (s := G)).
+HB.instance Definition _ (SG : lowerToField) :=
+  GRing.Ring_hasMulInverse.Build (T (s := SG)) (f_lower_mulVr_subproof) (f_lower_mulrV_subproof) (f_lower_unitrP_subproof) (f_lower_invr_out).
 
-      eapply eqR_trans ; [ apply eqR_sym ; apply (U_F_cancel (s := G)) | ].
-      eapply eqR_trans ; [ | apply (U_F_cancel (s := G)) ].
-      rewrite H.
-      apply eqR_refl.
-  Qed.
+(* unit elements are not zero, thus a unit ring and a field *)
+Lemma v_Z_fieldP {SG : lowerToField} : GRing.MathCompCompatField.Field.axiom (T (s := SG)).
+Proof.
+  intros x H.
+  rewrite unitrE.
+  unfold "/".
+  simpl.
+  unfold "^-1"%R.
+  simpl.
+  rewrite (setoid_lowerC sf_mulC).
+  now rewrite (setoid_lower_mulVr sf_mulV) ; [ apply eqxx | ].
+Qed.
 
-  Definition f_lower_invr_out{G : lowerToField} : {in [predC classical_sets.in_set (λ x0 : (T (s := G)), x0 != setoid_lower0 sf_zero)],
-        setoid_lower1 sf_inv =1 id}.
-  Proof.
-    intros ? ?.
-    rewrite inE in H.
-    rewrite classical_sets.notin_set in H.
-    destruct (x == setoid_lower0 sf_zero) eqn:H0 ; [ clear H | now exfalso ].
-    apply (ssrbool.elimT eqP) in H0.
-    rewrite H0.
+HB.instance Definition _ (SG : lowerToField) :=
+  GRing.ComUnitRing_isIntegral.Build (T (s := SG)) (GRing.IdomainMixin v_Z_fieldP).
+HB.instance Definition _ (SG : lowerToField) :=
+  GRing.UnitRing_isField.Build (T (s := SG)) v_Z_fieldP.
 
-    unfold setoid_lower1, setoid_lower0.
-    apply lower_to_eq.
-    eapply eqR_trans ; [ eapply (lower_ext _ _ _) ; apply (U_F_cancel (s := G)) | ].
-    apply (sf_inv0 (s := G)).
-  Qed.
+(* Use simpler notation for field *)
+Notation v_Z_is_field := Hacspec_ovn_to_sigma_T__canonical__FinRing_Field.
 
-  HB.instance Definition _ (SG : lowerToField) :=
-    GRing.Ring_hasMulInverse.Build (T (s := SG)) (f_lower_mulVr_subproof) (f_lower_mulrV_subproof) (f_lower_unitrP_subproof) (f_lower_invr_out).
+(** * OVN instantiation *)
 
-  (* last field axiom, unit elements are not zero *)
-  (* thus a unit ring and a field *)
-  Lemma v_Z_fieldP {SG : lowerToField} : GRing.MathCompCompatField.Field.axiom (T (s := SG)).
-  Proof.
-    intros x H.
-    rewrite unitrE.
-    unfold "/".
-    simpl.
-    unfold "^-1"%R.
-    simpl.
-    rewrite (setoid_lowerC sf_mulC).
-    now rewrite (setoid_lower_mulVr sf_mulV) ; [ apply eqxx | ].
-  Qed.
-
-  HB.instance Definition _ (SG : lowerToField) := GRing.ComUnitRing_isIntegral.Build (T (s := SG)) (GRing.IdomainMixin v_Z_fieldP).
-  HB.instance Definition _ (SG : lowerToField) := GRing.UnitRing_isField.Build (T (s := SG)) v_Z_fieldP.
-
-  (* Use simpler notation for field *)
-  Notation v_Z_is_field := Hacspec_ovn_to_sigma_T__canonical__FinRing_Field.
-
-(*** OVN instantiation *)
-
+(** * OVN Group and Field *)
 Section OVN_instantiation.
-  (* TODO: make into section *)
   Context { C : choice_type }.
   Definition both_C : Type := both C.
   Definition C_type : Type := C.
-  Context { copy : t_Copy C }.
-  Context { partial_eq : t_PartialEq C C }.
-  Context { serialize : t_Serialize C }.
-  Context { clone : t_Clone C }.
-  Context { is_eq : t_Eq C }.
+
+  (* TODO: Cannot find instance in hacspec lib? *)
+  Instance copy : t_Copy C := _.
+  Instance partial_eq : t_PartialEq C C := _.
+  Instance eq : t_Eq C := _.
+  Instance clone : t_Clone C := _.
+  Instance serialize : t_Serialize C := _.
+
   Variable (group : @t_Group C copy partial_eq is_eq clone serialize).
 
   HB.instance Definition _ :=
@@ -595,7 +590,6 @@ Section OVN_instantiation.
     is_group_op.Build (both_C)
       (group.(f_prod))
       (group.(f_group_inv))
-      (* (group.(div)) *)
       (group.(f_group_one))
       (group.(f_g)).
 
@@ -615,8 +609,6 @@ Section OVN_instantiation.
   Definition both_Z : Type := both f_Z.
   Definition Z_type : Type := f_Z.
 
-  (* Definition f_div := fun x y => (group.(f_Z_t_Field).(f_mul)) x ((group.(f_Z_t_Field).(f_inv)) y). *)
-
   HB.instance Definition _ :=
     is_eq_rel.Build (both_Z) both_equivalence _ _ _.
 
@@ -625,11 +617,9 @@ Section OVN_instantiation.
       both_Z
       (group.(f_Z_t_Field).(f_mul))
       (group.(f_Z_t_Field).(f_inv))
-      (* f_div *)
       (group.(f_Z_t_Field).(f_field_one))
       (group.(f_Z_t_Field).(f_add))
       (group.(f_Z_t_Field).(f_opp))
-      (* (group.(f_Z_t_Field).(f_sub)) *)
       (group.(f_Z_t_Field).(f_field_zero)).
 
   Variable both_field_properties : is_setoid_field_properties.axioms_ (both_Z) (setoid_field_op.class Hacspec_ovn_to_sigma_both_Z__canonical__Hacspec_ovn_to_sigma_setoid_field_op) (eqR.class Hacspec_ovn_to_sigma_both_Z__canonical__Hacspec_ovn_to_sigma_eqR).
@@ -641,34 +631,32 @@ Section OVN_instantiation.
   HB.instance Definition _ : is_setoid_lower both_Z :=
     is_setoid_lower.Build both_Z Z_type (fun x => is_pure x) ret_both ret_both_is_pure_cancel (fun x => erefl)  (fun x y H => proj1 both_equivalence_is_pure_eq H)  (fun x y H => both_eq_fun_ext _ _ _).
 
-  HB.instance Definition _t : GRing.Field Z_type := GRing.Field.class (Hacspec_ovn_to_sigma_T__canonical__FinRing_Field Hacspec_ovn_to_sigma_both_Z__canonical__Hacspec_ovn_to_sigma_setoid_lower_to_field).
+  HB.instance Definition _ : GRing.Field Z_type := GRing.Field.class (Hacspec_ovn_to_sigma_T__canonical__FinRing_Field Hacspec_ovn_to_sigma_both_Z__canonical__Hacspec_ovn_to_sigma_setoid_lower_to_field).
 
   Notation v_Z_is_field := Hacspec_ovn_to_sigma_Z_type__canonical__GRing_Field.
 End OVN_instantiation.
 
-Module HacspecGroup (* (OVN_impl : Hacspec_ovn.HacspecOVNParams) *).
-  (* Module OVN := HacspecOVN OVN_impl. *)
-  (* Include OVN. *)
-  (* Export OVN. *)
-Context {v_G : choice_type}.
+(** * Hacspec Group *)
+Module HacspecGroup.
+  Context {v_G : choice_type}.
 
-  Context {v_G_t_Copy : t_Copy v_G}.
-  Instance v_G_t_Copy_instance : t_Copy v_G := v_G_t_Copy.
-
-  Context {v_G_t_PartialEq : t_PartialEq v_G v_G}.
-  Instance v_G_t_PartialEq_temp : t_PartialEq v_G v_G := v_G_t_PartialEq.
-
-  Context {v_G_t_Clone : t_Clone v_G}.
-  Instance v_G_t_Clone_temp : t_Clone v_G := v_G_t_Clone.
-
-  Context {v_G_t_Serialize : t_Serialize v_G}.
-  Instance v_G_t_Serialize_temp : t_Serialize v_G := v_G_t_Serialize.
-
-  Context {v_G_t_Eq : t_Eq v_G}.
-  Instance v_G_t_Eq_temp : t_Eq v_G := v_G_t_Eq.
+  (* TODO: Cannot find instance in hacspec lib? *)
+  Instance v_G_t_copy : t_Copy v_G := _.
+  Instance v_G_t_partial_eq : t_PartialEq v_G v_G := _.
+  Instance v_G_t_eq : t_Eq v_G := _.
+  Instance v_G_t_clone : t_Clone v_G := _.
+  Instance v_G_t_serialize : t_Serialize v_G := _.
 
   Context {v_G_t_Group : t_Group v_G}.
   Instance v_G_t_Group_temp : t_Group v_G := v_G_t_Group.
+
+  Instance f_Z_t_copy : t_Copy f_Z := f_Z_t_Copy.
+  Instance f_Z_t_partial_eq : t_PartialEq f_Z f_Z := f_Z_t_PartialEq.
+  Instance f_Z_t_eq : t_Eq f_Z := f_Z_t_Eq.
+  Instance f_Z_t_clone : t_Clone f_Z := f_Z_t_Clone.
+  Instance f_Z_t_serialize : t_Serialize f_Z := f_Z_t_Serialize.
+
+  Instance f_Z_t_Field' : t_Field f_Z := _.
 
   Context {v_A : choice_type}.
   Context {v_A_t_Sized : t_Sized v_A}.
@@ -678,13 +666,7 @@ Context {v_G : choice_type}.
   Instance v_A_t_HasActions_temp : t_HasActions v_A := v_A_t_HasActions.
 
   Context {n : both uint_size}.
-  Context {f_field_type_Serializable : Serializable.Serializable v_G_t_Group.(f_Z)}.
-  Instance f_field_type_Serializable_temp : Serializable.Serializable v_G_t_Group.(f_Z) := f_field_type_Serializable.
 
-  Context {f_group_type_Serializable : Serializable.Serializable v_G}.
-  Instance f_group_type_Serializable_temp : Serializable.Serializable v_G := f_group_type_Serializable.
-
-  (* Extra from code *)
   Context {v_G_t_Sized : t_Sized v_G}.
   Instance v_G_t_Sized_temp : t_Sized v_G := v_G_t_Sized.
 
@@ -710,17 +692,19 @@ Context {v_G : choice_type}.
   Parameter generator_is_not_one : f_group_one ≈both f_g -> False.
 End HacspecGroup.
 
+(** * Secure Group *)
 Module Type SecureGroup.
   Module Group := HacspecGroup.
   Export Group.
   Include Group.
-  
+
   (* A secure group is of prime order and has a generator *)
   Parameter v_G_prime_order : prime #[ is_pure f_g : v_G_is_group].
   Parameter v_G_g_gen : [set : v_G_is_group] = <[ is_pure f_g : v_G_is_group]>.
 
 End SecureGroup.
 
+(** * Hacspec Group Param *)
 Module HacspecGroupParam (SG : SecureGroup) <: GroupParam.
   Include SG.
   Export SG.
@@ -738,6 +722,7 @@ Module HacspecGroupParam (SG : SecureGroup) <: GroupParam.
 
 End HacspecGroupParam.
 
+(** * Field equality *)
 Module Type FieldEquality (SG : SecureGroup).
 
   Module HacspecGroup := HacspecGroupParam SG.
@@ -748,18 +733,22 @@ Module Type FieldEquality (SG : SecureGroup).
   (* the field is given by the Z/#[g]Z, so the OVN field should be equal to this *)
 
   Program Definition Z_to_F : {rmorphism 'Z_q -> 'F_q} := GRing.ssrfun_idfun__canonical__GRing_RMorphism _.
+  (* begin hide *)
   Next Obligation.
     now rewrite (@pdiv_id q HacspecGroup.prime_order).
   Defined.
   Fail Next Obligation.
+  (* end hide *)
 
   Program Definition F_to_Z : {rmorphism 'F_q -> 'Z_q} := GRing.ssrfun_idfun__canonical__GRing_RMorphism _.
+  (* begin hide *)
   Next Obligation.
     now rewrite (@pdiv_id q HacspecGroup.prime_order).
   Defined.
   Fail Next Obligation.
+  (* end hide *)
 
-  Definition F_to_Z_cancel :
+  Lemma F_to_Z_cancel :
     cancel Z_to_F F_to_Z.
   Proof.
     intros x.
@@ -772,7 +761,7 @@ Module Type FieldEquality (SG : SecureGroup).
     reflexivity.
   Qed.
 
-  Definition Z_to_F_cancel :
+  Lemma Z_to_F_cancel :
     cancel F_to_Z Z_to_F.
   Proof.
     intros x.
@@ -986,7 +975,7 @@ Module Type OVN_or_proof_preconditions (SG : SecureGroup) (field_equality : Fiel
 
   Include field_equality.
   Export field_equality.
-  (*** Helper properties *)
+  (** * Helper properties *)
 
   Lemma order_ge1 : succn (succn (Zp_trunc q)) = q.
   Proof.
@@ -1145,7 +1134,7 @@ Module Type OVN_or_proof_preconditions (SG : SecureGroup) (field_equality : Fiel
     now rewrite expg1.
   Qed.
 
-  (*** OR protocol *)
+  (** * OR protocol *)
   Module MyParam <: SigmaProtocolParams.
 
     Definition Witness : finType := prod (prod (Finite.clone _ 'Z_q) (Finite.clone _ 'bool)) gT.
@@ -1377,6 +1366,7 @@ Module OVN_or_proof (SG : SecureGroup) (field_equality : FieldEquality SG) (proo
       prod2ch (fto ((otf r2) + (m * (otf d2))), fto (otf c - otf d2)).
 
   Lemma f_d2r2_to_wd_bij : forall m c, bijective (f_d2r2_to_wd m c).
+  Proof.
     intros.
     eapply (Bijective (g := fun dr =>
       let '(d2, r2) := (ch2prod dr) in
@@ -1420,6 +1410,7 @@ Module OVN_or_proof (SG : SecureGroup) (field_equality : FieldEquality SG) (proo
       prod2ch (fto ((otf r1) + (m * (otf c - otf d2))), fto (otf d2)).
 
   Lemma f_d1r1_to_wd_bij : forall m c, bijective (f_d1r1_to_wd m c).
+  Proof.
     intros.
     eapply (Bijective (g := fun dr =>
                               let '(d2, r2) := (ch2prod dr) in
@@ -1836,6 +1827,7 @@ Module OVN_or_proof (SG : SecureGroup) (field_equality : FieldEquality SG) (proo
                       (ret_both ((snd (otf (fst b)) == (snd (fst (otf (fst b))) ^+  (fst (fst (otf (snd b)))) * g)) : 'bool))) ;;
           ret (hacspec_ret_to_or_sigma_ret (otf b.1) v)
       }].
+  (* begin hide *)
   Next Obligation.
     eapply (valid_package_cons _ _ _ _ _ _ [] []).
     - apply valid_empty_package.
@@ -1848,6 +1840,7 @@ Module OVN_or_proof (SG : SecureGroup) (field_equality : FieldEquality SG) (proo
     - try (rewrite <- fset0E ; setoid_rewrite @imfset0 ; rewrite in_fset0 ; reflexivity).
   Qed.
   Fail Next Obligation.
+  (* end hide *)
 
   (* Adversary gets no advantage by running hacspec version *)
   Lemma hacspec_vs_RUN_interactive :
@@ -2301,7 +2294,8 @@ Module OVN_or_proof (SG : SecureGroup) (field_equality : FieldEquality SG) (proo
                          #val #[ SOUNDNESS ] : chSoundness → 'bool
         ] A_export A →
       ɛ_soundness A = 0.
-        intros LA A VA.
+  Proof.
+    intros LA A VA.
     apply: eq_rel_perf_ind_eq.
     2,3: apply fdisjoints0.
     simplify_eq_rel temp.

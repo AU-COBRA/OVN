@@ -18,6 +18,7 @@ From Hacspec Require Import LocationUtility.
 From Hacspec Require Import Hacspec_Lib_Comparable.
 From Hacspec Require Import Hacspec_Lib_Pre.
 From Hacspec Require Import Hacspec_Lib.
+From Hacspec Require Import ConCertLib.
 
 Open Scope hacspec_scope.
 Import choice.Choice.Exports.
@@ -30,20 +31,12 @@ Export Hacspec_ovn_Ovn_traits.
 Section Hacspec_OVN.
   Context {v_G : choice_type}.
 
-  Context {v_G_t_Copy : t_Copy v_G}.
-  Instance v_G_t_Copy_instance : t_Copy v_G := v_G_t_Copy.
-
-  Context {v_G_t_PartialEq : t_PartialEq v_G v_G}.
-  Instance v_G_t_PartialEq_temp : t_PartialEq v_G v_G := v_G_t_PartialEq.
-
-  Context {v_G_t_Clone : t_Clone v_G}.
-  Instance v_G_t_Clone_temp : t_Clone v_G := v_G_t_Clone.
-
-  Context {v_G_t_Serialize : t_Serialize v_G}.
-  Instance v_G_t_Serialize_temp : t_Serialize v_G := v_G_t_Serialize.
-
-  Context {v_G_t_Eq : t_Eq v_G}.
-  Instance v_G_t_Eq_temp : t_Eq v_G := v_G_t_Eq.
+  (* TODO: Cannot find instance in hacspec lib? *)
+  #[global] Instance v_G_t_copy : t_Copy v_G := _.
+  #[global] Instance v_G_t_partial_eq : t_PartialEq v_G v_G := _.
+  #[global] Instance v_G_t_eq : t_Eq v_G := _.
+  #[global] Instance v_G_t_clone : t_Clone v_G := _.
+  #[global] Instance v_G_t_serialize : t_Serialize v_G := _.
 
   Context {v_G_t_Group : t_Group v_G}.
   Instance v_G_t_Group_temp : t_Group v_G := v_G_t_Group.
@@ -56,25 +49,12 @@ Section Hacspec_OVN.
   Instance v_A_t_HasActions_temp : t_HasActions v_A := v_A_t_HasActions.
 
   Context {n : both uint_size}.
-  Context {f_field_type_Serializable : Serializable.Serializable v_G_t_Group.(f_Z)}.
-  Instance f_field_type_Serializable_temp : Serializable.Serializable v_G_t_Group.(f_Z) := f_field_type_Serializable.
-
-  Context {f_group_type_Serializable : Serializable.Serializable v_G}.
-  Instance f_group_type_Serializable_temp : Serializable.Serializable v_G := f_group_type_Serializable.
 
   (* Extra from code *)
   Context {v_G_t_Sized : t_Sized v_G}.
   Instance v_G_t_Sized_temp : t_Sized v_G := v_G_t_Sized.
 
   Notation v_Z := f_Z.
-  (* {v_Z : _} `{ t_Sized v_Z} `{ t_Field v_Z} *)
-  (* {v_G : _} `{ t_Sized v_G} `{ t_Group v_G} *)
-  (* t_SchnorrZKPCommit v_G *)
-  (* t_OrZKPCommit v_G *)
-  (* {v_G : _} {n : both uint_size} `{ t_Sized v_G} `{ t_Group v_G} *)
-  (* t_OvnContractState v_G (both uint_size) *)
-  (*  {v_G : _} {n : both uint_size} {v_A : _} {impl_574521470_ : _} `{ t_Sized v_G} `{ t_Sized v_A} `{ t_Sized impl_574521470_} `{ t_Group v_G} `{ t_HasActions v_A} `{ t_HasReceiveContext impl_574521470_ 'unit} *)
-  (* impl_574521470_ -> t_CastVoteParam or t_RegisterParam or t_TallyParameter *)
 
   Equations select_private_voting_key (random : both int32) : both v_Z :=
     select_private_voting_key random  :=
@@ -571,114 +551,97 @@ Solve All Obligations with now intros ; destruct from_uint_size.
 Fail Next Obligation.
 
 (* TODO: Not generated? *)
-  (** Concert lib part **)
-  From ConCert.Utils Require Import Extras.
-  Export Extras.
-  From ConCert.Utils Require Import Automation.
-  Export Automation.
-  From ConCert.Execution Require Import Serializable.
-  Export Serializable.
-  From ConCert.Execution Require Import Blockchain.
-  Export Blockchain.
-  From ConCert.Execution Require Import ContractCommon.
-  Export ContractCommon.
-  From ConCert.Execution Require Import Serializable.
-  Export Serializable.
-  From Hacspec Require Import ConCertLib.
-  Export ConCertLib.
+(** Concert lib part **)
+From ConCert.Utils Require Import Extras.
+Export Extras.
+From ConCert.Utils Require Import Automation.
+Export Automation.
+From ConCert.Execution Require Import Serializable.
+Export Serializable.
+From ConCert.Execution Require Import Blockchain.
+Export Blockchain.
+From ConCert.Execution Require Import ContractCommon.
+Export ContractCommon.
+From ConCert.Execution Require Import Serializable.
+Export Serializable.
+From Hacspec Require Import ConCertLib.
+Export ConCertLib.
 
-  Definition state_OVN : choice_type :=
-    t_OvnContractState.
+Definition state_OVN : choice_type :=
+  t_OvnContractState.
 
-  Definition receive_OVN_cast_vote (ctx : both (t_CastVoteParam)) (st : both (state_OVN)) : both (t_Result ((v_A × state_OVN)) (t_ParseError)) :=
-    cast_vote ctx st.
+Definition receive_OVN_cast_vote (ctx : both (t_CastVoteParam)) (st : both (state_OVN)) : both (t_Result ((v_A × state_OVN)) (t_ParseError)) :=
+  cast_vote ctx st.
 
-  Definition receive_OVN_commit_to_vote (ctx : both (t_CastVoteParam)) (st : both (state_OVN)) : both (t_Result ((v_A × state_OVN)) (t_ParseError)) :=
-    commit_to_vote  ctx st.
+Definition receive_OVN_commit_to_vote (ctx : both (t_CastVoteParam)) (st : both (state_OVN)) : both (t_Result ((v_A × state_OVN)) (t_ParseError)) :=
+  commit_to_vote  ctx st.
 
-  Definition init_OVN (chain : Chain) (ctx : ContractCallContext) (st : state_OVN) : ResultMonad.result (state_OVN) (t_ParseError) :=
-    ResultMonad.Ok st.
+Definition init_OVN (chain : Chain) (ctx : ContractCallContext) (st : state_OVN) : ResultMonad.result (state_OVN) (t_ParseError) :=
+  ResultMonad.Ok st.
 
-  Definition receive_OVN_register (ctx : both (t_RegisterParam)) (st : both (state_OVN)) : both (t_Result ((v_A × state_OVN)) (t_ParseError)) :=
-    register_vote ctx st.
+Definition receive_OVN_register (ctx : both (t_RegisterParam)) (st : both (state_OVN)) : both (t_Result ((v_A × state_OVN)) (t_ParseError)) :=
+  register_vote ctx st.
 
-  Definition receive_OVN_tally (ctx : both (t_TallyParameter)) (st : both (state_OVN)) : both (t_Result ((v_A × state_OVN)) (t_ParseError)) :=
-    tally_votes ctx st.
+Definition receive_OVN_tally (ctx : both (t_TallyParameter)) (st : both (state_OVN)) : both (t_Result ((v_A × state_OVN)) (t_ParseError)) :=
+  tally_votes ctx st.
 
-  Inductive Msg_OVN : Type :=
-  | msg_OVN_cast_vote : t_CastVoteParam -> Msg_OVN
-  | msg_OVN_commit_to_vote : t_CastVoteParam -> Msg_OVN
-  | msg_OVN_register : t_RegisterParam -> Msg_OVN
-  | msg_OVN_tally : t_TallyParameter -> Msg_OVN.
-  #[global] Program Instance state_OVN_t_HasReceiveContext : t_HasReceiveContext (state_OVN) 'unit :=
-    {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result (state_OVN) t_ParseError)) (tt, inl ctx)) : _)|}.
-  Fail Next Obligation.
-  #[global] Program Instance state_OVN_t_Sized : t_Sized (state_OVN) :=
-    fun x =>
-      x.
-  Fail Next Obligation.
-  #[global] Program Instance state_OVN_t_HasActions : t_HasActions (state_OVN).
-  Next Obligation.
-    pose (init_ovn_contract_equation_1 (ret_both tt)).
-    set (solve_lift _) in e.
-    apply b.
-  Defined.
-  Fail Next Obligation.
+Inductive Msg_OVN : Type :=
+| msg_OVN_cast_vote : t_CastVoteParam -> Msg_OVN
+| msg_OVN_commit_to_vote : t_CastVoteParam -> Msg_OVN
+| msg_OVN_register : t_RegisterParam -> Msg_OVN
+| msg_OVN_tally : t_TallyParameter -> Msg_OVN.
+#[global] Program Instance state_OVN_t_HasReceiveContext : t_HasReceiveContext (state_OVN) 'unit :=
+  {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result (state_OVN) t_ParseError)) (tt, inl ctx)) : _)|}.
+Fail Next Obligation.
+#[global] Program Instance state_OVN_t_Sized : t_Sized (state_OVN) :=
+  fun x =>
+    x.
+Fail Next Obligation.
+#[global] Program Instance state_OVN_t_HasActions : t_HasActions (state_OVN).
+Next Obligation.
+  pose (init_ovn_contract_equation_1 (ret_both tt)).
+  set (solve_lift _) in e.
+  apply b.
+Defined.
+Fail Next Obligation.
 
-  Equations receive_OVN (chain : Chain) (ctx : ContractCallContext) (st : state_OVN) (msg : Datatypes.option (Msg_OVN)) : ResultMonad.result (state_OVN * list ActionBody) t_ParseError :=
-    receive_OVN chain ctx st msg  :=
-      match msg with
-      | Some (msg_OVN_cast_vote val) =>
+Equations receive_OVN (chain : Chain) (ctx : ContractCallContext) (st : state_OVN) (msg : Datatypes.option (Msg_OVN)) : ResultMonad.result (state_OVN * list ActionBody) t_ParseError :=
+  receive_OVN chain ctx st msg  :=
+    match msg with
+    | Some (msg_OVN_cast_vote val) =>
         match is_pure (both_prog (receive_OVN_cast_vote (ret_both val) (ret_both st))) with
-           | inl x => ResultMonad.Ok ((snd x), [])
-           | inr x => ResultMonad.Err x
-           end
-      | Some (msg_OVN_commit_to_vote val) =>
-      match is_pure (both_prog (receive_OVN_commit_to_vote (ret_both val) (ret_both st))) with
-           | inl x => ResultMonad.Ok ((snd x), [])
-           | inr x => ResultMonad.Err x
-           end
-      | Some (msg_OVN_register val) =>
+        | inl x => ResultMonad.Ok ((snd x), [])
+        | inr x => ResultMonad.Err x
+        end
+    | Some (msg_OVN_commit_to_vote val) =>
+        match is_pure (both_prog (receive_OVN_commit_to_vote (ret_both val) (ret_both st))) with
+        | inl x => ResultMonad.Ok ((snd x), [])
+        | inr x => ResultMonad.Err x
+        end
+    | Some (msg_OVN_register val) =>
         match is_pure (both_prog (receive_OVN_register (ret_both val) (ret_both st))) with
-           | inl x => ResultMonad.Ok ((snd x), [])
-           | inr x => ResultMonad.Err x
-           end
-      | Some (msg_OVN_tally val) =>
-      match (is_pure (both_prog (receive_OVN_tally (ret_both val) (ret_both st)))) with
-           | inl x => ResultMonad.Ok ((snd x), [])
-           | inr x => ResultMonad.Err x
-           end
-      | _ =>
+        | inl x => ResultMonad.Ok ((snd x), [])
+        | inr x => ResultMonad.Err x
+        end
+    | Some (msg_OVN_tally val) =>
+        match (is_pure (both_prog (receive_OVN_tally (ret_both val) (ret_both st)))) with
+        | inl x => ResultMonad.Ok ((snd x), [])
+        | inr x => ResultMonad.Err x
+        end
+    | _ =>
         ResultMonad.Err tt
-      end : ResultMonad.result (state_OVN * list ActionBody) t_ParseError.
-  Fail Next Obligation.
+    end : ResultMonad.result (state_OVN * list ActionBody) t_ParseError.
+Fail Next Obligation.
 
-  Ltac make_hacspec_serializable :=
-    (serialize_enum ; repeat (refine nseq_serializable ; serialize_enum)
-    ; try ( exact f_group_type_Serializable
-            || exact f_field_type_Serializable
-            ||exact hacspec_int_serializable
-            || exact bool_serializable
-            || exact unit_serializable)).
+#[global] Instance state_OVN_Serializable : Serializable (state_OVN) := _.
+#[global] Instance t_RegisterParam_Serializable : Serializable t_RegisterParam := _.
+#[global] Instance t_CastVoteParam_Serializable : Serializable t_TallyParameter := _.
+#[global] Program Instance Msg_OVN_Serializable : Serializable Msg_OVN :=
+  Derive Serializable Msg_OVN_rect < msg_OVN_cast_vote , msg_OVN_commit_to_vote, msg_OVN_register,msg_OVN_tally >.
+Fail Next Obligation.
 
-  #[global] Program Instance state_OVN_Serializable : Serializable (state_OVN) :=
-    ltac:(make_hacspec_serializable).
-  Fail Next Obligation.
-
-  #[global] Program Instance t_RegisterParam_Serializable : Serializable t_RegisterParam :=
-    ltac:(make_hacspec_serializable).
-  Fail Next Obligation.
-
-  #[global] Program Instance t_CastVoteParam_Serializable : Serializable t_TallyParameter :=
-    ltac:(make_hacspec_serializable).
-  Fail Next Obligation.
-
-  #[global] Program Instance Msg_OVN_Serializable : Serializable Msg_OVN :=
-    Derive Serializable Msg_OVN_rect < msg_OVN_cast_vote , msg_OVN_commit_to_vote, msg_OVN_register,msg_OVN_tally >.
-  Fail Next Obligation.
-
-  Definition contract_OVN  : @Contract _ (state_OVN) (Msg_OVN) (state_OVN) (t_ParseError) state_OVN_Serializable Msg_OVN_Serializable state_OVN_Serializable _ :=
-    build_contract init_OVN receive_OVN.
+Definition contract_OVN  : @Contract _ (state_OVN) (Msg_OVN) (state_OVN) (t_ParseError) state_OVN_Serializable Msg_OVN_Serializable state_OVN_Serializable _ :=
+  build_contract init_OVN receive_OVN.
 
 End Hacspec_OVN.
 
