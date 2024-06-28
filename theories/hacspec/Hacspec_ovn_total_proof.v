@@ -101,18 +101,15 @@ Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
   Import OR_ZKP.
   Import Schnorr_ZKP.
 
-  (* Redifinition *)
-  #[export] Instance Bool_pos : Positive #|'bool|.
-  Proof.
-    rewrite card_bool. done.
-  Defined.
-
-  Axiom power_is_pos : Positive (2^32).
-
-  Check (_ : 'unit).
-
   Include HGPA.
-  (* Include HacspecGroup. *)
+
+  (* (* Redifinition *) *)
+  (* #[export] Instance Bool_pos : Positive #|'bool|. *)
+  (* Proof. *)
+  (*   rewrite card_bool. done. *)
+  (* Defined. *)
+
+  Definition power_is_pos : Positive (2^32). Proof. easy. Qed.
 
   (* Definition choiceWitness : choice_type := 'fin #||. *)
   Notation " 'chState' " :=
@@ -124,11 +121,11 @@ Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
     (in custom pack_type at level 2).
 
   Notation " 'chInp' " :=
-    (t_OvnContractState (n := HacspecGroup.n) × t_CastVoteParam)
+    (t_OvnContractState × t_CastVoteParam)
     (in custom pack_type at level 2).
 
   Notation " 'chOut' " :=
-    (chOption (t_OvnContractState (n := HacspecGroup.n)))
+    (chOption (t_OvnContractState))
     (in custom pack_type at level 2).
 
 
@@ -143,8 +140,8 @@ Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
     [package
       #def #[ MAXIMUM_BALLOT_SECRECY ] ('(state, ctx) : chInp) : chOut
       {
-        temp ← is_state (cast_vote (v_G_t_Group := HGPA.HacspecGroup.v_G_t_Group) (n := HGPA.HacspecGroup.n) (ret_both (ctx : t_CastVoteParam)) (ret_both (state : t_OvnContractState (n := HacspecGroup.n)))) ;;
-        match temp : t_Result (HacspecGroup.v_A × t_OvnContractState (n := HacspecGroup.n)) _ with
+        temp ← is_state (cast_vote (ret_both (ctx : t_CastVoteParam)) (ret_both (state : t_OvnContractState))) ;;
+        match temp : t_Result (HacspecGroup.v_A × t_OvnContractState) _ with
         | Result_Ok_case (_, s) => ret (Some s)
         | Result_Err_case _ => ret None
         end
@@ -178,20 +175,20 @@ Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
         let p_i := f_cvp_i ctx : both int32 in
         x ← is_state (f_g_pow (f_cvp_xi ctx)) ;;
         h ← is_state (compute_g_pow_yi (cast_int (WS2 := _) (f_cvp_i ctx)) (f_g_pow_xis state)) ;;
-        z ← sample (uniform (H := _) #|Finite.clone _ 'F_q|) ;;
-        c ← sample (uniform (H := _) #|Finite.clone _ 'F_q|) ;;
+        z ← sample (uniform (H := Zq_pos) #|Finite.clone _ 'F_q|) ;;
+        c ← sample (uniform (H := Zq_pos) #|Finite.clone _ 'F_q|) ;;
         let y := g ^+ otf z in
         '(zkp_xhy, zkp_abab, zkp_c, zkp_rdrd) ← MyAlg.Simulate (fto (x : gT,h : gT,y)) c ;;
         let '(x,h,y) := otf zkp_xhy in
         let '(zkp_a1, zkp_b1, zkp_a2, zkp_b2) := otf zkp_abab in
         let '(zkp_r1, zkp_d1, zkp_r2, zkp_d2) := otf zkp_rdrd in
 
-        let zkp_c := OR_ZKP.WitnessToField (otf zkp_c : 'F_q) : f_Z in
+        let zkp_c := WitnessToField (otf zkp_c : 'F_q) : f_Z in
 
-        let zkp_r1 := OR_ZKP.WitnessToField (zkp_r1 : 'F_q) : f_Z in
-        let zkp_d1 := OR_ZKP.WitnessToField (zkp_d1 : 'F_q) : f_Z in
-        let zkp_r2 := OR_ZKP.WitnessToField (zkp_r2 : 'F_q) : f_Z in
-        let zkp_d2 := OR_ZKP.WitnessToField (zkp_d2 : 'F_q) : f_Z in
+        let zkp_r1 := WitnessToField (zkp_r1 : 'F_q) : f_Z in
+        let zkp_d1 := WitnessToField (zkp_d1 : 'F_q) : f_Z in
+        let zkp_r2 := WitnessToField (zkp_r2 : 'F_q) : f_Z in
+        let zkp_d2 := WitnessToField (zkp_d2 : 'F_q) : f_Z in
         res ← is_state (
             letb zkp_vi :=
               Build_t_OrZKPCommit
@@ -226,6 +223,7 @@ Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
     easy.
   Qed.
   Next Obligation.
+    easy.
     eapply (valid_package_cons _ _ _ _ _ _ [] []).
     - apply valid_empty_package.
     - intros [].

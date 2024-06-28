@@ -75,35 +75,13 @@ Import PackageNotation.
 (* From mathcomp Require Import ring. *)
 (* end details *)
 
-Module OVN_or_proof_preconditions (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
+(** * OR protocol *)
+(* Setup and definitions for the OR protocol *)
+(* This allows us to instantiate the SigmaProtocol library *)
+Module OVN_or_proof_preconditions (HGPA : HacspecGroupParamAxiom).
   Include HGPA.
   Export HGPA.
 
-  (* begin details : Positivity checks *)
-  #[export] Instance positive_gT : Positive #|HacspecGroup.gT|.
-  Proof.
-    apply /card_gt0P. exists HacspecGroup.g. auto.
-  Qed.
-
-  #[export] Instance Bool_pos : Positive #|'bool|.
-  Proof.
-    rewrite card_bool. done.
-  Defined.
-
-  #[export] Instance Zq_pos : Positive #|Finite.clone _ 'Z_q|.
-  Proof.
-    apply /card_gt0P. exists 0%R. auto.
-  Defined.
-
-  #[export] Instance prod_pos : forall {A B : finType}, Positive #|A| -> Positive #|B| -> Positive #|(prod A B : finType)|.
-  Proof.
-    intros.
-    rewrite card_prod.
-    now apply Positive_prod.
-  Defined.
-  (* end details *)
-
-  (** * OR protocol *)
   Module MyParam <: SigmaProtocolParams.
 
     Definition Witness : finType := prod (prod (Finite.clone _ 'Z_q) (Finite.clone _ 'bool)) gT.
@@ -298,8 +276,8 @@ End OVN_or_proof_preconditions.
 (** * OR protocol proofs *)
 (* Shows equality between above code and Hax generated code.   *)
 (* Then proofs SHVZK and extractor correctness for OR protocol *)
-Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
-  Module proof_args := OVN_or_proof_preconditions SG HGPA.
+Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
+  Module proof_args := OVN_or_proof_preconditions HGPA.
 
   Import HGPA.
   Import proof_args.

@@ -83,6 +83,7 @@ Import PackageNotation.
 (******************************************************************************)
 
 (** * Setoid relations. *)
+(* Define a version of relations like associativity and commutivitiy, using setoid equality instead of [=] *)
 Section setoid_relations.
   Context {S T : Type}.
 
@@ -123,6 +124,7 @@ Section setoid_relations.
 End setoid_relations.
 
 (** * Setoid lowering *)
+(* Given a setoid, we can construct a quotient type given an instance of [setoid_lower] *)
 
 HB.mixin Record is_eq_rel (V : Type) := {
     eq_relation : V -> V -> Prop ;
@@ -153,7 +155,7 @@ HB.mixin Record is_setoid_lower (S : Type) of eqR S :=
 
 HB.instance Definition _ (SG : lower_rel) : Finite (T (s := SG)) :=  _.
 
-(* * Properties from setoid lower to equality for quotiented type *)
+(* Properties from setoid lowers to equality in the quotient type *)
 Section setoid_lower_properties.
   Context {G : lower_rel}.
 
@@ -330,6 +332,8 @@ Section setoid_lower_properties.
 End setoid_lower_properties.
 
 (** * Group from setoid *)
+(* Given group-like structure on the setoid, we can construct a group on the quotiented type. *)
+(* We define group-like structure by [is_group_op] and [is_setoid_group_properties].          *)
 
 HB.mixin Record is_group_op (V : Type) :=
   {
@@ -353,24 +357,28 @@ HB.mixin Record is_setoid_group_properties (V : Type) of group_op V & eqR V :=
 
 HB.structure Definition setoid_group := { V of group_op V & eqR V & is_setoid_group_properties V }.
 
+(* Given setoid lower relation and a setoid with group-like structure, we can lower to a group *)
 #[short(type="lowerToGroup")]
   HB.structure Definition setoid_lower_to_group := { V of setoid_lower V & setoid_group V }.
 
-Definition mul_base_group (SG : lowerToGroup) :=
+(* We can define multiplicative group *)
+HB.instance Definition _ (SG : lowerToGroup) : isMulBaseGroup T :=
   isMulBaseGroup.Build (T (s := SG))
     (setoid_lowerA sg_prodA)
     (setoid_lower_left_id sg_prod1)
     (setoid_lower_involutive sg_invK)
     (setoid_lower_prod_morph sg_invM).
 
-HB.instance Definition _ (SG : lowerToGroup) : isMulBaseGroup T := mul_base_group SG.
-
+(* The multiplicative group is a finite group, giving us an element of [fingroup.FinGroup] *)
+(* from any setoid with group-like structure *)
 HB.instance Definition _ (SG : lowerToGroup) :=
   BaseFinGroup_isGroup.Build (T (s := SG)) (setoid_lower_left_inverse sg_prodV).
 
 (** * Field from setoid *)
+(* Similarly given field-like structure on the setoid, we can construct a field on the quotiented *)
+(* type. We define field-like structure by [is_field_op] and [is_setoid_field_properties].        *)
 
-HB.mixin Record is_setoid_field_op (V : Type) :=
+HB.mixin Record is_field_op (V : Type) :=
   {
     sf_mul : V -> V -> V ;
     sf_inv : V -> V ;
@@ -381,9 +389,9 @@ HB.mixin Record is_setoid_field_op (V : Type) :=
     sf_zero : V ;
   }.
 
-HB.structure Definition setoid_field_op := { V of is_setoid_field_op V }.
+HB.structure Definition field_op := { V of is_field_op V }.
 
-HB.mixin Record is_setoid_field_properties (V : Type) of setoid_field_op V & eqR V :=
+HB.mixin Record is_setoid_field_properties (V : Type) of field_op V & eqR V :=
   {
     (** Guarantees about the field operations *)
     (* Addition is assoc, commutative and cancel with zero and opp *)
@@ -411,11 +419,14 @@ HB.mixin Record is_setoid_field_properties (V : Type) of setoid_field_op V & eqR
     sf_mulV : forall x, ¬ (@eq_relation V x sf_zero)  -> @eq_relation V (sf_mul (sf_inv x) x) sf_one ;
   }.
 
-HB.structure Definition setoid_field := { V of is_setoid_field_op V & eqR V & is_setoid_field_properties V }.
+(* Given setoid lower relation and a setoid with field-like structure, we can lower to a field *)
+HB.structure Definition setoid_field := { V of is_field_op V & eqR V & is_setoid_field_properties V }.
 
 #[short(type="lowerToField")]
   HB.structure Definition setoid_lower_to_field := { V of setoid_lower V & setoid_field V }.
 
+(* begin details : mul1r and mul0r from mul1 and mul0 using mulC *)
+(* We define mul1r from mul1 and mulC *)
 Corollary mul1r_from_mul1_mulC :
   forall {A} {eq_relation : A -> A -> Prop} {one : A} {opM : A -> A -> A},
     RelationClasses.Transitive eq_relation ->
@@ -428,7 +439,8 @@ Proof.
   eapply H ; [ apply H1 | apply H0 ].
 Qed.
 
-Corollary mulr0_from_mul0_mulC :
+(* We define mulr0 from mul0 and mulC *)
+Corollary mul0r_from_mul0_mulC :
   forall {A} {eq_relation : A -> A -> Prop} {zero : A} {opM : A -> A -> A},
     RelationClasses.Transitive eq_relation ->
     setoid_left_zero (eq_relation := eq_relation) zero opM ->
@@ -445,8 +457,10 @@ Definition sf_mul1l {SG : lowerToField} :=
 Definition sf_mul1r {SG : lowerToField} :=
   (mul1r_from_mul1_mulC eqR_trans (sf_mul1 (s := SG)) (sf_mulC)).
 Definition sf_mul0r {SG : lowerToField} :=
-  (mulr0_from_mul0_mulC eqR_trans (sf_mul0 (s := SG)) (sf_mulC)).
+  (mul0r_from_mul0_mulC eqR_trans (sf_mul0 (s := SG)) (sf_mulC)).
+(* end details *)
 
+(* Our definitions get us an Nmodule, which is a SemiRing, with commutative multiplication, and thus we get a Zmodule, thus a ring *)
 HB.instance Definition _ (SG : lowerToField) :=
   GRing.isNmodule.Build (T (s := SG))
     (setoid_lowerA sf_addA)
@@ -467,10 +481,10 @@ HB.instance Definition _ (SG : lowerToField) :=
 HB.instance Definition _ (SG : lowerToField) :=
   GRing.SemiRing_hasCommutativeMul.Build (T (s := SG)) (setoid_lowerC sf_mulC).
 
-(* Nmodule is Zmodule *)
 HB.instance Definition _  (SG : lowerToField) :=
   GRing.Nmodule_isZmodule.Build  (T (s := SG)) (setoid_lower_left_inverse sf_addN).
 
+(* begin details : we lower mul inverse *)
 (* Property of equality for fields ! *)
 Parameter zero_to_zero : forall (SG : lowerToField), forall x, (@eq_relation _ (U (s := SG) x) sf_zero) -> x = setoid_lower0 sf_zero.
 
@@ -539,7 +553,9 @@ Proof.
   eapply eqR_trans ; [ eapply (lower_ext _ _ _) ; apply (U_F_cancel (s := G)) | ].
   apply (sf_inv0 (s := G)).
 Qed.
+(* end details : we lower mul inverse *)
 
+(* We now get field, since we have a ring with multiplicative inverse *)
 HB.instance Definition _ (SG : lowerToField) :=
   GRing.Ring_hasMulInverse.Build (T (s := SG)) (f_lower_mulVr_subproof) (f_lower_mulrV_subproof) (f_lower_unitrP_subproof) (f_lower_invr_out).
 
@@ -561,73 +577,5 @@ HB.instance Definition _ (SG : lowerToField) :=
 HB.instance Definition _ (SG : lowerToField) :=
   GRing.UnitRing_isField.Build (T (s := SG)) v_Z_fieldP.
 
-(* Use simpler notation for field *)
+(* Finally we get a field type, given a setoid with field-like structure *)
 Notation v_Z_is_field := Hacspec_ovn_group_and_field_T__canonical__FinRing_Field.
-
-(** * OVN Group and Field *)
-Section OVN_instantiation.
-  Context { C : choice_type }.
-  Definition both_C : Type := both C.
-  Definition C_type : Type := C.
-
-  (* TODO: Cannot find instance in hacspec lib? *)
-  Instance copy : t_Copy C := _.
-  Instance partial_eq : t_PartialEq C C := _.
-  Instance eq : t_Eq C := _.
-  Instance clone : t_Clone C := _.
-  Instance serialize : t_Serialize C := _.
-
-  Variable (group : @t_Group C copy partial_eq is_eq clone serialize).
-
-  HB.instance Definition _ :=
-    is_eq_rel.Build (both_C) both_equivalence _ _ _.
-
-  HB.instance Definition _ :=
-    is_group_op.Build (both_C)
-      (group.(f_prod))
-      (group.(f_group_inv))
-      (group.(f_group_one))
-      (group.(f_g)).
-
-  Variable both_group_properties : is_setoid_group_properties.axioms_ (both_C) (group_op.class Hacspec_ovn_group_and_field_both_C__canonical__Hacspec_ovn_group_and_field_group_op) (eqR.class Hacspec_ovn_group_and_field_both_C__canonical__Hacspec_ovn_group_and_field_eqR).
-
-  HB.instance Definition _ := both_group_properties.
-
-  Definition both_setoid_group := Hacspec_ovn_group_and_field_both_C__canonical__Hacspec_ovn_group_and_field_group_op.
-
-  HB.instance Definition _ : is_setoid_lower both_C :=
-    is_setoid_lower.Build both_C C_type (fun x => is_pure x) ret_both ret_both_is_pure_cancel (fun x => erefl)  (fun x y H => proj1 both_equivalence_is_pure_eq H)  (fun x y H => both_eq_fun_ext _ _ _).
-
-  HB.instance Definition _ : fingroup.FinGroup C_type := fingroup.FinGroup.class (Hacspec_ovn_group_and_field_T__canonical__fingroup_FinGroup Hacspec_ovn_group_and_field_both_C__canonical__Hacspec_ovn_group_and_field_setoid_lower_to_group).
-
-  Notation v_G_is_group := Hacspec_ovn_group_and_field_C_type__canonical__fingroup_FinGroup.
-
-  Definition both_Z : Type := both f_Z.
-  Definition Z_type : Type := f_Z.
-
-  HB.instance Definition _ :=
-    is_eq_rel.Build (both_Z) both_equivalence _ _ _.
-
-  HB.instance Definition _ : is_setoid_field_op both_Z :=
-    is_setoid_field_op.Build
-      both_Z
-      (group.(f_Z_t_Field).(f_mul))
-      (group.(f_Z_t_Field).(f_inv))
-      (group.(f_Z_t_Field).(f_field_one))
-      (group.(f_Z_t_Field).(f_add))
-      (group.(f_Z_t_Field).(f_opp))
-      (group.(f_Z_t_Field).(f_field_zero)).
-
-  Variable both_field_properties : is_setoid_field_properties.axioms_ (both_Z) (setoid_field_op.class Hacspec_ovn_group_and_field_both_Z__canonical__Hacspec_ovn_group_and_field_setoid_field_op) (eqR.class Hacspec_ovn_group_and_field_both_Z__canonical__Hacspec_ovn_group_and_field_eqR).
-
-  HB.instance Definition _ := both_field_properties.
-
-  Definition both_setoid_field := Hacspec_ovn_group_and_field_both_Z__canonical__Hacspec_ovn_group_and_field_setoid_field.
-
-  HB.instance Definition _ : is_setoid_lower both_Z :=
-    is_setoid_lower.Build both_Z Z_type (fun x => is_pure x) ret_both ret_both_is_pure_cancel (fun x => erefl)  (fun x y H => proj1 both_equivalence_is_pure_eq H)  (fun x y H => both_eq_fun_ext _ _ _).
-
-  HB.instance Definition _ : GRing.Field Z_type := GRing.Field.class (Hacspec_ovn_group_and_field_T__canonical__FinRing_Field Hacspec_ovn_group_and_field_both_Z__canonical__Hacspec_ovn_group_and_field_setoid_lower_to_field).
-
-  Notation v_Z_is_field := Hacspec_ovn_group_and_field_Z_type__canonical__GRing_Field.
-End OVN_instantiation.

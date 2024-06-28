@@ -553,6 +553,8 @@ Equations tally_votes  (_ : both t_TallyParameter) (state : both (t_OvnContractS
 Solve All Obligations with now intros ; destruct from_uint_size.
 Fail Next Obligation.
 
+(** * ConCert glue code *)
+
 (* TODO: Not generated? *)
 (** Concert lib part **)
 From ConCert.Utils Require Import Extras.
@@ -646,7 +648,3 @@ Fail Next Obligation.
 Definition contract_OVN  : @Contract _ (state_OVN) (Msg_OVN) (state_OVN) (t_ParseError) state_OVN_Serializable Msg_OVN_Serializable state_OVN_Serializable _ :=
   build_contract init_OVN receive_OVN.
 End HacspecOVN.
-
-(* Module M := HacspecOVN. *)
-(* Include M. *)
-(* Check (Build_t_OvnContractState[ _ ](f_round1 := _)). *)

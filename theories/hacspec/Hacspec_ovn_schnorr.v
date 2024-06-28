@@ -77,7 +77,7 @@ Import PackageNotation.
 
 (** * Instantiate Schnorr proof *)
 
-Module OVN_schnorr_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
+Module OVN_schnorr_proof (HGPA : HacspecGroupParamAxiom).
   Module Schnorr := Schnorr HGPA.HacspecGroup.
 
   Import Schnorr.MyParam.
