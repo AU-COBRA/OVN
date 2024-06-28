@@ -91,39 +91,11 @@ Import PackageNotation.
 
 (** * Hacspec Group *)
 Module HacspecGroup.
-  Context {v_G : choice_type}.
-
-  (* TODO: Cannot find instance in hacspec lib? *)
-  Instance v_G_t_copy : t_Copy v_G := _.
-  Instance v_G_t_partial_eq : t_PartialEq v_G v_G := _.
-  Instance v_G_t_eq : t_Eq v_G := _.
-  Instance v_G_t_clone : t_Clone v_G := _.
-  Instance v_G_t_serialize : t_Serialize v_G := _.
-
-  Context {v_G_t_Group : t_Group v_G}.
-  #[global] Instance v_G_t_Group_temp : t_Group v_G := v_G_t_Group.
-
-  #[global] Instance f_Z_t_copy : t_Copy f_Z := f_Z_t_Copy.
-  #[global] Instance f_Z_t_partial_eq : t_PartialEq f_Z f_Z := f_Z_t_PartialEq.
-  #[global] Instance f_Z_t_eq : t_Eq f_Z := f_Z_t_Eq.
-  #[global] Instance f_Z_t_clone : t_Clone f_Z := f_Z_t_Clone.
-  #[global] Instance f_Z_t_serialize : t_Serialize f_Z := f_Z_t_Serialize.
-
+  Module OVN := HacspecOVN.
+  Include OVN.
+  Export OVN.
+  
   Instance f_Z_t_Field' : t_Field f_Z := _.
-
-  Context {v_A : choice_type}.
-  Context {v_A_t_Sized : t_Sized v_A}.
-  Instance v_A_t_Sized_temp : t_Sized v_A := v_A_t_Sized.
-
-  Context {v_A_t_HasActions : t_HasActions v_A}.
-  Instance v_A_t_HasActions_temp : t_HasActions v_A := v_A_t_HasActions.
-
-  Context {n : both uint_size}.
-
-  Context {v_G_t_Sized : t_Sized v_G}.
-  Instance v_G_t_Sized_temp : t_Sized v_G := v_G_t_Sized.
-
-  #[local] Open Scope hacspec_scope.
 
   Parameter v_G_group_properties : is_setoid_group_properties.axioms_ both_C
                                      (group_op.class (Hacspec_ovn_group_and_field_both_C__canonical__Hacspec_ovn_group_and_field_group_op v_G_t_Group))
@@ -263,6 +235,150 @@ Module HacspecGroupParam (SG : SecureGroup) <: GroupParam.
     now unfold generator ; rewrite g_gen.
   Qed.
 
+  (** * Helper properties *)
+
+  Lemma order_ge1 : succn (succn (Zp_trunc q)) = q.
+  Proof.
+    rewrite <- (@pdiv_id q prime_order) at 1.
+    apply Fp_cast, prime_order.
+  Qed.
+
+  Lemma trunc_pow : forall (h : gT) x, h ^+ (x %% (Zp_trunc q).+2) = h ^+ x.
+    intros.
+    destruct (ssrbool.elimT (cycleP g h)) ; [ | subst ].
+    - unfold g.
+      setoid_rewrite <- v_G_g_gen.
+      simpl.
+      apply in_setT.
+    - rewrite expgAC.
+      rewrite (expgAC _ x0).
+      f_equal.
+      epose (@expg_mod_order gT g x).
+      fold q in e.
+      rewrite <- order_ge1 in e.
+      intros.
+      apply e ; clear e.
+  Qed.
+
+  Lemma invg_id : (forall (x : gT), x ^-1 = x ^- 1%R).
+  Proof. reflexivity. Qed.
+
+  Lemma trunc_extra : forall (h : gT), h ^+ (Zp_trunc q).+2 = 1%g.
+    intros.
+    rewrite <- trunc_pow.
+    now rewrite modnn.
+  Qed.
+
+  Lemma reverse_opp : (forall (x : gT) (n : 'Z_q), x ^+ ((Zp_trunc (pdiv q)).+2 - n) = x ^+ GRing.opp n).
+  Proof.
+    intros.
+    rewrite (@pdiv_id q prime_order).
+    now rewrite trunc_pow.
+  Qed.
+
+  Lemma neg_is_opp : (forall (x : gT) (n : 'Z_q), x ^- n = x ^+ GRing.opp n).
+  Proof.
+    intros x n.
+    rewrite trunc_pow.
+    destruct n as [n ?] ; simpl.
+    induction n as [ | n ].
+    - rewrite invg1.
+      rewrite subn0.
+      now rewrite trunc_extra.
+    - rewrite expgSr.
+      rewrite invMg.
+      rewrite IHn ; [ | easy ].
+      rewrite subnS.
+      eapply canLR with (f := fun y => mulg (x^+1) y).
+      {
+        clear ; intros ?.
+        rewrite mulgA.
+        rewrite mulVg.
+        rewrite mul1g.
+        reflexivity.
+      }
+
+      rewrite <- expgD.
+      rewrite addSn.
+      rewrite add0n.
+      set (n0 := subn _ _).
+      now rewrite (Nat.lt_succ_pred 0 n0).
+  Qed.
+
+  Lemma mulg_cancel : forall (x : gT) (y : 'Z_q),
+      (cancel (mulg^~ (x ^+ y))  (mulg^~ (x ^- y))
+      /\ cancel (mulg^~ (x ^- y))  (mulg^~ (x ^+ y)))
+      /\ (cancel (mulg (x ^+ y))  (mulg (x ^- y))
+      /\ cancel (mulg (x ^- y))  (mulg (x ^+ y))).
+  Proof.
+    now intros x y
+    ; repeat split
+    ; intros z
+    ; (rewrite <- mulgA || rewrite mulgA)
+    ; (rewrite mulgV || rewrite mulVg)
+    ; (rewrite mulg1 || rewrite mul1g).
+  Qed.
+
+  Lemma prod_swap_iff :
+    forall a b (x : gT) (y : 'Z_q),
+      (a * x ^- y = b <-> a = b * x ^+ y)%g
+      /\ (x ^- y * a = b <-> a = x ^+ y * b)%g.
+  Proof.
+    repeat split ;
+      [ eapply (canRL (f := mulg^~ _) (g := mulg^~ _))
+      | eapply (canLR (f := mulg^~ _) (g := mulg^~ _))
+      | eapply (canRL)
+      | eapply (canLR) ] ; apply (mulg_cancel x y).
+  Qed.
+
+  Lemma mulg_invg_sub : (forall (x : gT) (y z : 'Z_q), x ^+ y * x ^- z = x ^+ nat_of_ord (y - z)%R)%g.
+  Proof.
+    intros.
+    rewrite neg_is_opp.
+    rewrite <- expgD.
+    now rewrite trunc_pow.
+  Qed.
+
+  Lemma mulg_invg_left_sub : (forall (x : gT) (y z : 'Z_q), x ^- y * x ^+ z = x ^+ nat_of_ord (z - y)%R)%g.
+  Proof.
+    intros.
+    rewrite neg_is_opp.
+    rewrite <- expgD.
+    now rewrite trunc_pow.
+  Qed.
+
+  Lemma cyclic_always_commute : forall (x y : gT), commute x y.
+  Proof.
+    intros.
+    destruct (ssrbool.elimT (cycleP g x)) ; [ | subst ].
+    {
+      unfold gT in x.
+      unfold g.
+      setoid_rewrite <- v_G_g_gen.
+      simpl.
+      apply in_setT.
+    }
+
+    destruct (ssrbool.elimT (cycleP g y)) ; [ | subst ].
+    {
+      unfold g.
+      setoid_rewrite <- v_G_g_gen.
+      simpl.
+      apply in_setT.
+    }
+
+    apply commuteX2.
+    apply commute_refl.
+  Qed.
+
+  Lemma div_cancel_Fq : forall (x : gT) (s : 'F_q), s <> 0%R -> x ^+ nat_of_ord (s / s)%R = x.
+  Proof.
+    intros.
+    rewrite mulrV.
+    2: now rewrite (unitfE) ; apply /eqP.
+    now rewrite expg1.
+  Qed.
+
   (* Parameter pow_witness_to_field : *)
   (*   forall (h : gT) (b : 'Z_q), *)
   (*     (h ^ b = (setoid_lower2 f_pow) h (WitnessToField b))%g. *)
@@ -278,6 +394,24 @@ Module Type HacspecGroupParamAxiom (SG : SecureGroup).
 
   Include field_equality.
   Export field_equality.
+
+  Lemma div_cancel : forall (x : gT) (s : 'Z_q), s <> 0%R -> x ^+ nat_of_ord (s / s)%R = x.
+  Proof.
+    intros.
+    rewrite mulrV.
+    2:{
+      rewrite <- (F_to_Z_cancel _).
+      apply rmorph_unit.
+      rewrite (unitfE).
+      apply /eqP.
+      red ; intros.
+      apply H.
+      rewrite <- (F_to_Z_cancel _).
+      rewrite H0.
+      apply  (@rmorph0 'F_q 'Z_q F_to_Z).
+    }
+    now rewrite expg1.
+  Qed.
 
   (* pow spec, could be omitted by using iterated mul in hax code instead *)
   Parameter pow_witness_to_field :
@@ -310,5 +444,6 @@ Module Type HacspecGroupParamAxiom (SG : SecureGroup).
                 (unsize
                    (box_new
                       (array_from_list l))))) ;; c1 x ⦃ post ⦄.
+
 End HacspecGroupParamAxiom.
 

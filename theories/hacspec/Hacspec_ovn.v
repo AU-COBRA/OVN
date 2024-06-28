@@ -28,43 +28,46 @@ Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
 From OVN Require Import Hacspec_ovn_Ovn_traits.
 Export Hacspec_ovn_Ovn_traits.
 
-Section Hacspec_OVN.
-  Context {v_G : choice_type}.
+Module HacspecOVN.
+(** Move arguments to context *)
+Parameter (v_G : choice_type).
 
-  (* TODO: Cannot find instance in hacspec lib? *)
-  #[global] Instance v_G_t_copy : t_Copy v_G := _.
-  #[global] Instance v_G_t_partial_eq : t_PartialEq v_G v_G := _.
-  #[global] Instance v_G_t_eq : t_Eq v_G := _.
-  #[global] Instance v_G_t_clone : t_Clone v_G := _.
-  #[global] Instance v_G_t_serialize : t_Serialize v_G := _.
+(* TODO: Cannot find instance in hacspec lib? *)
+#[global] Instance v_G_t_copy : t_Copy v_G := _.
+#[global] Instance v_G_t_partial_eq : t_PartialEq v_G v_G := _.
+#[global] Instance v_G_t_eq : t_Eq v_G := _.
+#[global] Instance v_G_t_clone : t_Clone v_G := _.
+#[global] Instance v_G_t_serialize : t_Serialize v_G := _.
 
-  Context {v_G_t_Group : t_Group v_G}.
-  Instance v_G_t_Group_temp : t_Group v_G := v_G_t_Group.
+Parameter (v_G_t_Group : t_Group v_G).
+Instance v_G_t_Group_temp : t_Group v_G := v_G_t_Group.
 
-  Context {v_A : choice_type}.
-  Context {v_A_t_Sized : t_Sized v_A}.
-  Instance v_A_t_Sized_temp : t_Sized v_A := v_A_t_Sized.
+Parameter (v_A : choice_type).
+Parameter (v_A_t_Sized : t_Sized v_A).
+Instance v_A_t_Sized_temp : t_Sized v_A := v_A_t_Sized.
 
-  Context {v_A_t_HasActions : t_HasActions v_A}.
-  Instance v_A_t_HasActions_temp : t_HasActions v_A := v_A_t_HasActions.
+Parameter (v_A_t_HasActions : t_HasActions v_A).
+Instance v_A_t_HasActions_temp : t_HasActions v_A := v_A_t_HasActions.
 
-  Context {n : both uint_size}.
+Parameter (n : both uint_size).
 
-  (* Extra from code *)
-  Context {v_G_t_Sized : t_Sized v_G}.
-  Instance v_G_t_Sized_temp : t_Sized v_G := v_G_t_Sized.
+(* Extra from code *)
+Parameter (v_G_t_Sized : t_Sized v_G).
+Instance v_G_t_Sized_temp : t_Sized v_G := v_G_t_Sized.
 
-  Notation v_Z := f_Z.
+Notation "'v_Z'" := f_Z : hacspec_scope.
 
-  Equations select_private_voting_key (random : both int32) : both v_Z :=
-    select_private_voting_key random  :=
-      solve_lift (f_random_field_elem random) : both v_Z.
-  Fail Next Obligation.
+Equations select_private_voting_key (random : both int32) : both v_Z :=
+  select_private_voting_key random  :=
+    solve_lift (f_random_field_elem random) : both v_Z.
+Fail Next Obligation.
 
-  Equations sub (x : both v_Z) (y : both v_Z) : both v_Z :=
-    sub x y  :=
-      solve_lift (f_add x (f_opp y)) : both v_Z.
-  Fail Next Obligation.
+Equations sub (x : both v_Z) (y : both v_Z) : both v_Z :=
+  sub x y  :=
+    solve_lift (f_add x (f_opp y)) : both v_Z.
+Fail Next Obligation.
+
+(** * Generated code *)
 
 Equations compute_group_element_for_vote (xi : both f_Z) (vote : both 'bool) (g_pow_yi : both v_G) : both v_G :=
   compute_group_element_for_vote xi vote g_pow_yi  :=
@@ -144,12 +147,12 @@ Equations Build_t_CastVoteParam  {f_cvp_i : both int32} {f_cvp_xi : both v_Z} {f
               bind_both f_cvp_i (fun f_cvp_i =>
                 solve_lift (ret_both ((f_cvp_i,f_cvp_xi,f_cvp_zkp_random_w,f_cvp_zkp_random_r,f_cvp_zkp_random_d,f_cvp_vote) : (t_CastVoteParam))))))))) : both (t_CastVoteParam).
 Fail Next Obligation.
-Notation "'Build_t_CastVoteParam' '[' x ']' '(' 'f_cvp_i' ':=' y ')'" := (Build_t_CastVoteParam (f_cvp_i := y) (f_cvp_xi := f_cvp_xi x) (f_cvp_zkp_random_w := f_cvp_zkp_random_w x) (f_cvp_zkp_random_r := f_cvp_zkp_random_r x) (f_cvp_zkp_random_d := f_cvp_zkp_random_d x) (f_cvp_vote := f_cvp_vote x)).
-Notation "'Build_t_CastVoteParam' '[' x ']' '(' 'f_cvp_xi' ':=' y ')'" := (Build_t_CastVoteParam (f_cvp_i := f_cvp_i x) (f_cvp_xi := y) (f_cvp_zkp_random_w := f_cvp_zkp_random_w x) (f_cvp_zkp_random_r := f_cvp_zkp_random_r x) (f_cvp_zkp_random_d := f_cvp_zkp_random_d x) (f_cvp_vote := f_cvp_vote x)).
-Notation "'Build_t_CastVoteParam' '[' x ']' '(' 'f_cvp_zkp_random_w' ':=' y ')'" := (Build_t_CastVoteParam (f_cvp_i := f_cvp_i x) (f_cvp_xi := f_cvp_xi x) (f_cvp_zkp_random_w := y) (f_cvp_zkp_random_r := f_cvp_zkp_random_r x) (f_cvp_zkp_random_d := f_cvp_zkp_random_d x) (f_cvp_vote := f_cvp_vote x)).
-Notation "'Build_t_CastVoteParam' '[' x ']' '(' 'f_cvp_zkp_random_r' ':=' y ')'" := (Build_t_CastVoteParam (f_cvp_i := f_cvp_i x) (f_cvp_xi := f_cvp_xi x) (f_cvp_zkp_random_w := f_cvp_zkp_random_w x) (f_cvp_zkp_random_r := y) (f_cvp_zkp_random_d := f_cvp_zkp_random_d x) (f_cvp_vote := f_cvp_vote x)).
-Notation "'Build_t_CastVoteParam' '[' x ']' '(' 'f_cvp_zkp_random_d' ':=' y ')'" := (Build_t_CastVoteParam (f_cvp_i := f_cvp_i x) (f_cvp_xi := f_cvp_xi x) (f_cvp_zkp_random_w := f_cvp_zkp_random_w x) (f_cvp_zkp_random_r := f_cvp_zkp_random_r x) (f_cvp_zkp_random_d := y) (f_cvp_vote := f_cvp_vote x)).
-Notation "'Build_t_CastVoteParam' '[' x ']' '(' 'f_cvp_vote' ':=' y ')'" := (Build_t_CastVoteParam (f_cvp_i := f_cvp_i x) (f_cvp_xi := f_cvp_xi x) (f_cvp_zkp_random_w := f_cvp_zkp_random_w x) (f_cvp_zkp_random_r := f_cvp_zkp_random_r x) (f_cvp_zkp_random_d := f_cvp_zkp_random_d x) (f_cvp_vote := y)).
+Notation "'Build_t_CastVoteParam' '[' x ']' '(' 'f_cvp_i' ':=' y ')'" := (Build_t_CastVoteParam (f_cvp_i := y) (f_cvp_xi := f_cvp_xi x) (f_cvp_zkp_random_w := f_cvp_zkp_random_w x) (f_cvp_zkp_random_r := f_cvp_zkp_random_r x) (f_cvp_zkp_random_d := f_cvp_zkp_random_d x) (f_cvp_vote := f_cvp_vote x)) : hacspec_scope.
+Notation "'Build_t_CastVoteParam' '[' x ']' '(' 'f_cvp_xi' ':=' y ')'" := (Build_t_CastVoteParam (f_cvp_i := f_cvp_i x) (f_cvp_xi := y) (f_cvp_zkp_random_w := f_cvp_zkp_random_w x) (f_cvp_zkp_random_r := f_cvp_zkp_random_r x) (f_cvp_zkp_random_d := f_cvp_zkp_random_d x) (f_cvp_vote := f_cvp_vote x)) : hacspec_scope.
+Notation "'Build_t_CastVoteParam' '[' x ']' '(' 'f_cvp_zkp_random_w' ':=' y ')'" := (Build_t_CastVoteParam (f_cvp_i := f_cvp_i x) (f_cvp_xi := f_cvp_xi x) (f_cvp_zkp_random_w := y) (f_cvp_zkp_random_r := f_cvp_zkp_random_r x) (f_cvp_zkp_random_d := f_cvp_zkp_random_d x) (f_cvp_vote := f_cvp_vote x)) : hacspec_scope.
+Notation "'Build_t_CastVoteParam' '[' x ']' '(' 'f_cvp_zkp_random_r' ':=' y ')'" := (Build_t_CastVoteParam (f_cvp_i := f_cvp_i x) (f_cvp_xi := f_cvp_xi x) (f_cvp_zkp_random_w := f_cvp_zkp_random_w x) (f_cvp_zkp_random_r := y) (f_cvp_zkp_random_d := f_cvp_zkp_random_d x) (f_cvp_vote := f_cvp_vote x)) : hacspec_scope.
+Notation "'Build_t_CastVoteParam' '[' x ']' '(' 'f_cvp_zkp_random_d' ':=' y ')'" := (Build_t_CastVoteParam (f_cvp_i := f_cvp_i x) (f_cvp_xi := f_cvp_xi x) (f_cvp_zkp_random_w := f_cvp_zkp_random_w x) (f_cvp_zkp_random_r := f_cvp_zkp_random_r x) (f_cvp_zkp_random_d := y) (f_cvp_vote := f_cvp_vote x)) : hacspec_scope.
+Notation "'Build_t_CastVoteParam' '[' x ']' '(' 'f_cvp_vote' ':=' y ')'" := (Build_t_CastVoteParam (f_cvp_i := f_cvp_i x) (f_cvp_xi := f_cvp_xi x) (f_cvp_zkp_random_w := f_cvp_zkp_random_w x) (f_cvp_zkp_random_r := f_cvp_zkp_random_r x) (f_cvp_zkp_random_d := f_cvp_zkp_random_d x) (f_cvp_vote := y)) : hacspec_scope.
 
 Definition t_OrZKPCommit : choice_type :=
   (v_G × v_G × v_G × v_G × v_G × v_G × f_Z × f_Z × f_Z × f_Z × f_Z).
@@ -223,17 +226,17 @@ Equations Build_t_OrZKPCommit {f_or_zkp_x : both v_G} {f_or_zkp_y : both v_G} {f
                         bind_both f_or_zkp_x (fun f_or_zkp_x =>
                           solve_lift (ret_both ((f_or_zkp_x,f_or_zkp_y,f_or_zkp_a1,f_or_zkp_b1,f_or_zkp_a2,f_or_zkp_b2,f_or_zkp_c,f_or_zkp_d1,f_or_zkp_d2,f_or_zkp_r1,f_or_zkp_r2) : (t_OrZKPCommit)))))))))))))) : both (t_OrZKPCommit).
 Fail Next Obligation.
-Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_x' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := y) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)).
-Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_y' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := y) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)).
-Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_a1' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := y) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)).
-Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_b1' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := y) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)).
-Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_a2' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := y) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)).
-Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_b2' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := y) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)).
-Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_c' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := y) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)).
-Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_d1' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := y) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)).
-Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_d2' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := y) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)).
-Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_r1' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := y) (f_or_zkp_r2 := f_or_zkp_r2 x)).
-Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_r2' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := y)).
+Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_x' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := y) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)) : hacspec_scope.
+Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_y' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := y) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)) : hacspec_scope.
+Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_a1' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := y) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)) : hacspec_scope.
+Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_b1' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := y) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)) : hacspec_scope.
+Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_a2' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := y) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)) : hacspec_scope.
+Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_b2' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := y) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)) : hacspec_scope.
+Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_c' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := y) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)) : hacspec_scope.
+Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_d1' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := y) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)) : hacspec_scope.
+Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_d2' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := y) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)) : hacspec_scope.
+Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_r1' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := y) (f_or_zkp_r2 := f_or_zkp_r2 x)) : hacspec_scope.
+Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_r2' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := y)) : hacspec_scope.
 
 Definition t_RegisterParam  : choice_type :=
   (int32 × v_Z × int32).
@@ -259,9 +262,9 @@ Equations Build_t_RegisterParam  {f_rp_i : both int32} {f_rp_xi : both v_Z} {f_r
         bind_both f_rp_i (fun f_rp_i =>
           solve_lift (ret_both ((f_rp_i,f_rp_xi,f_rp_zkp_random) : (t_RegisterParam)))))) : both (t_RegisterParam).
 Fail Next Obligation.
-Notation "'Build_t_RegisterParam' '[' x ']' '(' 'f_rp_i' ':=' y ')'" := (Build_t_RegisterParam (f_rp_i := y) (f_rp_xi := f_rp_xi x) (f_rp_zkp_random := f_rp_zkp_random x)).
-Notation "'Build_t_RegisterParam' '[' x ']' '(' 'f_rp_xi' ':=' y ')'" := (Build_t_RegisterParam (f_rp_i := f_rp_i x) (f_rp_xi := y) (f_rp_zkp_random := f_rp_zkp_random x)).
-Notation "'Build_t_RegisterParam' '[' x ']' '(' 'f_rp_zkp_random' ':=' y ')'" := (Build_t_RegisterParam (f_rp_i := f_rp_i x) (f_rp_xi := f_rp_xi x) (f_rp_zkp_random := y)).
+Notation "'Build_t_RegisterParam' '[' x ']' '(' 'f_rp_i' ':=' y ')'" := (Build_t_RegisterParam (f_rp_i := y) (f_rp_xi := f_rp_xi x) (f_rp_zkp_random := f_rp_zkp_random x)) : hacspec_scope.
+Notation "'Build_t_RegisterParam' '[' x ']' '(' 'f_rp_xi' ':=' y ')'" := (Build_t_RegisterParam (f_rp_i := f_rp_i x) (f_rp_xi := y) (f_rp_zkp_random := f_rp_zkp_random x)) : hacspec_scope.
+Notation "'Build_t_RegisterParam' '[' x ']' '(' 'f_rp_zkp_random' ':=' y ')'" := (Build_t_RegisterParam (f_rp_i := f_rp_i x) (f_rp_xi := f_rp_xi x) (f_rp_zkp_random := y)) : hacspec_scope.
 
 Definition t_SchnorrZKPCommit : choice_type :=
   (v_G × f_Z × f_Z).
@@ -287,9 +290,9 @@ Equations Build_t_SchnorrZKPCommit {f_schnorr_zkp_u : both v_G} {f_schnorr_zkp_c
         bind_both f_schnorr_zkp_u (fun f_schnorr_zkp_u =>
           solve_lift (ret_both ((f_schnorr_zkp_u,f_schnorr_zkp_c,f_schnorr_zkp_z) : (t_SchnorrZKPCommit)))))) : both (t_SchnorrZKPCommit).
 Fail Next Obligation.
-Notation "'Build_t_SchnorrZKPCommit' '[' x ']' '(' 'f_schnorr_zkp_u' ':=' y ')'" := (Build_t_SchnorrZKPCommit (f_schnorr_zkp_u := y) (f_schnorr_zkp_c := f_schnorr_zkp_c x) (f_schnorr_zkp_z := f_schnorr_zkp_z x)).
-Notation "'Build_t_SchnorrZKPCommit' '[' x ']' '(' 'f_schnorr_zkp_c' ':=' y ')'" := (Build_t_SchnorrZKPCommit (f_schnorr_zkp_u := f_schnorr_zkp_u x) (f_schnorr_zkp_c := y) (f_schnorr_zkp_z := f_schnorr_zkp_z x)).
-Notation "'Build_t_SchnorrZKPCommit' '[' x ']' '(' 'f_schnorr_zkp_z' ':=' y ')'" := (Build_t_SchnorrZKPCommit (f_schnorr_zkp_u := f_schnorr_zkp_u x) (f_schnorr_zkp_c := f_schnorr_zkp_c x) (f_schnorr_zkp_z := y)).
+Notation "'Build_t_SchnorrZKPCommit' '[' x ']' '(' 'f_schnorr_zkp_u' ':=' y ')'" := (Build_t_SchnorrZKPCommit (f_schnorr_zkp_u := y) (f_schnorr_zkp_c := f_schnorr_zkp_c x) (f_schnorr_zkp_z := f_schnorr_zkp_z x)) : hacspec_scope.
+Notation "'Build_t_SchnorrZKPCommit' '[' x ']' '(' 'f_schnorr_zkp_c' ':=' y ')'" := (Build_t_SchnorrZKPCommit (f_schnorr_zkp_u := f_schnorr_zkp_u x) (f_schnorr_zkp_c := y) (f_schnorr_zkp_z := f_schnorr_zkp_z x)) : hacspec_scope.
+Notation "'Build_t_SchnorrZKPCommit' '[' x ']' '(' 'f_schnorr_zkp_z' ':=' y ')'" := (Build_t_SchnorrZKPCommit (f_schnorr_zkp_u := f_schnorr_zkp_u x) (f_schnorr_zkp_c := f_schnorr_zkp_c x) (f_schnorr_zkp_z := y)) : hacspec_scope.
 
 Definition t_TallyParameter : choice_type :=
   'unit.
@@ -416,13 +419,13 @@ Equations Build_t_OvnContractState {f_g_pow_xis : both (nseq v_G (is_pure (n)))}
                 bind_both f_g_pow_xis (fun f_g_pow_xis =>
                   solve_lift (ret_both ((f_g_pow_xis,f_zkp_xis,f_commit_vis,f_g_pow_xi_yi_vis,f_zkp_vis,f_tally,f_round1) : (t_OvnContractState)))))))))) : both (t_OvnContractState).
 Fail Next Obligation.
-Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_g_pow_xis' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := y) (f_zkp_xis := f_zkp_xis x) (f_commit_vis := f_commit_vis x) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := f_zkp_vis x) (f_tally := f_tally x) (f_round1 := f_round1 x)).
-Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_zkp_xis' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := f_g_pow_xis x) (f_zkp_xis := y) (f_commit_vis := f_commit_vis x) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := f_zkp_vis x) (f_tally := f_tally x) (f_round1 := f_round1 x)).
-Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_commit_vis' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := f_g_pow_xis x) (f_zkp_xis := f_zkp_xis x) (f_commit_vis := y) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := f_zkp_vis x) (f_tally := f_tally x) (f_round1 := f_round1 x)).
-Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_g_pow_xi_yi_vis' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := f_g_pow_xis x) (f_zkp_xis := f_zkp_xis x) (f_commit_vis := f_commit_vis x) (f_g_pow_xi_yi_vis := y) (f_zkp_vis := f_zkp_vis x) (f_tally := f_tally x) (f_round1 := f_round1 x)).
-Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_zkp_vis' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := f_g_pow_xis x) (f_zkp_xis := f_zkp_xis x) (f_commit_vis := f_commit_vis x) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := y) (f_tally := f_tally x) (f_round1 := f_round1 x)).
-Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_tally' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := f_g_pow_xis x) (f_zkp_xis := f_zkp_xis x) (f_commit_vis := f_commit_vis x) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := f_zkp_vis x) (f_tally := y) (f_round1 := f_round1 x)).
-Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_round1' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := f_g_pow_xis x) (f_zkp_xis := f_zkp_xis x) (f_commit_vis := f_commit_vis x) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := f_zkp_vis x) (f_tally := f_tally x) (f_round1 := y)).
+Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_g_pow_xis' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := y) (f_zkp_xis := f_zkp_xis x) (f_commit_vis := f_commit_vis x) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := f_zkp_vis x) (f_tally := f_tally x) (f_round1 := f_round1 x)) : hacspec_scope.
+Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_zkp_xis' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := f_g_pow_xis x) (f_zkp_xis := y) (f_commit_vis := f_commit_vis x) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := f_zkp_vis x) (f_tally := f_tally x) (f_round1 := f_round1 x)) : hacspec_scope.
+Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_commit_vis' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := f_g_pow_xis x) (f_zkp_xis := f_zkp_xis x) (f_commit_vis := y) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := f_zkp_vis x) (f_tally := f_tally x) (f_round1 := f_round1 x)) : hacspec_scope.
+Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_g_pow_xi_yi_vis' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := f_g_pow_xis x) (f_zkp_xis := f_zkp_xis x) (f_commit_vis := f_commit_vis x) (f_g_pow_xi_yi_vis := y) (f_zkp_vis := f_zkp_vis x) (f_tally := f_tally x) (f_round1 := f_round1 x)) : hacspec_scope.
+Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_zkp_vis' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := f_g_pow_xis x) (f_zkp_xis := f_zkp_xis x) (f_commit_vis := f_commit_vis x) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := y) (f_tally := f_tally x) (f_round1 := f_round1 x)) : hacspec_scope.
+Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_tally' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := f_g_pow_xis x) (f_zkp_xis := f_zkp_xis x) (f_commit_vis := f_commit_vis x) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := f_zkp_vis x) (f_tally := y) (f_round1 := f_round1 x)) : hacspec_scope.
+Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_round1' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := f_g_pow_xis x) (f_zkp_xis := f_zkp_xis x) (f_commit_vis := f_commit_vis x) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := f_zkp_vis x) (f_tally := f_tally x) (f_round1 := y)) : hacspec_scope.
 
 (* (* Manually inserted t_CastVoteParam_t_Sized  *) *)
 (* Context {t_CastVoteParam_t_Sized : t_Sized t_CastVoteParam}. *)
@@ -642,6 +645,8 @@ Fail Next Obligation.
 
 Definition contract_OVN  : @Contract _ (state_OVN) (Msg_OVN) (state_OVN) (t_ParseError) state_OVN_Serializable Msg_OVN_Serializable state_OVN_Serializable _ :=
   build_contract init_OVN receive_OVN.
+End HacspecOVN.
 
-End Hacspec_OVN.
-
+(* Module M := HacspecOVN. *)
+(* Include M. *)
+(* Check (Build_t_OvnContractState[ _ ](f_round1 := _)). *)

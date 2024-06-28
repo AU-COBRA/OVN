@@ -79,164 +79,29 @@ Module OVN_or_proof_preconditions (SG : SecureGroup) (HGPA : HacspecGroupParamAx
   Include HGPA.
   Export HGPA.
 
-  (** * Helper properties *)
-
-  Lemma order_ge1 : succn (succn (Zp_trunc q)) = q.
+  (* begin details : Positivity checks *)
+  #[export] Instance positive_gT : Positive #|HacspecGroup.gT|.
   Proof.
-    rewrite <- (@pdiv_id q HacspecGroup.prime_order) at 1.
-    apply Fp_cast, prime_order.
+    apply /card_gt0P. exists HacspecGroup.g. auto.
   Qed.
 
-  Lemma trunc_pow : forall (h : gT) x, h ^+ (x %% (Zp_trunc q).+2) = h ^+ x.
-    intros.
-    destruct (ssrbool.elimT (cycleP g h)) ; [ | subst ].
-    - unfold g.
-      setoid_rewrite <- v_G_g_gen.
-      simpl.
-      apply in_setT.
-    - rewrite expgAC.
-      rewrite (expgAC _ x0).
-      f_equal.
-      epose (@expg_mod_order gT g x).
-      fold q in e.
-      rewrite <- order_ge1 in e.
-      intros.
-      apply e ; clear e.
-  Qed.
+  #[export] Instance Bool_pos : Positive #|'bool|.
+  Proof.
+    rewrite card_bool. done.
+  Defined.
 
-  Lemma invg_id : (forall (x : gT), x ^-1 = x ^- 1%R).
-  Proof. reflexivity. Qed.
+  #[export] Instance Zq_pos : Positive #|Finite.clone _ 'Z_q|.
+  Proof.
+    apply /card_gt0P. exists 0%R. auto.
+  Defined.
 
-  Lemma trunc_extra : forall (h : gT), h ^+ (Zp_trunc q).+2 = 1.
-    intros.
-    rewrite <- trunc_pow.
-    now rewrite modnn.
-  Qed.
-
-  Lemma reverse_opp : (forall (x : gT) (n : 'Z_q), x ^+ ((Zp_trunc (pdiv q)).+2 - n) = x ^+ GRing.opp n).
+  #[export] Instance prod_pos : forall {A B : finType}, Positive #|A| -> Positive #|B| -> Positive #|(prod A B : finType)|.
   Proof.
     intros.
-    rewrite (@pdiv_id q HacspecGroup.prime_order).
-    now rewrite trunc_pow.
-  Qed.
-
-  Lemma neg_is_opp : (forall (x : gT) (n : 'Z_q), x ^- n = x ^+ GRing.opp n).
-  Proof.
-    intros x n.
-    rewrite trunc_pow.
-    destruct n as [n ?] ; simpl.
-    induction n.
-    - rewrite invg1.
-      rewrite subn0.
-      now rewrite trunc_extra.
-    - rewrite expgSr.
-      rewrite invMg.
-      rewrite IHn ; [ | easy ].
-      rewrite subnS.
-      eapply canLR with (f := fun y => mulg (x^+1) y).
-      {
-        clear ; intros ?.
-        rewrite mulgA.
-        rewrite mulVg.
-        rewrite mul1g.
-        reflexivity.
-      }
-
-      rewrite <- expgD.
-      rewrite addSn.
-      rewrite add0n.
-      set (subn _ _).
-      now rewrite (Nat.lt_succ_pred 0 n0).
-  Qed.
-
-  Lemma mulg_cancel : forall (x : gT) (y : 'Z_q),
-      (cancel (mulg^~ (x ^+ y))  (mulg^~ (x ^- y))
-      /\ cancel (mulg^~ (x ^- y))  (mulg^~ (x ^+ y)))
-      /\ (cancel (mulg (x ^+ y))  (mulg (x ^- y))
-      /\ cancel (mulg (x ^- y))  (mulg (x ^+ y))).
-  Proof.
-    now intros x y
-    ; repeat split
-    ; intros z
-    ; (rewrite <- mulgA || rewrite mulgA)
-    ; (rewrite mulgV || rewrite mulVg)
-    ; (rewrite mulg1 || rewrite mul1g).
-  Qed.
-
-  Lemma prod_swap_iff : (forall a b (x : gT) (y : 'Z_q), (a * x ^- y = b <-> a = b * x ^+ y) /\ (x ^- y * a = b <-> a = x ^+ y * b)).
-  Proof.
-    repeat split ;
-      [ eapply (canRL (f := mulg^~ _) (g := mulg^~ _))
-      | eapply (canLR (f := mulg^~ _) (g := mulg^~ _))
-      | eapply (canRL)
-      | eapply (canLR) ] ; apply (mulg_cancel x y).
-  Qed.
-
-  Lemma mulg_invg_sub : (forall (x : gT) (y z : 'Z_q), x ^+ y * x ^- z = x ^+ nat_of_ord (y - z)).
-  Proof.
-    intros.
-    rewrite neg_is_opp.
-    rewrite <- expgD.
-    now rewrite trunc_pow.
-  Qed.
-
-  Lemma mulg_invg_left_sub : (forall (x : gT) (y z : 'Z_q), x ^- y * x ^+ z = x ^+ nat_of_ord (z - y)).
-  Proof.
-    intros.
-    rewrite neg_is_opp.
-    rewrite <- expgD.
-    now rewrite trunc_pow.
-  Qed.
-
-  Lemma cyclic_always_commute : forall (x y : gT), commute x y.
-  Proof.
-    intros.
-    destruct (ssrbool.elimT (cycleP g x)) ; [ | subst ].
-    {
-      unfold gT in x.
-      unfold g.
-      setoid_rewrite <- v_G_g_gen.
-      simpl.
-      apply in_setT.
-    }
-
-    destruct (ssrbool.elimT (cycleP g y)) ; [ | subst ].
-    {
-      unfold g.
-      setoid_rewrite <- v_G_g_gen.
-      simpl.
-      apply in_setT.
-    }
-
-    apply commuteX2.
-    apply commute_refl.
-  Qed.
-
-  Lemma div_cancel_Fq : forall (x : gT) (s : 'F_q), s <> 0 -> x ^+ nat_of_ord (s / s)%R = x.
-  Proof.
-    intros.
-    rewrite mulrV.
-    2: now rewrite (unitfE) ; apply /eqP.
-    now rewrite expg1.
-  Qed.
-
-  Lemma div_cancel : forall (x : gT) (s : 'Z_q), s <> 0 -> x ^+ nat_of_ord (s / s)%R = x.
-  Proof.
-    intros.
-    rewrite mulrV.
-    2:{
-      rewrite <- (F_to_Z_cancel _).
-      apply rmorph_unit.
-      rewrite (unitfE).
-      apply /eqP.
-      red ; intros.
-      apply H.
-      rewrite <- (F_to_Z_cancel _).
-      rewrite H0.
-      apply  (@rmorph0 'F_q 'Z_q F_to_Z).
-    }
-    now rewrite expg1.
-  Qed.
+    rewrite card_prod.
+    now apply Positive_prod.
+  Defined.
+  (* end details *)
 
   (** * OR protocol *)
   Module MyParam <: SigmaProtocolParams.
@@ -247,31 +112,30 @@ Module OVN_or_proof_preconditions (SG : SecureGroup) (HGPA : HacspecGroupParamAx
     Definition Challenge : finType := Finite.clone _ 'Z_q.
     Definition Response : finType :=  (prod (prod (prod (Finite.clone _ 'Z_q) (Finite.clone _ 'Z_q)) (Finite.clone _ 'Z_q)) (Finite.clone _ 'Z_q)).
 
-    Definition w0 : Witness := (0, false, 1).
-    Definition e0 : Challenge := 0.
-    Definition z0 : Response := 0.
+    Definition w0 : Witness := (0%R, false, 1%g).
+    Definition e0 : Challenge := 0%R.
+    Definition z0 : Response := 0%R.
 
-    (* OR relation *)
+    (* * OR relation *)
     Definition R : Statement -> Witness -> bool :=
       (λ (xhy : Statement) (mv : Witness),
         let '(x,h,y) := xhy in
         let '(m,v,h2) := mv in
-        (x == g ^+ m)
-        && (h == h2)
-        && ((y == h^+m * g ^+ v))
+        (x == g ^+ m)%g
+        && (h == h2)%g
+        && ((y == h^+m * g ^+ v))%g
       ).
 
-    (* Sanity check *)
+    (* begin details : Sanity checks *)
     Lemma relation_valid_left:
       ∀ (x : 'Z_q) (h : gT),
-        R (g^+x, h, h^+x * g) (x, 1%R, h).
+        R (g^+x, h, h^+x * g)%g (x, 1%R, h)%g.
     Proof.
       intros x yi.
       unfold R.
       now rewrite !eqxx.
     Qed.
 
-    (* Sanity check *)
     Lemma relation_valid_right:
       ∀ (x : 'Z_q) (h : gT),
         R (g ^+ x, h, h ^+x) (x, 0%R, h).
@@ -282,42 +146,23 @@ Module OVN_or_proof_preconditions (SG : SecureGroup) (HGPA : HacspecGroupParamAx
       rewrite mulg1.
       now rewrite !eqxx.
     Qed.
+    (* end details *)
 
-    (* Positivity checks *)
-    #[export] Instance positive_gT : Positive #|HacspecGroup.gT|.
-    Proof.
-      apply /card_gt0P. exists HacspecGroup.g. auto.
-    Qed.
-
-    #[export] Instance Bool_pos : Positive #|'bool|.
-    Proof.
-      rewrite card_bool. done.
-    Defined.
-
-    #[export] Instance Zq_pos : Positive #|Finite.clone _ 'Z_q|.
-    Proof.
-      apply /card_gt0P. exists 0. auto.
-    Defined.
-
-    #[export] Instance prod_pos : forall {A B : finType}, Positive #|A| -> Positive #|B| -> Positive #|(prod A B : finType)|.
-    Proof.
-      intros.
-      rewrite card_prod.
-      now apply Positive_prod.
-    Defined.
-
+    (* begin details : size of protocol elements is positive *)
     Instance Witness_pos : Positive #|Witness| := _.
     Definition Statement_pos : Positive #|Statement| := _.
     Definition Message_pos : Positive #|Message| := _.
     Definition Challenge_pos : Positive #|Challenge| := _.
     Definition Response_pos : Positive #|Response| := _.
-
+    Definition Bool_pos : Positive #|'bool| := _.
+    (* end details *)
   End MyParam.
 
   Module MyAlg <: SigmaProtocolAlgorithms MyParam.
 
     Import MyParam.
 
+    (* begin details : define (choice) type from size of protocol elements *)
     Definition choiceWitness : choice_type := 'fin #|Witness|.
     Definition choiceStatement : choice_type := 'fin #|Statement|.
     Definition choiceMessage : choice_type := 'fin #|Message|.
@@ -330,6 +175,7 @@ Module OVN_or_proof_preconditions (SG : SecureGroup) (HGPA : HacspecGroupParamAx
     Definition choiceBool := 'fin #|'bool|.
 
     Definition i_witness := #|Finite.clone _ 'Z_q|.
+    (* end details *)
 
     Definition HIDING : nat := 0.
     Definition SOUNDNESS : nat := 1.
@@ -355,21 +201,21 @@ Module OVN_or_proof_preconditions (SG : SecureGroup) (HGPA : HacspecGroupParamAx
              let r1 := r in
              let d1 := d in
 
-             let a1 := (g ^+ (otf r1 : 'Z_q) * x ^+ (otf d1 : 'Z_q)) in
-             let b1 := (h ^+ (otf r1 : 'Z_q) * y ^+ (otf d1 : 'Z_q)) in
+             let a1 := (g ^+ (otf r1 : 'Z_q) * x ^+ (otf d1 : 'Z_q))%g in
+             let b1 := (h ^+ (otf r1 : 'Z_q) * y ^+ (otf d1 : 'Z_q))%g in
 
-             let a2 := (g ^+ (otf w : 'Z_q)) in
-             let b2 := (h ^+ (otf w : 'Z_q)) in
+             let a2 := (g ^+ (otf w : 'Z_q))%g in
+             let b2 := (h ^+ (otf w : 'Z_q))%g in
              ret (fto (a1, b1, a2, b2)))
          else
            (let r2 := r in
             let d2 := d in
 
-            let a1 := (g ^+ (otf w : 'Z_q)) in
-            let b1 := (h ^+ (otf w : 'Z_q)) in
+            let a1 := (g ^+ (otf w : 'Z_q))%g in
+            let b1 := (h ^+ (otf w : 'Z_q))%g in
 
-            let a2 := (g ^+ (otf r2 : 'Z_q) * x ^+ (otf d2 : 'Z_q)) in
-            let b2 := (h ^+ (otf r2 : 'Z_q) * (y * g^-1) ^+ (otf d2 : 'Z_q)) in
+            let a2 := (g ^+ (otf r2 : 'Z_q) * x ^+ (otf d2 : 'Z_q))%g in
+            let b2 := (h ^+ (otf r2 : 'Z_q) * (y * g^-1) ^+ (otf d2 : 'Z_q))%g in
             ret (fto (a1, b1, a2, b2)))
       }.
 
@@ -378,11 +224,11 @@ Module OVN_or_proof_preconditions (SG : SecureGroup) (HGPA : HacspecGroupParamAx
       let '(x, h, y) := otf xhy in
       let '(a1, b1, a2, b2) := (otf a) in
       let '(r1, d1, r2, d2) := (otf z) in
-      fto ((otf c == d1 + d2) &&
+      fto ((otf c == d1 + d2)%R &&
              (a1 == (g ^+ r1) * (x ^+ d1)) &&
              (b1 == (h ^+ r1) * (y ^+ d1)) &&
              (a2 == (g ^+ r2) * (x ^+ d2)) &&
-             (b2 == (h ^+ r2) * ((y * (g ^-1)) ^+ d2))).
+             (b2 == (h ^+ r2) * ((y * (g ^-1)) ^+ d2)))%g.
 
 
     Definition Response (xhy : choiceStatement) (xv : choiceWitness) (_ : choiceMessage) (c : choiceChallenge) :
@@ -395,11 +241,11 @@ Module OVN_or_proof_preconditions (SG : SecureGroup) (HGPA : HacspecGroupParamAx
          then
            (let d2 := (otf c - otf d) in
             let r2 := (otf w - (m * d2)) in
-            ret (fto (otf r, otf d, r2, d2)))
+            ret (fto (otf r, otf d, r2, d2)))%R
          else
            (let d1 := (otf c - otf d) in
             let r1 := (otf w - (m * d1)) in
-            ret (fto (r1, d1, otf r, otf d)))
+            ret (fto (r1, d1, otf r, otf d)))%R
       }.
 
     Definition Simulate (xhy : choiceStatement) (c : choiceChallenge) :
@@ -412,11 +258,11 @@ Module OVN_or_proof_preconditions (SG : SecureGroup) (HGPA : HacspecGroupParamAx
          let d2 := otf d in
          let r2 := otf r in
          let r1 := otf r_other in
-         let d1 := otf c - d2 in
-         let a1 := g ^+ r1 * x ^+ d1 in
-         let b1 := h ^+ r1 * y ^+ d1 in
-         let a2 := g ^+ r2 * x ^+ d2 in
-         let b2 := h ^+ r2 * (y * invg g) ^+ d2 in
+         let d1 := (otf c - d2)%R in
+         let a1 := (g ^+ r1 * x ^+ d1)%g in
+         let b1 := (h ^+ r1 * y ^+ d1)%g in
+         let a2 := (g ^+ r2 * x ^+ d2)%g in
+         let b2 := (h ^+ r2 * (y * invg g) ^+ d2)%g in
          ret (xhy , fto (a1,b1,a2,b2), c , fto (r1,d1,r2,d2))
       }.
 
@@ -431,16 +277,16 @@ Module OVN_or_proof_preconditions (SG : SecureGroup) (HGPA : HacspecGroupParamAx
             ) :=
         (otf xhy, otf a, otf z, otf z') in
 
-      let m := if d1 - d1' != 0
-               then ((r1' - r1) / (d1 - d1'))
-               else ((r2' - r2) / ((d2 - d2'))) in
-      let v := ~~ (d1 - d1' != 0) (* y == h ^+ m * g *) in
+      let m := if (d1 - d1' != 0)%R
+               then ((r1' - r1) / (d1 - d1'))%R
+               else ((r2' - r2) / ((d2 - d2')))%R in
+      let v := ~~ (d1 - d1' != 0)%R (* y == h ^+ m * g *) in
       Some (fto (m, v, h)).
     Fail Next Obligation.
 
     Definition KeyGen (xv : choiceWitness) :=
       let '(m, v, h) := otf xv in
-      fto (g ^+ m, h ^+ m, h ^+ m * g ^+ v).
+      fto (g ^+ m, h ^+ m, h ^+ m * g ^+ v)%g.
 
   End MyAlg.
 
@@ -454,7 +300,7 @@ End OVN_or_proof_preconditions.
 (* Then proofs SHVZK and extractor correctness for OR protocol *)
 Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
   Module proof_args := OVN_or_proof_preconditions SG HGPA.
-    
+
   Import HGPA.
   Import proof_args.
 
@@ -473,14 +319,14 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
   Definition f_d2r2_to_wd : 'Z_q -> 'I_MyAlg.i_witness -> Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)) → Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)) :=
     fun m c dr =>
       let '(d2, r2) := (ch2prod dr) in
-      prod2ch (fto ((otf r2) + (m * (otf d2))), fto (otf c - otf d2)).
+      prod2ch (fto ((otf r2) + (m * (otf d2))), fto (otf c - otf d2))%R.
 
   Lemma f_d2r2_to_wd_bij : forall m c, bijective (f_d2r2_to_wd m c).
   Proof.
     intros.
     eapply (Bijective (g := fun dr =>
       let '(d2, r2) := (ch2prod dr) in
-      prod2ch (fto (otf c - otf r2), fto (otf d2 - (otf c - otf r2) * m)))).
+      prod2ch (fto (otf c - otf r2), fto (otf d2 - (otf c - otf r2) * m))))%R.
     - intros z.
       unfold f_d2r2_to_wd.
       rewrite <- prod2ch_ch2prod.
@@ -517,14 +363,14 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
   Definition f_d1r1_to_wd : 'Z_q -> 'I_MyAlg.i_witness -> Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)) → Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)) :=
     fun m c dr =>
       let '(d2, r1) := ch2prod dr in
-      prod2ch (fto ((otf r1) + (m * (otf c - otf d2))), fto (otf d2)).
+      prod2ch (fto ((otf r1) + (m * (otf c - otf d2))), fto (otf d2))%R.
 
   Lemma f_d1r1_to_wd_bij : forall m c, bijective (f_d1r1_to_wd m c).
   Proof.
     intros.
     eapply (Bijective (g := fun dr =>
                               let '(d2, r2) := (ch2prod dr) in
-                              prod2ch (r2, fto (otf d2 - m * (otf c - otf r2))))).
+                              prod2ch (r2, fto (otf d2 - m * (otf c - otf r2)))))%R.
     - intros z.
       unfold f_d1r1_to_wd.
       rewrite <- prod2ch_ch2prod.
@@ -583,7 +429,7 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
 
   (* Equivalence between the two OR protocols *)
  Lemma or_run_eq  (pre : precond) :
-    forall (b : Statement * Witness) c,
+    (forall (b : Statement * Witness) c,
       Some c = lookup_op RUN_interactive (RUN, ((chProd choiceStatement choiceWitness), choiceTranscript)) ->
       ⊢ ⦃ fun '(h₁, h₀) => heap_ignore Sigma_locs (h₀, h₁) ⦄
         c (fto (fst b), fto (snd b))
@@ -599,7 +445,7 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
                     (ret_both (snd (fst (fst b))))
                     (ret_both (WitnessToField (fst (fst (snd b)))))
                     (ret_both ((snd (fst b) == (snd (fst (fst b)) ^+  (fst (fst (snd b))) * g)) : 'bool)))
-          ⦃ fun '(x,h0) '(y,h1) => or_run_post_cond (fto (fst b)) x y ∧ heap_ignore Sigma_locs (h0, h1) ⦄.
+          ⦃ fun '(x,h0) '(y,h1) => or_run_post_cond (fto (fst b)) x y ∧ heap_ignore Sigma_locs (h0, h1) ⦄)%g.
   Proof.
     intros [[[x h] y] [[m v] n]] c H.
 
@@ -728,8 +574,8 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
             (* rewrite H. *)
             (* rewrite !(proj1 both_equivalence_is_pure_eq (sf_sub_by_opp (s := both_setoid_field v_G_t_Group _) _ _)). *)
 
-            Transparent Hacspec_ovn.sub.
-            unfold Hacspec_ovn.sub.
+            Transparent sub.
+            unfold sub.
 
             rewrite <- (FieldToWitnessCancel (GRing.opp (m * _))%R).
             setoid_rewrite <- (rmorphD FieldToWitness).
@@ -748,7 +594,7 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
 
             apply f_equal.
             now Misc.push_down_sides.
-          - unfold Hacspec_ovn.sub.
+          - unfold sub.
 
             rewrite <- (FieldToWitnessCancel (otf _)%R).
             setoid_rewrite <- (rmorphN FieldToWitness).
@@ -850,8 +696,8 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
             rewrite mulg1.
             rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
             rewrite pow_witness_to_field.
-            Transparent Hacspec_ovn.div.
-            unfold Hacspec_ovn.div.
+            Transparent div.
+            unfold div.
             (* rewrite (proj1 both_equivalence_is_pure_eq (div_is_prod_inv _ _)). *)
             rewrite pow_witness_to_field.
             rewrite WitnessToFieldCancel.
@@ -939,7 +785,7 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
                       (ret_both (WitnessToField (fst (fst (otf (snd b))))))
                       (ret_both ((snd (otf (fst b)) == (snd (fst (otf (fst b))) ^+  (fst (fst (otf (snd b)))) * g)) : 'bool))) ;;
           ret (hacspec_ret_to_or_sigma_ret (otf b.1) v)
-      }].
+      }]%g.
   (* begin hide *)
   Next Obligation.
     eapply (valid_package_cons _ _ _ _ _ _ [] []).
@@ -962,7 +808,7 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
                          #val #[ RUN ] : chRelation → chTranscript
         ] A_export A →
       fdisjoint LA Sigma_locs →
-      AdvantageE hacspec_or_run RUN_interactive A = 0.
+      AdvantageE hacspec_or_run RUN_interactive A = 0%R.
   Proof.
     (* Unfold statement *)
     intros LA A Va Hdisj.
@@ -1074,7 +920,7 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
                          #val #[ RUN ] : chRelation → chTranscript
         ] A_export A →
       fdisjoint LA Sigma_locs →
-      AdvantageE hacspec_or_run (SHVZK_real_aux ∘ SHVZK_real) A = 0.
+      AdvantageE hacspec_or_run (SHVZK_real_aux ∘ SHVZK_real) A = 0%R.
   Proof.
     intros.
     apply (AdvantageE_le_0 _ _ _ ).
@@ -1091,7 +937,7 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
                          #val #[ TRANSCRIPT ] : chInput → chTranscript
         ] A_export A →
       fdisjoint LA Sigma_locs →
-      ɛ_SHVZK A = 0.
+      ɛ_SHVZK A = 0%R.
   Proof.
     intros.
     unfold ɛ_SHVZK.
@@ -1169,10 +1015,10 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
                      (fto ((otf r1) + (m * (otf c - otf d2))), fto (otf d2), r)
                  in
                  prod3ch (w, d2, r2) (* w d r *)
-        )).
+        )%R).
       {
         eapply Bijective with
-          (g :=  fun (wdr : Arit (uniform (_ * _ * _))) =>
+          (g :=  (fun (wdr : Arit (uniform (_ * _ * _))) =>
                    let '(w, d2, r2) := ch3prod wdr in
                    let '(d, r, r_other) :=
                      if vi
@@ -1185,7 +1031,7 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
                        let r2 := r2 in
                        (d2, r2, r)
                    in
-                   prod3ch (d, r, r_other)).
+                   prod3ch (d, r, r_other))%R).
         {
           intros xyz.
           rewrite -[RHS](prod3ch_ch3prod xyz).
@@ -1406,7 +1252,7 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
       ValidPackage LA [interface
                          #val #[ SOUNDNESS ] : chSoundness → 'bool
         ] A_export A →
-      ɛ_soundness A = 0.
+      ɛ_soundness A = 0%R.
   Proof.
     intros LA A VA.
     apply: eq_rel_perf_ind_eq.
@@ -1445,12 +1291,12 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
     apply (proj2 (prod_swap_iff _ _ _ _)) in H9, H7, H8, H2.
     rewrite !mulg_invg_left_sub in H9, H7, H8, H2.
 
-    assert (ld1 - rd1 + (ld2 - rd2) <> 0).
+    assert (ld1 - rd1 + (ld2 - rd2) <> 0)%R.
     {
       subst e e'.
       clear -H.
       intros ?.
-      assert (fto (ld1 + ld2) = fto (rd1 + rd2)).
+      assert (fto (ld1 + ld2)%R = fto (rd1 + rd2)%R).
       2:{
         rewrite H1 in H.
         rewrite eqxx in H.
@@ -1469,7 +1315,7 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
       apply H0.
     }
 
-    assert ((ld1 - rd1) <> 0 \/ (ld2 - rd2) <> 0).
+    assert ((ld1 - rd1) <> 0 \/ (ld2 - rd2) <> 0)%R.
     {
       destruct (ld1 == rd1) eqn:is_eq;
         [ apply (ssrbool.elimT eqP) in is_eq
@@ -1488,12 +1334,12 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
 
     assert (if_bind : forall b (a : gT) (c d : 'Z_q), (a ^+ (if b then c else d)) = (if b then a ^+ c else a ^+ d)) by now clear ; intros [].
 
-    replace (g ^+ _) with (x ^+ (if ld1 - rd1 != 0 then (ld1 - rd1) / (ld1 - rd1) else (ld2 - rd2) / (ld2 - rd2))) by
-      now destruct (ld1 - rd1 != 0) ; rewrite !trunc_pow !expgM ; [ rewrite H9 | rewrite H7 ].
+    replace (g ^+ _) with (x ^+ (if ld1 - rd1 != 0 then (ld1 - rd1) / (ld1 - rd1) else (ld2 - rd2) / (ld2 - rd2))%R)%g by
+      now destruct (ld1 - rd1 != 0)%R ; rewrite !trunc_pow !expgM ; [ rewrite H9 | rewrite H7 ].
 
-    replace (h ^+ _) with ((y * g ^- (~~ (ld1 - rd1 != 0))) ^+ (if ld1 - rd1 != 0 then (ld1 - rd1) / (ld1 - rd1) else (ld2 - rd2) / (ld2 - rd2))).
+    replace (h ^+ _) with ((y * g ^- (~~ (ld1 - rd1 != 0))%R) ^+ (if ld1 - rd1 != 0 then (ld1 - rd1) / (ld1 - rd1) else (ld2 - rd2) / (ld2 - rd2))%R)%g.
     2:{
-      destruct (ld1 - rd1 != 0) ; rewrite !trunc_pow !expgM ; [ rewrite H8 | rewrite H2 ].
+      destruct (ld1 - rd1 != 0)%R ; rewrite !trunc_pow !expgM ; [ rewrite H8 | rewrite H2 ].
       - rewrite expg0.
         rewrite invg1.
         rewrite mulg1.
@@ -1502,7 +1348,7 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
         reflexivity.
     }
 
-    destruct (ld1 == rd1) eqn:is_zero;
+    destruct (ld1 == rd1)%R eqn:is_zero;
       [ apply (ssrbool.elimT eqP) in is_zero
       | apply (ssrbool.elimF eqP) in is_zero ].
     {
@@ -1521,7 +1367,7 @@ Module OVN_or_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
       now rewrite !eqxx.
     }
     {
-      assert (ld1 - rd1 <> 0).
+      assert (ld1 - rd1 <> 0)%R.
       {
         red ; intros.
         apply is_zero.

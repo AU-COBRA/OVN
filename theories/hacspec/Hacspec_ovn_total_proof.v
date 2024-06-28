@@ -111,6 +111,9 @@ Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
 
   Check (_ : 'unit).
 
+  Include HGPA.
+  (* Include HacspecGroup. *)
+
   (* Definition choiceWitness : choice_type := 'fin #||. *)
   Notation " 'chState' " :=
     t_OvnContractState
@@ -121,18 +124,17 @@ Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
     (in custom pack_type at level 2).
 
   Notation " 'chInp' " :=
-    (t_OvnContractState × t_CastVoteParam)
+    (t_OvnContractState (n := HacspecGroup.n) × t_CastVoteParam)
     (in custom pack_type at level 2).
 
   Notation " 'chOut' " :=
-    (chOption t_OvnContractState)
+    (chOption (t_OvnContractState (n := HacspecGroup.n)))
     (in custom pack_type at level 2).
+
 
 
 
   Definition MAXIMUM_BALLOT_SECRECY : nat := 10.
-
-  Module ConcertDefinitions := OVNConcert OVN_impl.
 
   Program Definition maximum_ballot_secrecy_real :
     package (fset [])
@@ -141,23 +143,8 @@ Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
     [package
       #def #[ MAXIMUM_BALLOT_SECRECY ] ('(state, ctx) : chInp) : chOut
       {
-        (* is_state ( *)
-        (*     matchb (@cast_vote *)
-        (*               t_CastVoteParam *)
-        (*               (ConcertDefinitions.t_CastVoteParam_t_Sized) *)
-        (*               (ConcertDefinitions.t_CastVoteParam_t_HasReceiveContext) *)
-        (*               (ret_both (ctx : t_CastVoteParam)) *)
-        (*               (ret_both (state : t_OvnContractState))) *)
-        (*     with *)
-        (*     | Result_Ok_case (_, s) => ret_both (Some (s : t_OvnContractState) : chOption t_OvnContractState) *)
-        (*     | Result_Err_case _ => ret_both (None : chOption t_OvnContractState) *)
-        (*     end : both (chOption (t_OvnContractState))) *)
-
-        temp ← is_state (@cast_vote
-                           (ConcertDefinitions.t_CastVoteParam_t_Sized)
-                           (ConcertDefinitions.t_CastVoteParam_t_HasReceiveContext)
-                           (ret_both (ctx : t_CastVoteParam)) (ret_both (state : t_OvnContractState))) ;;
-        match temp : t_Result (v_A × t_OvnContractState) _ with
+        temp ← is_state (cast_vote (v_G_t_Group := HGPA.HacspecGroup.v_G_t_Group) (n := HGPA.HacspecGroup.n) (ret_both (ctx : t_CastVoteParam)) (ret_both (state : t_OvnContractState (n := HacspecGroup.n)))) ;;
+        match temp : t_Result (HacspecGroup.v_A × t_OvnContractState (n := HacspecGroup.n)) _ with
         | Result_Ok_case (_, s) => ret (Some s)
         | Result_Err_case _ => ret None
         end
