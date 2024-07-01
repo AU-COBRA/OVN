@@ -133,7 +133,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
   Definition MAXIMUM_BALLOT_SECRECY : nat := 10.
 
-  Program Definition maximum_ballot_secrecy_real :
+  Program Definition maximum_ballot_secrecy_real_pkg :
     package (fset [])
       [interface]
       [interface #val #[ MAXIMUM_BALLOT_SECRECY ] : chInp → chOut] :=
@@ -147,7 +147,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
         end
       }
     ].
-  Next Obligation.
+    Next Obligation.
     fold chElement.
     eapply (valid_package_cons _ _ _ _ _ _ [] []).
     - apply valid_empty_package.
@@ -155,7 +155,8 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       simpl.
       rewrite <- !fset0E.
       ssprove_valid'_2.
-      all: apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
+      all: try apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
+      
     - unfold "\notin".
       rewrite <- !fset0E.
       rewrite imfset0.
@@ -164,6 +165,19 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
   Qed.
   Fail Next Obligation.
 
+  Definition maximum_ballot_secrecy_real : Game_Type [interface #val #[MAXIMUM_BALLOT_SECRECY] : chInp → chOut ] :=
+    ({| locs := fset [::];
+       locs_pack := maximum_ballot_secrecy_real_pkg |}).
+
+  Goal True.
+    pose AdvantageE_equiv.
+    Unset Printing Notations.
+    Check adv_equiv.
+
+    pose (ReductionLem fset0 fset0 [interface #val #[MAXIMUM_BALLOT_SECRECY] : chInp → chOut ]).
+    
+    simpl in a.
+  
   Program Definition maximum_ballot_secrecy_ideal:
     package (fset [])
       [interface]
@@ -174,8 +188,8 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
         let state := ret_both (state : t_OvnContractState) in
         let ctx := (ret_both (ctx : t_CastVoteParam)) in
         let p_i := f_cvp_i ctx : both int32 in
-        x ← is_state (f_g_pow (f_cvp_xi ctx)) ;;
         h ← is_state (compute_g_pow_yi (cast_int (WS2 := _) (f_cvp_i ctx)) (f_g_pow_xis state)) ;;
+        x ← is_state (f_g_pow (f_cvp_xi ctx)) ;;
         z ← sample (uniform (H := Zq_pos) #|Finite.clone _ 'Z_q|) ;;
         c ← sample (uniform (H := Zq_pos) #|Finite.clone _ 'Z_q|) ;;
         let y := g ^+ otf z in
@@ -384,7 +398,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       now apply IHh1.
   Qed.
 
-  Definition somewhat_substitution : forall {A B : choice_type} (b : both A) (f : A -> raw_code B) (c : raw_code B),
+  Definition somewhat_substitution : forall {A : choice_type} {B : choiceType} (b : both A) (f : A -> raw_code B) (c : raw_code B),
       (forall x, deterministic (f x)) ->
           ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ ret (is_pure b) ≈ is_state b ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄ ->
           ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← ret (is_pure b) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄ ->
@@ -437,14 +451,8 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
       Opaque MyAlg.Simulate.
 
-      simpl (lookup_op _ _).
-      fold chElement.
+      simpl (lookup_op _ _) ; fold chElement.
 
-      (* set (setm _ _ _ _). *)
-      (* unfold mkdef in o. *)
-      (* simpl in o. *)
-
-      (* subst o. *)
       rewrite !setmE.
       rewrite <- fset1E in H1.
       rewrite in_fset1 in H1.
@@ -463,7 +471,8 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       destruct x as [state ctx].
 
       set (fun _ => _) at 3.
-      set (bind _ _) at 2.
+      set (r := fun _ => _) at 4.
+      (* set (bind _ _) at 2. *)
 
       unfold cast_vote at 1.
       rewrite bind_assoc.
@@ -472,14 +481,12 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       rewrite bind_assoc ; 
       rewrite bind_rewrite ; 
       rewrite bind_assoc ;
-      set (is_state _) ;
+      set (r0 := is_state _) ;
       simpl (is_state _) ; 
       unfold bind at 2 ; 
       simpl (is_state _) ; 
         unfold bind at 2 ;
         subst r0.
-
-      epose (@somewhat_substitution _ ((chOption t_OvnContractState)) f_accept).
 
       assert (somewhat_let_substitution :
                forall {A C : choice_type} {B : choiceType} (f : C -> raw_code B) (c : raw_code B) (y : both A) (r : both A -> both C),
@@ -487,18 +494,12 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
           ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ b_temp ← is_state y ;; temp ← is_state (r (ret_both b_temp)) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄ ->
           ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← is_state (letb 'b := y in r b) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄) by admit.
       (* *)
-      apply (somewhat_let_substitution _ _ _ _ r _ _) ; [admit | ].
-      apply (@somewhat_substitution _ ((chOption t_OvnContractState)) (compute_g_pow_yi _ _)) ; [ admit | admit | rewrite bind_rewrite ].
+      apply (somewhat_let_substitution _ _ _ _ _ _ _) ; [admit | ].
 
-      apply (somewhat_let_substitution _ _ _ _ r _ _) ; [admit | ].
-      set (fun _ => _) at 3.
-      replace (bind _ _) with (x ← sample uniform #|gT| ;; y0 (otf x)) by admit.
-      subst y0.
-      hnf.
-
-      apply pkg_rhl.r_const_sample_L ; [admit | intros ].
-
-      apply (somewhat_let_substitution _ _ _ _ r _ _) ; [admit | ].
+      eapply r_bind ; [ apply rreflexivity_rule | intros ].
+      eapply rpre_weaken_rule ; [ | admit ].
+      
+      apply (somewhat_let_substitution _ _ _ _ _ _ _) ; [admit | ].
 
       set (f_cvp_zkp_random_w _).
       set (f_cvp_zkp_random_r _).
@@ -507,12 +508,53 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       set (f_cvp_xi _).
       set (f_cvp_vote _).
 
+      epose AdvantageE_equiv.
+      pose hacspec_vs_RUN_interactive
+      
       change (zkp_one_out_of_two b b0 b1 b2 b3 b4) with
         (letb ' b := b in
          letb ' b0 := b0 in
          letb ' b1 := b1 in
            zkp_one_out_of_two b b0 b1 b2 b3 b4).
 
+      apply r_nice_swap_rule ; [ admit | admit | ].
+
+      apply (somewhat_substitution (f_g_pow b3)) ; [ admit | admit | rewrite bind_rewrite ].
+      apply r_nice_swap_rule ; [ admit | admit | ].
+
+      apply (somewhat_let_substitution _ _ _ _ _ _ _) ; [admit | ].
+
+      set (fun _ => _) at 3.
+      replace (bind _ _) with (x ← sample uniform #|'Z_q| ;; y0 (otf x)) by admit.
+
+      ssprove_sync_eq.
+      intros.
+      subst y0.
+      hnf.
+      
+      apply (somewhat_let_substitution _ _ _ _ _ _ _) ; [admit | ].
+
+      set (fun _ => _) at 3.
+      replace (bind _ _) with (x ← sample uniform #|'Z_q| ;; y0 (otf x)) by admit.
+
+      ssprove_sync_eq.
+      intros.
+      subst y0.
+      hnf.
+
+      apply (somewhat_let_substitution _ _ _ _ _ _ _) ; [admit | ].
+
+      set (fun _ => _) at 3.
+      replace (bind _ _) with (x ← sample uniform #|'Z_q| ;; y0 (otf x)) by admit.
+
+      ssprove_sync_eq.
+      intros.
+      subst y0.
+      hnf.
+
+
+      
+      
       eapply r_transR.
       2:{
         apply (somewhat_let_substitution _ _ _ _ _ _ _) ; [admit | eapply r_bind ; [ admit | intros ] ].
@@ -547,6 +589,8 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
                           (ret_both
                              ((is_pure b2 : gT) == ((is_pure b2 : gT) ^+ FieldToWitness (is_pure b3) * g)%g : 'bool)) (* ((snd (fst b) == (snd (fst (fst b)) ^+  (fst (fst (snd b))) * g)) : 'bool) *))) ;; y0 x) by admit.
 
+      pose lookup_op_valid.
+      pose (lookup_op RUN_interactive (RUN, ((chProd choiceStatement choiceWitness), choiceTranscript))).
       replace (assertD _ _) with (ret 3).
       
       

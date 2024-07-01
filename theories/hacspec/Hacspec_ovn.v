@@ -33,11 +33,11 @@ Module HacspecOVN.
 Parameter (v_G : choice_type).
 
 (* TODO: Cannot find instance in hacspec lib? *)
-#[global] Instance v_G_t_copy : t_Copy v_G := _.
-#[global] Instance v_G_t_partial_eq : t_PartialEq v_G v_G := _.
-#[global] Instance v_G_t_eq : t_Eq v_G := _.
-#[global] Instance v_G_t_clone : t_Clone v_G := _.
-#[global] Instance v_G_t_serialize : t_Serialize v_G := _.
+#[global] Instance v_G_t_copy : t_Copy v_G := copy.
+#[global] Instance v_G_t_partial_eq : t_PartialEq v_G v_G := partial_eq.
+#[global] Instance v_G_t_eq : t_Eq v_G := is_eq.
+#[global] Instance v_G_t_clone : t_Clone v_G := clone.
+#[global] Instance v_G_t_serialize : t_Serialize v_G := serialize.
 
 Parameter (v_G_t_Group : t_Group v_G).
 Instance v_G_t_Group_temp : t_Group v_G := v_G_t_Group.
@@ -449,8 +449,8 @@ Equations cast_vote (ctx : both t_CastVoteParam) (state : both (t_OvnContractSta
     solve_lift (run (letb '(_,out) := f_get (f_parameter_cursor ctx) in
     letm[choice_typeMonad.result_bind_code _ (* t_ParseError *)] (params : t_CastVoteParam f_Z) := impl__map_err out f_from in
     Result_Ok (letb g_pow_yi := compute_g_pow_yi (cast_int (WS2 := _) (f_cvp_i params)) (f_g_pow_xis state) in
-    letb g_pow_xi_yi_vi := compute_group_element_for_vote (f_cvp_xi params) (f_cvp_vote params) g_pow_yi in
     letb zkp_vi := zkp_one_out_of_two (f_cvp_zkp_random_w params) (f_cvp_zkp_random_r params) (f_cvp_zkp_random_d params) g_pow_yi (f_cvp_xi params) (f_cvp_vote params) in
+    letb g_pow_xi_yi_vi := compute_group_element_for_vote (f_cvp_xi params) (f_cvp_vote params) g_pow_yi in
     letb cast_vote_state_ret := f_clone state in
     letb cast_vote_state_ret := Build_t_OvnContractState[cast_vote_state_ret] (f_g_pow_xi_yi_vis := update_at_usize (f_g_pow_xi_yi_vis cast_vote_state_ret) (cast_int (WS2 := _) (f_cvp_i params)) g_pow_xi_yi_vi) in
     letb cast_vote_state_ret := Build_t_OvnContractState[cast_vote_state_ret] (f_zkp_vis := update_at_usize (f_zkp_vis cast_vote_state_ret) (cast_int (WS2 := _) (f_cvp_i params)) zkp_vi) in
