@@ -459,9 +459,9 @@ Module Type HacspecGroupParamAxiom.
   Qed.
 
   (* begin details : Positivity checks *)
-  #[export] Instance positive_gT : Positive #|HacspecGroup.gT|.
+  #[export] Instance positive_gT : Positive #|gT|.
   Proof.
-    apply /card_gt0P. exists HacspecGroup.g. auto.
+    apply /card_gt0P. exists g. auto.
   Qed.
 
   #[export] Instance Bool_pos : Positive #|'bool|.
@@ -489,7 +489,7 @@ Module Type HacspecGroupParamAxiom.
   
   Parameter conversion_is_true :
     forall (b : both f_Z),
-    (HacspecGroup.g ^+ FieldToWitness (is_pure b)) = is_pure (f_g_pow b).
+    (g ^+ FieldToWitness (is_pure b)) = is_pure (f_g_pow b).
 
     (* We have a bijection between f_random_field_elem and random sampling *)
     Parameter randomness_sample_is_bijective :
@@ -508,11 +508,10 @@ Module Type HacspecGroupParamAxiom.
           e ← sample uniform i ;;
         c0 e ≈
           x ← is_state
-          (f_hash (t_Group := HacspecGroup.v_G_t_Group)
+          (f_hash (t_Group := v_G_t_Group)
              (impl__into_vec
                 (unsize
                    (box_new
                       (array_from_list l))))) ;; c1 x ⦃ post ⦄.
 
 End HacspecGroupParamAxiom.
-

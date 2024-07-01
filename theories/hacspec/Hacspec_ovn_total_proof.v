@@ -94,12 +94,12 @@ From OVN Require Import Hacspec_ovn_sigma_setup.
 From OVN Require Import Hacspec_ovn_schnorr.
 From OVN Require Import Hacspec_ovn_or.
 
-Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
-  Module Schnorr_ZKP := OVN_schnorr_proof SG HGPA.
-  Module OR_ZKP := OVN_or_proof SG HGPA.
+Module OVN_proof (HGPA : HacspecGroupParamAxiom).
+  Module Schnorr_ZKP := OVN_schnorr_proof HGPA.
+  Module OR_ZKP := OVN_or_proof HGPA.
 
-  Import OR_ZKP.
   Import Schnorr_ZKP.
+  Import OR_ZKP.
 
   Include HGPA.
 
@@ -162,6 +162,7 @@ Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
       rewrite in_fset0.
       easy.
   Qed.
+  Fail Next Obligation.
 
   Program Definition maximum_ballot_secrecy_ideal:
     package (fset [])
@@ -175,20 +176,20 @@ Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
         let p_i := f_cvp_i ctx : both int32 in
         x ← is_state (f_g_pow (f_cvp_xi ctx)) ;;
         h ← is_state (compute_g_pow_yi (cast_int (WS2 := _) (f_cvp_i ctx)) (f_g_pow_xis state)) ;;
-        z ← sample (uniform (H := Zq_pos) #|Finite.clone _ 'F_q|) ;;
-        c ← sample (uniform (H := Zq_pos) #|Finite.clone _ 'F_q|) ;;
+        z ← sample (uniform (H := Zq_pos) #|Finite.clone _ 'Z_q|) ;;
+        c ← sample (uniform (H := Zq_pos) #|Finite.clone _ 'Z_q|) ;;
         let y := g ^+ otf z in
         '(zkp_xhy, zkp_abab, zkp_c, zkp_rdrd) ← MyAlg.Simulate (fto (x : gT,h : gT,y)) c ;;
         let '(x,h,y) := otf zkp_xhy in
         let '(zkp_a1, zkp_b1, zkp_a2, zkp_b2) := otf zkp_abab in
         let '(zkp_r1, zkp_d1, zkp_r2, zkp_d2) := otf zkp_rdrd in
 
-        let zkp_c := WitnessToField (otf zkp_c : 'F_q) : f_Z in
+        let zkp_c := WitnessToField (otf zkp_c : 'Z_q) : f_Z in
 
-        let zkp_r1 := WitnessToField (zkp_r1 : 'F_q) : f_Z in
-        let zkp_d1 := WitnessToField (zkp_d1 : 'F_q) : f_Z in
-        let zkp_r2 := WitnessToField (zkp_r2 : 'F_q) : f_Z in
-        let zkp_d2 := WitnessToField (zkp_d2 : 'F_q) : f_Z in
+        let zkp_r1 := WitnessToField (zkp_r1 : 'Z_q) : f_Z in
+        let zkp_d1 := WitnessToField (zkp_d1 : 'Z_q) : f_Z in
+        let zkp_r2 := WitnessToField (zkp_r2 : 'Z_q) : f_Z in
+        let zkp_d2 := WitnessToField (zkp_d2 : 'Z_q) : f_Z in
         res ← is_state (
             letb zkp_vi :=
               Build_t_OrZKPCommit
@@ -217,13 +218,6 @@ Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
       }
     ].
   Next Obligation.
-    apply /card_gt0P.
-    simpl.
-    exists 0%R.
-    easy.
-  Qed.
-  Next Obligation.
-    easy.
     eapply (valid_package_cons _ _ _ _ _ _ [] []).
     - apply valid_empty_package.
     - intros [].
@@ -238,9 +232,11 @@ Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
       rewrite in_fset0.
       easy.
   Qed.
+  Fail Next Obligation.
 
   Definition ɛ_maximum_ballot_secrecy A := AdvantageE maximum_ballot_secrecy_real maximum_ballot_secrecy_ideal A.
 
+  (* begin details : helper defintions *)
   Definition deterministic_bind :
     forall {A B} (b : raw_code A) (f : A -> raw_code B)
       (H : deterministic b)
@@ -403,13 +399,14 @@ Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
     - apply b_eq.
     - intros.
       simpl.
-      apply rpre_hypothesis_rule'.
+      apply Misc.rpre_hypothesis_rule'.
       intros ? ? [].
       eapply rpre_weaken_rule.
       1: subst ; apply rreflexivity_rule.
       intros ? ? [].
       now subst.
   Qed.
+  (* end details : helper defintions *)
 
   Lemma maximum_ballot_secrecy_success:
     ∀ LA A,
@@ -463,12 +460,384 @@ Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
       rewrite !cast_fun_K.
       clear e e0.
 
-      destruct x as [? ?].
+      destruct x as [state ctx].
+
+      set (fun _ => _) at 3.
+      set (bind _ _) at 2.
+
+      unfold cast_vote at 1.
+      rewrite bind_assoc.
+      
+      rewrite bind_assoc ; rewrite bind_rewrite ; fold chElement ;
+      rewrite bind_assoc ; 
+      rewrite bind_rewrite ; 
+      rewrite bind_assoc ;
+      set (is_state _) ;
+      simpl (is_state _) ; 
+      unfold bind at 2 ; 
+      simpl (is_state _) ; 
+        unfold bind at 2 ;
+        subst r0.
+
+      epose (@somewhat_substitution _ ((chOption t_OvnContractState)) f_accept).
+
+      assert (somewhat_let_substitution :
+               forall {A C : choice_type} {B : choiceType} (f : C -> raw_code B) (c : raw_code B) (y : both A) (r : both A -> both C),
+                 (forall x, deterministic (f x)) ->
+          ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ b_temp ← is_state y ;; temp ← is_state (r (ret_both b_temp)) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄ ->
+          ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← is_state (letb 'b := y in r b) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄) by admit.
+      (* *)
+      apply (somewhat_let_substitution _ _ _ _ r _ _) ; [admit | ].
+      apply (@somewhat_substitution _ ((chOption t_OvnContractState)) (compute_g_pow_yi _ _)) ; [ admit | admit | rewrite bind_rewrite ].
+
+      apply (somewhat_let_substitution _ _ _ _ r _ _) ; [admit | ].
+      set (fun _ => _) at 3.
+      replace (bind _ _) with (x ← sample uniform #|gT| ;; y0 (otf x)) by admit.
+      subst y0.
+      hnf.
+
+      apply pkg_rhl.r_const_sample_L ; [admit | intros ].
+
+      apply (somewhat_let_substitution _ _ _ _ r _ _) ; [admit | ].
+
+      set (f_cvp_zkp_random_w _).
+      set (f_cvp_zkp_random_r _).
+      set (f_cvp_zkp_random_d _).
+      set (ret_both _).
+      set (f_cvp_xi _).
+      set (f_cvp_vote _).
+
+      change (zkp_one_out_of_two b b0 b1 b2 b3 b4) with
+        (letb ' b := b in
+         letb ' b0 := b0 in
+         letb ' b1 := b1 in
+           zkp_one_out_of_two b b0 b1 b2 b3 b4).
+
+      eapply r_transR.
+      2:{
+        apply (somewhat_let_substitution _ _ _ _ _ _ _) ; [admit | eapply r_bind ; [ admit | intros ] ].
+        eapply rpre_weaken_rule ; [ | admit ].
+        assert (a₀ = a₁) by admit.
+        subst.
+        apply (somewhat_let_substitution _ _ _ _ _ _ _) ; [admit | eapply r_bind ; [ admit | intros ] ].
+        eapply rpre_weaken_rule ; [ | admit ].
+        assert (a₀ = a₁0) by admit.
+        subst.
+        apply (somewhat_let_substitution _ _ _ _ _ _ _) ; [admit | eapply r_bind ; [ admit | intros ] ].
+        eapply rpre_weaken_rule ; [ | admit ].
+        assert (a₀ = a₁1) by admit.
+        subst.
+        eapply rpost_weaken_rule ; [ | admit ].
+        apply rreflexivity_rule.
+      }
+
+      set (fun _ => _) at 3.
+      replace (bind _ _) with
+        (x ← (#assert (MyParam.R (g ^+ FieldToWitness (is_pure b3), is_pure b2, is_pure b2)
+                    (FieldToWitness (is_pure b3), is_pure b4, is_pure b2)) ;;
+              wr ← sample uniform (2^32) ;;
+              dr ← sample uniform (2^32) ;;
+              rr ← sample uniform (2^32) ;;
+              is_state (zkp_one_out_of_two
+                          (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord wr))))
+                          (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord rr))))
+                          (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord dr))))
+                          (ret_both (is_pure b2)) (* (snd (fst (fst b))) *)
+                          (ret_both (WitnessToField (FieldToWitness (is_pure b3)))) (* (WitnessToField (fst (fst (snd b)))) *)
+                          (ret_both
+                             ((is_pure b2 : gT) == ((is_pure b2 : gT) ^+ FieldToWitness (is_pure b3) * g)%g : 'bool)) (* ((snd (fst b) == (snd (fst (fst b)) ^+  (fst (fst (snd b))) * g)) : 'bool) *))) ;; y0 x) by admit.
+
+      replace (assertD _ _) with (ret 3).
+      
+      
+      eapply r_transR.
+      2:{
+        eapply r_bind.
+        1:{
+          apply r_nice_swap_rule ; [ admit | admit | ].
+          eapply rpre_weaken_rule ; [ | admit ].
+          eapply rpost_weaken_rule ; [ | admit ].
+
+          epose (or_run_eq (λ '(h₁, h₀), heap_ignore _ (h₀, h₁)) (((g ^+ FieldToWitness (is_pure b3)) , (is_pure b2), (is_pure b2)), (FieldToWitness (is_pure b3) , is_pure b4, (is_pure b2)))).
+          unfold ".1", ".2" in r1.
+
+          change HGPA.HacspecGroup.g with g in r1.
+          change HGPA.HacspecGroup.OVN_instance.OVN.zkp_one_out_of_two with zkp_one_out_of_two in r1.
+          change HGPA.field_equality.WitnessToField with WitnessToField in r1.
+
+          set (assertD _ _) in *.
+          eapply r2.
+          
+          eapply r2.
+          
+          rewrite WitnessToFieldCancel in r2.
+      
+      apply (somewhat_let_substitution _ _ _ _ r _ _) ; [admit | ].
+      apply (somewhat_let_substitution _ _ _ _ r _ _) ; [admit | ].
+
+      
+      2:{ reflexivity.
+
+      replace ()
+ite      
+      rewrite <- (bind_ret_both (f_cvp_zkp_random_w
+                      (solve_lift bind_both (ret_both (f_parameter_cursor (ret_both ctx))) ret_both))).
+      set (fun _ => _) at 3.
+      replace (bind _ _) with (x ← sample uniform #|gT| ;; y0 (otf x)) by admit.
+      subst y0.
+      hnf.
+
+      
+      apply (@somewhat_substitution _ ((chOption t_OvnContractState)) (compute_g_pow_yi _ _)) ; [ admit | admit | rewrite bind_rewrite ].
+
+      
+      set (ret_both _).
+
+      unfold y0.
+      apply (somewhat_let_substitution _ _ _ _ r _ _) ; [admit | ].
+
+      
+      simpl.
+
+      apply (@somewhat_substitution _ ((chOption t_OvnContractState)) (compute_g_pow_yi _ _)) ; [ admit | admit | rewrite bind_rewrite ].
+        
+        admit.
+        
+        
+      
+      apply r1.
+      apply 
+      apply somewhat_let_substitution.
+      
+      assert (forall y r, is_state (letb ' p := y in r p) = (' p ← is_state y ;; r (ret_both p))).
+      
+      
+      replace (is_state (letb ' g_pow_yi
+            := compute_g_pow_yi
+                 (cast_int (f_cvp_i (solve_lift ret_both (f_parameter_cursor (ret_both ctx)))))
+                 (f_g_pow_xis (ret_both state))
+            in letb ' g_pow_xi_yi_vi
+               := compute_group_element_for_vote
+                    (f_cvp_xi (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                    (f_cvp_vote (solve_lift ret_both (f_parameter_cursor (ret_both ctx)))) g_pow_yi
+               in letb ' zkp_vi
+                  := zkp_one_out_of_two
+                       (f_cvp_zkp_random_w (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                       (f_cvp_zkp_random_r (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                       (f_cvp_zkp_random_d (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                       g_pow_yi (f_cvp_xi (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                       (f_cvp_vote (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                  in letb ' cast_vote_state_ret := f_branch (ret_both state)
+                     in letb ' cast_vote_state_ret0
+                        := Build_t_OvnContractState [cast_vote_state_ret]
+                           ( f_g_pow_xi_yi_vis := update_at_usize
+                                                    (f_g_pow_xi_yi_vis cast_vote_state_ret)
+                                                    (cast_int
+                                                       (f_cvp_i
+                                                          (solve_lift ret_both
+                                                                        (f_parameter_cursor
+                                                                         (ret_both ctx)))))
+                                                    g_pow_xi_yi_vi)
+                        in letb ' cast_vote_state_ret1
+                           := Build_t_OvnContractState [cast_vote_state_ret0]
+                              ( f_zkp_vis := update_at_usize (f_zkp_vis cast_vote_state_ret0)
+                                               (cast_int
+                                                  (f_cvp_i
+                                                     (solve_lift ret_both
+                                                                   (f_parameter_cursor (ret_both ctx)))))
+                                               zkp_vi)
+                             in ControlFlow_Continue prod_b (f_accept, cast_vote_state_ret1))) with
+        (g_pow_yi ← is_state (compute_g_pow_yi
+                 (cast_int (f_cvp_i (solve_lift ret_both (f_parameter_cursor (ret_both ctx)))))
+                 (f_g_pow_xis (ret_both state))) ;;
+         g_pow_xi_yi_vi ←
+               compute_group_element_for_vote
+                    (f_cvp_xi (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                    (f_cvp_vote (solve_lift ret_both (f_parameter_cursor (ret_both ctx)))) g_pow_yi
+               ;; letb ' zkp_vi
+                  := zkp_one_out_of_two
+                       (f_cvp_zkp_random_w (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                       (f_cvp_zkp_random_r (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                       (f_cvp_zkp_random_d (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                       g_pow_yi (f_cvp_xi (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                       (f_cvp_vote (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                  in letb ' cast_vote_state_ret := f_branch (ret_both state)
+                     in letb ' cast_vote_state_ret0
+                        := Build_t_OvnContractState [cast_vote_state_ret]
+                           ( f_g_pow_xi_yi_vis := update_at_usize
+                                                    (f_g_pow_xi_yi_vis cast_vote_state_ret)
+                                                    (cast_int
+                                                       (f_cvp_i
+                                                          (solve_lift ret_both
+                                                                        (f_parameter_cursor
+                                                                         (ret_both ctx)))))
+                                                    g_pow_xi_yi_vi)
+                        in letb ' cast_vote_state_ret1
+                           := Build_t_OvnContractState [cast_vote_state_ret0]
+                              ( f_zkp_vis := update_at_usize (f_zkp_vis cast_vote_state_ret0)
+                                               (cast_int
+                                                  (f_cvp_i
+                                                     (solve_lift ret_both
+                                                                   (f_parameter_cursor (ret_both ctx)))))
+                                               zkp_vi)
+                           in ControlFlow_Continue prod_b (f_accept, cast_vote_state_ret1)).
+      
+      rewrite bind_assoc ;
+        set (is_state _) ;
+      simpl (is_state _) ; 
+      unfold bind at 2 ; 
+      subst y ; 
+      hnf ; 
+      unfold Hacspec_Lib_Pre.Ok ;
+        set (fun _ => _) at 3 ;
+        subst r0.
+
+      
+      
+      rewrite bind_assoc ; 
+      apply (@somewhat_substitution _ ((chOption t_OvnContractState)) f_accept) ; [admit | admit | rewrite bind_rewrite] ; 
+      rewrite bind_assoc ;
+      set (is_state _) ;
+      simpl (is_state _) ;
+      unfold bind at 2 ;
+      subst r0.
+
+      rewrite bind_assoc.
+      rewrite bind_rewrite.
+
+      apply (@somewhat_substitution _ ((chOption t_OvnContractState)) (compute_group_element_for_vote _ _ _)) ; [admit | admit | rewrite bind_rewrite].
+
+      
+      
+      set ((zkp_one_out_of_two
+                            (f_cvp_zkp_random_w
+                               (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                            (f_cvp_zkp_random_r
+                               (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                            (f_cvp_zkp_random_d
+                               (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                            (compute_g_pow_yi
+                               (cast_int
+                                  (f_cvp_i (solve_lift ret_both (f_parameter_cursor (ret_both ctx)))))
+                               (f_g_pow_xis (ret_both state)))
+                            (f_cvp_xi (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                            (f_cvp_vote (solve_lift ret_both (f_parameter_cursor (ret_both ctx)))))).
+      set (Build_t_OvnContractState[ _ ] ( f_g_pow_xi_yi_vis := _)).
+      set (Build_t_OvnContractState[ _ ] ( f_zkp_vis := _)).
+      pattern (f_cvp_zkp_random_w) in b.
+      
+      replace
+        Build_t_OvnContractState [
+            Build_t_OvnContractState [f_branch (ret_both state)]
+              ( f_g_pow_xi_yi_vis := update_at_usize
+                                       (f_g_pow_xi_yi_vis
+                                          (f_branch (ret_both state)))
+                                       (cast_int
+                                          (f_cvp_i
+                                             (solve_lift 
+                                                ret_both
+                                                (f_parameter_cursor
+                                                   (ret_both ctx)))))
+                                       (compute_group_element_for_vote
+                                          (f_cvp_xi
+                                             (solve_lift 
+                                                ret_both
+                                                (f_parameter_cursor
+                                                   (ret_both ctx))))
+                                          (f_cvp_vote
+                                             (solve_lift 
+                                                ret_both
+                                                (f_parameter_cursor
+                                                   (ret_both ctx))))
+                                          (compute_g_pow_yi
+                                             (cast_int
+                                                (f_cvp_i
+                                                   (solve_lift 
+                                                      ret_both
+                                                      (f_parameter_cursor
+                                                         (ret_both ctx)))))
+                                             (f_g_pow_xis (ret_both state)))))]
+          ( f_zkp_vis := update_at_usize
+                           (f_zkp_vis
+                              Build_t_OvnContractState [f_branch (ret_both state)]
+                              ( f_g_pow_xi_yi_vis := update_at_usize
+                                                       (f_g_pow_xi_yi_vis (f_branch (ret_both state)))
+                                                       (cast_int
+                                                          (f_cvp_i
+                                                             (solve_lift 
+                                                                ret_both
+                                                                (f_parameter_cursor (ret_both ctx)))))
+                                                       (compute_group_element_for_vote
+                                                          (f_cvp_xi
+                                                             (solve_lift 
+                                                                ret_both
+                                                                (f_parameter_cursor (ret_both ctx))))
+                                                          (f_cvp_vote
+                                                             (solve_lift 
+                                                                ret_both
+                                                                (f_parameter_cursor (ret_both ctx))))
+                                                          (compute_g_pow_yi
+                                                             (cast_int
+                                                                (f_cvp_i
+                                                                   (solve_lift 
+                                                                      ret_both
+                                                                      (f_parameter_cursor
+                                                                         (ret_both ctx)))))
+                                                             (f_g_pow_xis (ret_both state))))))
+                           (cast_int
+                              (f_cvp_i (solve_lift ret_both (f_parameter_cursor (ret_both ctx)))))
+                           (zkp_one_out_of_two
+                              (f_cvp_zkp_random_w
+                                 (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                              (f_cvp_zkp_random_r
+                                 (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                              (f_cvp_zkp_random_d
+                                 (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                              (compute_g_pow_yi
+                                 (cast_int
+                                    (f_cvp_i
+                                       (solve_lift ret_both (f_parameter_cursor (ret_both ctx)))))
+                                 (f_g_pow_xis (ret_both state)))
+                              (f_cvp_xi (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))
+                              (f_cvp_vote (solve_lift ret_both (f_parameter_cursor (ret_both ctx))))))
+      
+      rewrite bind_assoc ; 
+      apply (@somewhat_substitution _ ((chOption t_OvnContractState)) f_accept) ; [admit | admit | rewrite bind_rewrite] ; 
+      rewrite bind_assoc ;
+      set (is_state _) ;
+      simpl (is_state _) ;
+      unfold bind at 2 ;
+      subst r0.
+      
+      
+      simpl (bind _ _) at 2.
+
+      
+      
+      destruct s.
+      unfold y.
+      hnf.
+      
+      rewrite bind_assoc.
+      apply (@somewhat_substitution _ ((chOption t_OvnContractState)) f_accept) ; [admit | admit | rewrite bind_rewrite].
+
+
+
+      
+      replace (bind _ _) with (
+          bind (letm[choice_typeMonad.result_bind_code _ (* t_ParseError *)] (params : t_CastVoteParam f_Z) := impl__map_err out f_from in
+    Result_Ok (letb g_pow_yi := compute_g_pow_yi (cast_int (WS2 := _) (f_cvp_i params)) (f_g_pow_xis (ret_both state)) in
+    letb g_pow_xi_yi_vi := compute_group_element_for_vote (f_cvp_xi params) (f_cvp_vote params) g_pow_yi in
+    letb zkp_vi := zkp_one_out_of_two (f_cvp_zkp_random_w params) (f_cvp_zkp_random_r params) (f_cvp_zkp_random_d params) g_pow_yi (f_cvp_xi params) (f_cvp_vote params) in
+    letb cast_vote_state_ret := f_clone (ret_both state) in
+    letb cast_vote_state_ret := Build_t_OvnContractState[cast_vote_state_ret] (f_g_pow_xi_yi_vis := update_at_usize (f_g_pow_xi_yi_vis cast_vote_state_ret) (cast_int (WS2 := _) (f_cvp_i params)) g_pow_xi_yi_vi) in
+    letb cast_vote_state_ret := Build_t_OvnContractState[cast_vote_state_ret] (f_zkp_vis := update_at_usize (f_zkp_vis cast_vote_state_ret) (cast_int (WS2 := _) (f_cvp_i params)) zkp_vi) in
+    Result_Ok (prod_b (f_accept,cast_vote_state_ret))))
+
 
       unfold cast_vote at 1.
       rewrite !bind_assoc; rewrite !bind_rewrite.
-      rewrite !bind_assoc; rewrite !bind_rewrite.
-      fold chElement.
+      rewrite !bind_assoc; rewrite !bind_rewrite ; fold chElement.
       rewrite !bind_assoc.
       apply (@somewhat_substitution _ ((chOption t_OvnContractState)) f_accept) ; [admit | admit | rewrite bind_rewrite].
       rewrite !bind_assoc; rewrite !bind_rewrite.
@@ -482,41 +851,94 @@ Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
       rewrite !bind_assoc; rewrite !bind_rewrite.
       rewrite !bind_assoc; rewrite !bind_rewrite.
       rewrite !bind_assoc; rewrite !bind_rewrite.
-
-      rewrite !bind_assoc; rewrite !bind_rewrite.
-      rewrite !bind_assoc; rewrite !bind_rewrite.
-      rewrite !bind_assoc.
-      apply (@somewhat_substitution _ ((chOption t_OvnContractState)) (compute_group_element_for_vote _ _ _)) ; [admit | admit | rewrite bind_rewrite].
-            rewrite !bind_rewrite.
-      rewrite !bind_assoc; rewrite !bind_rewrite.
-      rewrite !bind_assoc; rewrite !bind_rewrite.
-      rewrite !bind_assoc; rewrite !bind_rewrite.
-
       rewrite !bind_assoc; rewrite !bind_rewrite.
       rewrite !bind_assoc; rewrite !bind_rewrite.
       rewrite !bind_assoc.
       apply (@somewhat_substitution _ ((chOption t_OvnContractState)) (compute_group_element_for_vote _ _ _)) ; [admit | admit | rewrite bind_rewrite].
       rewrite !bind_rewrite.
       rewrite !bind_assoc; rewrite !bind_rewrite.
+      rewrite !bind_assoc; rewrite !bind_rewrite.
+      rewrite !bind_assoc; rewrite !bind_rewrite.
+
+      rewrite !bind_assoc; rewrite !bind_rewrite.
+      rewrite !bind_assoc; rewrite !bind_rewrite.
+      rewrite !bind_assoc.
+
+      set (y := fun _ => _) at 3.
+      replace (bind _ _) with (x ← sample uniform #|gT| ;; y (otf x)) by admit.
+      subst y.
+      hnf.
+      
+      apply pkg_rhl.r_const_sample_L ; [admit | intros ].
+      rewrite !bind_rewrite.
+      rewrite !bind_assoc; rewrite !bind_rewrite.
+
+      set (bind_both _ _).
+      pattern (f_cvp_zkp_random_w (solve_lift ret_both (f_parameter_cursor (ret_both s0)))) in b.
+      set (fun _ => _) in b.
+      subst b.
+      epose (both_eq_let_both y (f_cvp_zkp_random_w (solve_lift ret_both (f_parameter_cursor (ret_both s0))))).
+      destruct b.
+
+      setoid_rewrite <- H3.
+      
+      setoid_rewrite <- b.
+
+      pose both_eq_bind.
+      rewrite <- (bind_ret_both _ (f_cvp_zkp_random_w (solve_lift ret_both (f_parameter_cursor (ret_both s0))))).
+      bind_both
+        (f_cvp_zkp_random_w (solve_lift ret_both (f_parameter_cursor (ret_both s0))))
+      rewrite let_bind.
+      rewrite <- (bind_rewrite (f_cvp_zkp_random_w (solve_lift ret_both (f_parameter_cursor (ret_both s0))))).
+
+      Transparent f_cvp_zkp_random_w.
+      unfold f_cvp_zkp_random_w.
+      
+      rewrite !bind_assoc.
+
+
+      set (y := fun _ => _) at 4.
+
+
+      
+      apply (@somewhat_substitution _ ((chOption t_OvnContractState)) (compute_group_element_for_vote _ _ _)) ; [admit | admit | rewrite bind_rewrite].
+      rewrite !bind_rewrite.
+
+      simpl.
+      
+      rewrite !bind_assoc; rewrite !bind_rewrite.
       rewrite bind_assoc.
 
-      eassert (is_state (zkp_one_out_of_two _ _ _ _ _ _) = match lookup_op or_proof_args.Sigma.RUN_interactive (or_proof_args.Sigma.RUN, ((chProd or_proof_args.MyAlg.choiceStatement or_proof_args.MyAlg.choiceWitness), or_proof_args.MyAlg.choiceTranscript)) with Some c => temp ← c (fto (g ^+ _,(
-                 is_pure (compute_g_pow_yi
-                 (cast_int (f_cvp_i (solve_lift ret_both (f_parameter_cursor (ret_both s0)))))
-                 (f_g_pow_xis (ret_both s))) : gT),_), ( fto ((or_proof_args.FieldToWitness (is_pure (f_cvp_xi (solve_lift ret_both (f_parameter_cursor (ret_both s0)))))) : 'F_q, _, _))) ;; _ | None => _ end) by admit.
-      rewrite H2.
+      (* eassert (is_state (zkp_one_out_of_two _ _ _ _ _ _) = match lookup_op OR_ZKP.Sigma.RUN_interactive (OR_ZKP.Sigma.RUN, ((chProd OR_ZKP.MyAlg.choiceStatement OR_ZKP.MyAlg.choiceWitness), OR_ZKP.MyAlg.choiceTranscript)) with Some c => temp ← c (fto (g ^+ FieldToWitness *)
+      (*                   (is_pure (f_cvp_xi (solve_lift ret_both (f_parameter_cursor (ret_both s0))))),( *)
+      (*            is_pure (compute_g_pow_yi *)
+      (*            (cast_int (f_cvp_i (solve_lift ret_both (f_parameter_cursor (ret_both s0))))) *)
+      (*            (f_g_pow_xis (ret_both s))) : gT),(_ ^+ _ * _ ^+ _)%g), ( fto ((FieldToWitness (is_pure (f_cvp_xi (solve_lift ret_both (f_parameter_cursor (ret_both s0)))))) : 'Z_q, _, is_pure (compute_g_pow_yi *)
+      (*            (cast_int (f_cvp_i (solve_lift ret_both (f_parameter_cursor (ret_both s0))))) *)
+      (*            (f_g_pow_xis (ret_both s))) : gT))) ;; _ | None => _ end) by admit. *)
+      (* rewrite H2. *)
+      
+      Check zkp_one_out_of_two.
+      epose OR_ZKP.hacspec_vs_RUN_interactive.
+      unfold AdvantageE in e.
+      apply (@somewhat_substitution _ _ OR_ZKP.hacspec_vs_RUN_interactive).
+      
       simpl (lookup_op _ _).
       destruct choice_type_eqP ; [ | subst ; contradiction ].
       destruct choice_type_eqP ; [ | subst ; contradiction ].
       subst.
       rewrite cast_fun_K.
 
-      rewrite otf_fto.
+      rewrite !otf_fto.
 
       rewrite !bind_assoc.
       simpl.
-      rewrite otf_fto.
+      (* rewrite otf_fto. *)
 
+      rewrite eqxx.
+      rewrite eqxx.
+      rewrite eqxx.
+      
       apply r_assertD ; [ reflexivity | ].
       unfold #assert.
 
@@ -632,8 +1054,7 @@ Module OVN_proof (SG : SecureGroup) (HGPA : HacspecGroupParamAxiom SG).
         admit.
       - simpl.
         f_equal.
-    
-        
+
         unfold zkp_one_out_of_two at 1.
         simpl.
         rewrite hacspec_function_guarantees.

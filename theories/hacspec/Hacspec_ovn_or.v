@@ -405,14 +405,23 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
     refine (a = hacspec_ret_to_or_sigma_ret (otf stmt) b).
   Defined.
 
+  (* Goal True. *)
+  (*   pose (lookup_op_valid _ _ _ _ (RUN, (choiceStatement × choiceWitness, choiceTranscript)) (pack_valid RUN_interactive) (ltac:(rewrite fset_cons (in_fsetU) ; solve_in_mem)) ).  *)
+  (*   pose H. *)
+  (*   Show Proof. *)
+
   (* Equivalence between the two OR protocols *)
- Lemma or_run_eq  (pre : precond) :
-    (forall (b : Statement * Witness) c,
-      Some c = lookup_op RUN_interactive (RUN, ((chProd choiceStatement choiceWitness), choiceTranscript)) ->
-      ⊢ ⦃ fun '(h₁, h₀) => heap_ignore Sigma_locs (h₀, h₁) ⦄
-        c (fto (fst b), fto (snd b))
-        ≈
-        #assert R (b.1) (b.2) ;;
+  Lemma or_run_eq  (pre : precond) :
+    (forall (b : Statement * Witness),
+        ⊢ ⦃ fun '(h₁, h₀) => heap_ignore Sigma_locs (h₀, h₁) ⦄
+          match lookup_op RUN_interactive (RUN, (choiceStatement × choiceWitness, choiceTranscript)) with
+          | Some c =>
+              c
+          | None => λ _ : src (RUN, (choiceStatement × choiceWitness, choiceTranscript)),
+           ret (chCanonical (chtgt (RUN, (choiceStatement × choiceWitness, choiceTranscript))))
+          end (fto (fst b), fto (snd b))
+          ≈
+          #assert R (b.1) (b.2) ;;
         wr ← sample uniform (2^32) ;;
         dr ← sample uniform (2^32) ;;
         rr ← sample uniform (2^32) ;;
@@ -425,10 +434,13 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
                     (ret_both ((snd (fst b) == (snd (fst (fst b)) ^+  (fst (fst (snd b))) * g)) : 'bool)))
           ⦃ fun '(x,h0) '(y,h1) => or_run_post_cond (fto (fst b)) x y ∧ heap_ignore Sigma_locs (h0, h1) ⦄)%g.
   Proof.
-    intros [[[x h] y] [[m v] n]] c H.
+    intros [[[x h] y] [[m v] n]].
 
     (* Unfold lhs *)
     simpl fst ; simpl snd.
+
+    epose (lookup_op_valid _ _ _ _ (RUN, (choiceStatement × choiceWitness, choiceTranscript)) (pack_valid RUN_interactive) (* TODO: *) _ ).
+    destruct e as [c [H _]]. rewrite H.
 
     simpl in H.
     destruct choice_type_eqP as [ e | ] ; [ | discriminate ].
@@ -440,7 +452,7 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
     (* Unfold rhs *)
     unfold zkp_one_out_of_two.
 
-    rewrite !otf_fto; unfold R.
+    rewrite !otf_fto ; unfold R.
     apply r_assertD ; [ reflexivity | ].
     intros _ ?.
     simpl in e₁.
@@ -856,22 +868,10 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
     apply compute_in_post_cond_R.
     eapply rpost_weaken_rule.
     1:{
-      eapply r_transL.
-      2:{
-        (* Apply proven equality *)
-        eapply (or_run_eq (λ '(h₁, h₀), heap_ignore Sigma_locs (h₀, h₁)) (otf s, otf s0) y).
-        subst y.
-        simpl.
-        destruct choice_type_eqP ; [ | subst ; contradiction ].
-        destruct choice_type_eqP ; [ | subst ; contradiction ].
-        subst.
-        rewrite cast_fun_K.
-        reflexivity.
-      }
-      {
-        rewrite !fto_otf.
-        apply rreflexivity_rule.
-      }
+      subst y.
+      rewrite <- (fto_otf s) at 1.
+      rewrite <- (fto_otf s0) at 1.
+      apply (or_run_eq (λ '(h₁, h₀), heap_ignore Sigma_locs (h₀, h₁)) (otf s, otf s0)).
     }
     {
       intros.
