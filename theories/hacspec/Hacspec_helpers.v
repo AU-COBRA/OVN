@@ -985,6 +985,10 @@ Module Misc.
    end.
 
   Ltac push_down :=
+    (* Remove (is_pure (ret_both (is_pure _))) *)
+    match goal with
+    | H : _ |- _ => simpl in H
+    end ;
     match goal with
     | H := is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))) (ret_both (is_pure (both_prog ?b))))) : _ |- _  =>
       subst H ;

@@ -411,7 +411,7 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
   (*   Show Proof. *)
 
   (* Equivalence between the two OR protocols *)
-  Lemma or_run_eq  (pre : precond) :
+  Lemma or_run_eq :
     (forall (b : Statement * Witness),
         ⊢ ⦃ fun '(h₁, h₀) => heap_ignore Sigma_locs (h₀, h₁) ⦄
           match lookup_op RUN_interactive (RUN, (choiceStatement × choiceWitness, choiceTranscript)) with
@@ -422,13 +422,13 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
           end (fto (fst b), fto (snd b))
           ≈
           #assert R (b.1) (b.2) ;;
-        wr ← sample uniform (2^32) ;;
-        dr ← sample uniform (2^32) ;;
-        rr ← sample uniform (2^32) ;;
+        wr ← sample uniform #|'Z_q| ;;
+        dr ← sample uniform #|'Z_q| ;;
+        rr ← sample uniform #|'Z_q| ;;
         is_state (zkp_one_out_of_two
-                    (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord wr))))
-                    (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord rr))))
-                    (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord dr))))
+                    (ret_both (WitnessToField (otf wr : 'Z_q)))
+                    (ret_both (WitnessToField (otf rr : 'Z_q)))
+                    (ret_both (WitnessToField (otf dr : 'Z_q)))
                     (ret_both (snd (fst (fst b))))
                     (ret_both (WitnessToField (fst (fst (snd b)))))
                     (ret_both ((snd (fst b) == (snd (fst (fst b)) ^+  (fst (fst (snd b))) * g)) : 'bool)))
@@ -439,7 +439,7 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
     (* Unfold lhs *)
     simpl fst ; simpl snd.
 
-    epose (lookup_op_valid _ _ _ _ (RUN, (choiceStatement × choiceWitness, choiceTranscript)) (pack_valid RUN_interactive) (* TODO: *) _ ).
+    epose (lookup_op_valid _ _ _ _ (RUN, (choiceStatement × choiceWitness, choiceTranscript)) (pack_valid RUN_interactive) (* TODO: *) ltac:(rewrite fset_cons (in_fsetU) ; solve_in_mem) ).
     destruct e as [c [H _]]. rewrite H.
 
     simpl in H.
@@ -461,25 +461,22 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
     subst.
 
     (* Align random sampling *)
-    pose (bij_f := randomness_sample_is_bijective).
-    set (f_rand := fun _ => _) in bij_f.
-
-    eapply rsymmetry ; eapply r_uniform_bij with (f := fun x => _) ; [ apply bij_f | intros x0 ] ; apply rsymmetry ; apply better_r.
-    eapply rsymmetry ; eapply r_uniform_bij with (f := fun x => _) ; [ apply bij_f | intros x1 ] ; apply rsymmetry ; apply better_r.
-    eapply rsymmetry ; eapply r_uniform_bij with (f := fun x => _) ; [ apply bij_f | intros x2] ; apply rsymmetry ; apply better_r.
+    eapply rsymmetry ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros x0 ] ; apply rsymmetry ; apply better_r.
+    eapply rsymmetry ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros x1 ] ; apply rsymmetry ; apply better_r.
+    eapply rsymmetry ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros x2] ; apply rsymmetry ; apply better_r.
 
     (* Save value in memory *)
     apply better_r_put_lhs.
 
-    (* Substitue random *)
-    pose (f_rand_inner := fun (x : 'I_(2 ^ 32)) => (FieldToWitness
-            (is_pure
-               (f_random_field_elem (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord x)))))))).
-    progress repeat match goal with
-    | [ |- context [ otf (f_rand ?x) ] ] =>
-        replace (_ (f_rand x)) with (f_rand_inner x) by now rewrite otf_fto
-      end.
-    subst f_rand f_rand_inner.
+    (* (* Substitue random *) *)
+    (* pose (f_rand_inner := fun (x : 'I_(2 ^ 32)) => (FieldToWitness *)
+    (*         (is_pure *)
+    (*            (f_random_field_elem (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord x)))))))). *)
+    (* progress repeat match goal with *)
+    (* | [ |- context [ otf (f_rand ?x) ] ] => *)
+    (*     replace (_ (f_rand x)) with (f_rand_inner x) by now rewrite otf_fto *)
+    (*   end. *)
+    (* subst f_rand f_rand_inner. *)
 
     (* Case on vote *)
     destruct v.
@@ -516,9 +513,9 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
       rewrite !otf_fto.
       unfold lower2 ; simpl.
 
-      set (f_random_field_elem _).
-      set (f_random_field_elem _).
-      set (f_random_field_elem _).
+      (* set (f_random_field_elem _). *)
+      (* set (f_random_field_elem _). *)
+      (* set (f_random_field_elem _). *)
 
       split.
       - repeat (rewrite pair_equal_spec ; split).
@@ -534,18 +531,19 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
           all: repeat setoid_rewrite <- expgnE.
 
           (* TODO: some group tactic here ? *)
-          - rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-            rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+          - unfold g.
+            rewrite pow_witness_to_field.
+            rewrite pow_witness_to_field.
             rewrite pow_witness_to_field.
             rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
             now Misc.push_down_sides.
-          - rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-            rewrite !pow_witness_to_field; rewrite WitnessToFieldCancel.
+          - rewrite pow_witness_to_field.
+            rewrite !pow_witness_to_field.
             now Misc.push_down_sides.
-          - rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+          - rewrite pow_witness_to_field.
             rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
             now Misc.push_down_sides.
-          - now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+          - now rewrite pow_witness_to_field.
         }
         (* Challenges *)
         {
@@ -557,9 +555,9 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
           repeat (rewrite pair_equal_spec ; split).
           all: clear ; simpl; Misc.push_down_sides.
           all: repeat setoid_rewrite <- expgnE.
-          - reflexivity.
-          - reflexivity.
-          - fold (both_prog b1).
+          - now rewrite FieldToWitnessCancel.
+          - now rewrite FieldToWitnessCancel.
+          - (* fold (both_prog b1). *)
             (* assert (forall (x y : 'Z_q), (x - y)%R = (x + (GRing.opp y))%R) by reflexivity. *)
             (* rewrite H. *)
             (* rewrite !(proj1 both_equivalence_is_pure_eq (sf_sub_by_opp (s := both_setoid_field v_G_t_Group _) _ _)). *)
@@ -567,28 +565,23 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
             Transparent sub.
             unfold sub.
 
-            rewrite <- (FieldToWitnessCancel (GRing.opp (m * _))%R).
-            setoid_rewrite <- (rmorphD FieldToWitness).
-            simpl.
-            rewrite hacspec_function_guarantees2.
-            rewrite <- (WitnessToFieldCancel (is_pure b1)).
-            (* setoid_rewrite <- (rmorphD WitnessToField). *)
-            (* rewrite (WitnessToFieldAdd). *)
+            rewrite <- (FieldToWitnessCancel (GRing.add _ _ )%R).
 
+            setoid_rewrite (rmorphD WitnessToField).
             setoid_rewrite (rmorphN WitnessToField).
             rewrite (rmorphM WitnessToField).
             setoid_rewrite (rmorphD WitnessToField).
             setoid_rewrite (rmorphN WitnessToField).
 
-            rewrite !WitnessToFieldCancel.
-
             apply f_equal.
             now Misc.push_down_sides.
           - unfold sub.
 
-            rewrite <- (FieldToWitnessCancel (otf _)%R).
-            setoid_rewrite <- (rmorphN FieldToWitness).
-            setoid_rewrite <- (rmorphD FieldToWitness).
+            rewrite <- (FieldToWitnessCancel (GRing.add _ _ )%R).
+
+            (* rewrite <- (FieldToWitnessCancel (otf _)%R). *)
+            setoid_rewrite (rmorphD WitnessToField).
+            setoid_rewrite (rmorphN WitnessToField).
 
             apply f_equal.
             now Misc.push_down_sides.
@@ -656,10 +649,6 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
       rewrite !otf_fto.
       unfold lower2 ; simpl.
 
-      set (f_random_field_elem _).
-      set (f_random_field_elem _).
-      set (f_random_field_elem _).
-
       split.
       - repeat (rewrite pair_equal_spec ; split).
         {
@@ -672,25 +661,25 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
           all: clear ; simpl; Misc.push_down_sides.
           all: repeat setoid_rewrite <- expgnE.
 
-          + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+          + rewrite pow_witness_to_field.
             rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
             now Misc.push_down_sides.
-          + now rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-          + rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
-            rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+          + now rewrite pow_witness_to_field.
+          + rewrite pow_witness_to_field.
+            rewrite pow_witness_to_field.
             unfold g.
             rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
             rewrite pow_witness_to_field.
             now Misc.push_down_sides.
           + rewrite expg0.
             rewrite mulg1.
-            rewrite pow_witness_to_field; rewrite WitnessToFieldCancel.
+            rewrite pow_witness_to_field.
             rewrite pow_witness_to_field.
             Transparent div.
             unfold div.
             (* rewrite (proj1 both_equivalence_is_pure_eq (div_is_prod_inv _ _)). *)
             rewrite pow_witness_to_field.
-            rewrite WitnessToFieldCancel.
+            (* rewrite WitnessToFieldCancel. *)
             now Misc.push_down_sides.
         }
         (* Challenges *)
@@ -703,39 +692,32 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
           repeat (rewrite pair_equal_spec ; split).
           all: clear ; simpl; Misc.push_down_sides.
           all: repeat setoid_rewrite <- expgnE.
-          - fold (both_prog b0).
-            rewrite <- (FieldToWitnessCancel (GRing.opp (m * _))%R).
-            setoid_rewrite <- (rmorphD FieldToWitness).
-            rewrite <- (WitnessToFieldCancel (is_pure b0)).
-            setoid_rewrite <- (rmorphD WitnessToField).
+          - (* fold (both_prog b0). *)
+            rewrite <- (FieldToWitnessCancel (GRing.add _ _)%R).
+            (* rewrite <- (FieldToWitnessCancel (GRing.opp (m * _))%R). *)
+            (* setoid_rewrite <- (rmorphD FieldToWitness). *)
+            (* rewrite <- (WitnessToFieldCancel (is_pure b0)). *)
+            (* setoid_rewrite <- (rmorphD WitnessToField). *)
 
-            rewrite !FieldToWitnessCancel.
-            rewrite <- (FieldToWitnessCancel (m * _)%R).
+            (* rewrite !FieldToWitnessCancel. *)
+            (* rewrite <- (FieldToWitnessCancel (m * _)%R). *)
 
-            setoid_rewrite <- (rmorphN FieldToWitness).
-            setoid_rewrite <- (rmorphD FieldToWitness).
-
+            (* setoid_rewrite <- (rmorphN FieldToWitness). *)
+            (* setoid_rewrite <- (rmorphD FieldToWitness). *)
+            setoid_rewrite (rmorphD WitnessToField).
+            setoid_rewrite (rmorphN WitnessToField).
             setoid_rewrite (rmorphM WitnessToField).
             setoid_rewrite (rmorphD WitnessToField).
             setoid_rewrite (rmorphN WitnessToField).
-
-            rewrite !WitnessToFieldCancel.
             apply f_equal.
-
-            cbn.
-
-            now repeat (Misc.push_down_sides ; apply f_equal).
-          - (* rewrite !(proj1 both_equivalence_is_pure_eq (f_sub_by_opp _ _)). *)
-            rewrite hacspec_function_guarantees2.
-            rewrite rmorphD.
-            setoid_rewrite <- (rmorphN FieldToWitness).
-            rewrite !FieldToWitnessCancel.
-            cbn.
-            f_equal.
-            f_equal.
             now Misc.push_down_sides.
-          - reflexivity.
-          - reflexivity.
+          - rewrite <- (FieldToWitnessCancel (GRing.add _ _)%R).
+            rewrite rmorphD.
+            setoid_rewrite (rmorphN WitnessToField).
+            apply f_equal.
+            now Misc.push_down_sides.
+          - now rewrite FieldToWitnessCancel.
+          - now rewrite FieldToWitnessCancel.
         }
       - clear -H.
         destruct H.
@@ -764,13 +746,13 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
          #def #[ RUN ] (b : chRelation) : chTranscript
         {
           #assert R (otf b.1) (otf b.2) ;;
-          wr ← sample uniform (2^32) ;;
-          dr ← sample uniform (2^32) ;;
-          rr ← sample uniform (2^32) ;;
+          wr ← sample uniform #|'Z_q| ;;
+          dr ← sample uniform #|'Z_q| ;;
+          rr ← sample uniform #|'Z_q| ;;
           v ← is_state (zkp_one_out_of_two
-                      (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord wr))))
-                      (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord rr))))
-                      (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord dr))))
+                      (ret_both (WitnessToField (otf wr : 'Z_q)))
+                      (ret_both (WitnessToField (otf rr : 'Z_q)))
+                      (ret_both (WitnessToField (otf dr : 'Z_q)))
                       (ret_both (snd (fst (otf (fst b)))))
                       (ret_both (WitnessToField (fst (fst (otf (snd b))))))
                       (ret_both ((snd (otf (fst b)) == (snd (fst (otf (fst b))) ^+  (fst (fst (otf (snd b)))) * g)) : 'bool))) ;;
@@ -850,9 +832,10 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
 
     set (pkg_core_definition.sampler _ _).
     eassert (r =
-              (v ← (wr ← sample uniform (2 ^ 32) ;;
-                    dr ← sample uniform (2 ^ 32) ;;
-                    rr ← sample uniform (2 ^ 32) ;;
+              (v ← (
+        wr ← sample uniform #|'Z_q| ;;
+        dr ← sample uniform #|'Z_q| ;;
+        rr ← sample uniform #|'Z_q| ;;
                     is_state
                       (zkp_one_out_of_two _
                          _
@@ -871,7 +854,7 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
       subst y.
       rewrite <- (fto_otf s) at 1.
       rewrite <- (fto_otf s0) at 1.
-      apply (or_run_eq (λ '(h₁, h₀), heap_ignore Sigma_locs (h₀, h₁)) (otf s, otf s0)).
+      apply (or_run_eq (otf s, otf s0)).
     }
     {
       intros.
@@ -908,7 +891,7 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
     now rewrite hacspec_vs_RUN_interactive.
   Qed.
 
-  (* Extractor correctness *)
+  (* Simulator correctness *)
   Lemma shvzk_success:
     ∀ LA A,
       ValidPackage LA [interface

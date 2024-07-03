@@ -35,11 +35,11 @@ pub struct SchnorrZKPCommit<G: Group> {
 // https://www.rfc-editor.org/rfc/rfc8235
 // https://crypto.stanford.edu/cs355/19sp/lec5.pdf
 pub fn schnorr_zkp<G: Group>(
-    random: u32,
+    random: G::Z,
     h: G,
     x: G::Z,
 ) -> SchnorrZKPCommit<G> {
-    let r = G::Z::random_field_elem(random);
+    let r = random;
     let u = G::g_pow(r);
     let c = G::hash(vec![G::g(), h, u]);
     let z = G::Z::add(r, G::Z::mul(c, x));
@@ -80,18 +80,18 @@ pub struct OrZKPCommit<G: Group> {
 
 /** Cramer, Damgård and Schoenmakers (CDS) technique */
 pub fn zkp_one_out_of_two<G: Group>(
-    random_w: u32,
-    random_r: u32,
-    random_d: u32,
+    random_w: G::Z,
+    random_r: G::Z,
+    random_d: G::Z,
     h: G,
     xi: G::Z,
     vi: bool,
 ) -> OrZKPCommit<G> {
-    let w = G::Z::random_field_elem(random_w);
+    let w = random_w;
 
     if vi {
-        let r1 = G::Z::random_field_elem(random_r);
-        let d1 = G::Z::random_field_elem(random_d);
+        let r1 = random_r;
+        let d1 = random_d;
 
         let x = G::g_pow(xi);
         let y = G::prod(G::pow(h, xi), G::g());
@@ -121,8 +121,8 @@ pub fn zkp_one_out_of_two<G: Group>(
             or_zkp_r2: r2,
         }
     } else {
-        let r2 = G::Z::random_field_elem(random_r);
-        let d2 = G::Z::random_field_elem(random_d);
+        let r2 = random_r;
+        let d2 = random_d;
 
         let x = G::g_pow(xi);
         let y = G::pow(h, xi);
@@ -249,16 +249,11 @@ pub fn init_ovn_contract<G: Group, const n: usize>(// _: &impl HasInitContext,
    })
 }
 
-/** Currently randomness needs to be injected */
-pub fn select_private_voting_key<Z: Field>(random: u32) -> Z {
-    Z::random_field_elem(random)
-}
-
 #[derive(Serialize, SchemaType)]
 pub struct RegisterParam<Z: Field> {
     pub rp_i: u32,
     pub rp_xi: Z,
-    pub rp_zkp_random: u32,
+    pub rp_zkp_random: Z,
 }
 
 /** Primary function in round 1 */
@@ -285,9 +280,9 @@ pub fn register_vote<G: Group, const n: usize, A: HasActions>(
 pub struct CastVoteParam<Z: Field> {
     pub cvp_i: u32,
     pub cvp_xi: Z,
-    pub cvp_zkp_random_w: u32,
-    pub cvp_zkp_random_r: u32,
-    pub cvp_zkp_random_d: u32,
+    pub cvp_zkp_random_w: Z,
+    pub cvp_zkp_random_r: Z,
+    pub cvp_zkp_random_d: Z,
     pub cvp_vote: bool,
 }
 
@@ -360,6 +355,9 @@ pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
     let params: CastVoteParam<G::Z> = ctx.parameter_cursor().get()?;
 
     let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i as usize, state.g_pow_xis);
+    let g_pow_xi_yi_vi =
+        compute_group_element_for_vote::<G>(params.cvp_xi, params.cvp_vote, g_pow_yi);
+
     let zkp_vi = zkp_one_out_of_two::<G>(
         params.cvp_zkp_random_w,
         params.cvp_zkp_random_r,
@@ -368,10 +366,6 @@ pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
         params.cvp_xi,
         params.cvp_vote,
     );
-
-    let g_pow_xi_yi_vi =
-        compute_group_element_for_vote::<G>(params.cvp_xi, params.cvp_vote, g_pow_yi);
-
     let mut cast_vote_state_ret = state.clone();
     cast_vote_state_ret.g_pow_xi_yi_vis[params.cvp_i as usize] = g_pow_xi_yi_vi;
     cast_vote_state_ret.zkp_vis[params.cvp_i as usize] = zkp_vi;

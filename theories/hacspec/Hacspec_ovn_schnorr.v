@@ -106,18 +106,25 @@ Module OVN_schnorr_proof (HGPA : HacspecGroupParamAxiom).
 
   (* Running Schnorr is equal to running OVN Schnorr implementation *)
  Lemma schnorr_run_eq  (pre : precond) :
-    forall (b : Witness) c,
-      Some c = lookup_op RUN_interactive (RUN, ((chProd choiceStatement choiceWitness), choiceTranscript)) ->
+   forall (b : Witness),
       ⊢ ⦃ pre ⦄
-        c (fto (HacspecGroup.g ^+ b), fto b)
+        match lookup_op RUN_interactive (RUN, (choiceStatement × choiceWitness, choiceTranscript)) with
+        | Some c =>
+            c
+        | None => λ _ : src (RUN, (choiceStatement × choiceWitness, choiceTranscript)),
+              ret (chCanonical (chtgt (RUN, (choiceStatement × choiceWitness, choiceTranscript))))
+        end (fto (HacspecGroup.g ^+ b), fto b)
         ≈
-        r ← sample uniform (2^32) ;;
-        is_state (schnorr_zkp (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord r)))) (ret_both ((HacspecGroup.g ^+ b))) (ret_both (WitnessToField b)))
+        r ← sample (uniform (H := Witness_pos) i_witness) ;;
+        is_state (schnorr_zkp (ret_both (WitnessToField (otf r : 'Z_q))) (ret_both ((HacspecGroup.g ^+ b))) (ret_both (WitnessToField b)))
           ⦃ fun '(x,_) '(y,_) => schnorr_run_post_cond x y  ⦄.
   Proof.
     intros.
 
     (* Unfold lhs *)
+    epose (lookup_op_valid _ _ _ _ (RUN, (choiceStatement × choiceWitness, choiceTranscript)) (pack_valid RUN_interactive) (* TODO: *) ltac:(rewrite fset_cons (in_fsetU) ; solve_in_mem) ).
+    destruct e as [c [H _]]. rewrite H.
+
     cbn in H.
     destruct choice_type_eqP ; [ | discriminate ].
     destruct choice_type_eqP ; [ | discriminate ].
@@ -130,10 +137,7 @@ Module OVN_schnorr_proof (HGPA : HacspecGroupParamAxiom).
     unfold schnorr_zkp.
 
     (* Equate randomness *)
-    eapply rsymmetry ;
-    eapply r_uniform_bij with (f := fun x => fto (FieldToWitness(is_pure (f_random_field_elem (t_Field := _) (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord x)))))))) ; [ apply randomness_sample_is_bijective | intros ] ;
-    eapply rsymmetry.
-
+    eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros ].
     apply better_r_put_lhs.
 
     (* Unfold definintions triple *)
@@ -180,11 +184,12 @@ Module OVN_schnorr_proof (HGPA : HacspecGroupParamAxiom).
     intros ; repeat split.
     * rewrite! otf_fto.
       (* Field isomorphism property *)
-      apply conversion_is_true.
+      rewrite <- conversion_is_true.
+      rewrite FieldToWitnessCancel.
+      reflexivity.
     * rewrite! otf_fto.
       (* Field isomorphism properties *)
       rewrite rmorphD.
-      rewrite WitnessToFieldCancel.
       rewrite rmorphM.
 
       (* Equality up to `ret_both (is_pure _)` *)
