@@ -381,7 +381,7 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
   Transparent run.
   Definition hacspec_ret_to_or_sigma_ret : Statement -> t_OrZKPCommit -> choiceTranscript.
   Proof.
-    intros hy [[[[[[[[[[r1x r2y] r3a1] r4b1] r5a2] r6b2] r7c] r8d1] r9d2] r10r1] r11r2].
+    intros hy [[[[[[[[[[_ (* r1x *) _ (* r2y *)] r3a1] r4b1] r5a2] r6b2] r7c] r8d1] r9d2] r10r1] r11r2].
     refine (fto _, fto _, fto _, fto _).
     (* choiceStatement *)
     - refine hy.
@@ -395,6 +395,56 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
     (* choiceResponse *)
     - refine (FieldToWitness r10r1, FieldToWitness r8d1, FieldToWitness r11r2, FieldToWitness r9d2).
   Defined.
+
+  Definition or_sigma_ret_to_hacspec_ret : choiceTranscript -> t_OrZKPCommit.
+  Proof.
+    intros [[[statement message] challenge] response].
+    destruct (otf statement) as [[x h] y].
+    destruct (otf message) as [[[r3a1 r4b1] r5a2] r6b2].
+    pose (otf challenge) as r7c.
+    destruct (otf response) as [[[r10r1 r8d1] r11r2] r9d2].
+
+    (* [[[[[[[[[[r1x r2y] r3a1] r4b1] r5a2] r6b2] r7c] r8d1] r9d2] r10r1] r11r2] *)
+    refine (x (* r1x *), y (* r2y *), r3a1, r4b1, r5a2, r6b2, WitnessToField r7c, WitnessToField r8d1, WitnessToField r9d2, WitnessToField r10r1, WitnessToField r11r2) ; fold chElement.
+  Defined.
+
+  (* begin details : sanity check *)
+  Lemma ret_cancel : forall (s : Statement) (v : t_OrZKPCommit),
+      v.1.1.1.1.1.1.1.1.1.1 = s.1.1 (* r1x = x *) ->
+      v.1.1.1.1.1.1.1.1.1.2 = s.2 (* r1x = x *) ->
+      or_sigma_ret_to_hacspec_ret (hacspec_ret_to_or_sigma_ret s v) = v.
+  Proof.
+    intros [[x h] y] [[[[[[[[[[r1x r2y] r3a1] r4b1] r5a2] r6b2] r7c] r8d1] r9d2] r10r1] r11r2] ? ?.
+    unfold hacspec_ret_to_or_sigma_ret.
+    unfold or_sigma_ret_to_hacspec_ret.
+    rewrite !otf_fto.
+    rewrite !WitnessToFieldCancel.
+    now simpl in H, H0 ; subst.
+  Qed.
+
+  Lemma ret_cancel_ : forall (v : choiceTranscript),
+      hacspec_ret_to_or_sigma_ret (otf v.1.1.1) (or_sigma_ret_to_hacspec_ret v) = v.
+  Proof.
+    intros [[[statement message] challenge] response].
+
+    rewrite <- (fto_otf statement).
+    rewrite <- (fto_otf message).
+    rewrite <- (fto_otf response).
+
+    unfold or_sigma_ret_to_hacspec_ret.
+    unfold hacspec_ret_to_or_sigma_ret.
+
+    destruct (otf statement) as [[r1x h] r2y].
+    destruct (otf message) as [[[r3a1 r4b1] r5a2] r6b2].
+    (* pose (otf challenge) as r7c. *)
+    destruct (otf response) as [[[r10r1 r8d1] r11r2] r9d2].
+
+    rewrite !otf_fto.
+    rewrite !FieldToWitnessCancel.
+    rewrite !fto_otf.
+    reflexivity.
+  Qed.
+  (* end details *)
 
   Definition or_run_post_cond :
     choiceStatement ->
@@ -1348,4 +1398,4 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
   Qed.
 
 End OVN_or_proof.
- 
+

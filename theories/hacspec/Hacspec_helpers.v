@@ -1389,3 +1389,173 @@ From Coq Require Import Utf8.
 
     apply rreflexivity_rule.
   Qed.
+
+    Definition deterministic_bind :
+    forall {A B} (b : raw_code A) (f : A -> raw_code B)
+      (H : deterministic b)
+      (H0 : forall x, deterministic (f x)),
+      deterministic (temp ← b ;; f temp).
+  Proof.
+    intros.
+    induction H.
+    - simpl.
+      apply H0.
+    - simpl.
+      apply deterministic_get.
+      apply X.
+    - simpl.
+      apply deterministic_put.
+      apply IHdeterministic.
+  Defined.
+
+  Definition det_iff_sem :
+    ∀ {A B : choice_type} (pre : precond) (post : postcond A B) (c₀ : raw_code A) (c₁ : raw_code B)
+      (hd₀ : deterministic c₀) (hd₁ : deterministic c₁),
+      det_jdg pre post c₀ c₁ hd₀ hd₁ <-> ⊢ ⦃ pre ⦄ c₀ ≈ c₁ ⦃ post ⦄.
+  Proof.
+    split ; [ apply det_to_sem | apply sem_to_det ].
+  Qed.
+
+  Lemma rsymmetry_iff :
+    ∀ {A₀ A₁ : ord_choiceType} {pre : precond} {post}
+      {c₀ : raw_code A₀} {c₁ : raw_code A₁},
+      ⊢ ⦃ λ '(h₁, h₀), pre (h₀, h₁) ⦄ c₁ ≈ c₀
+        ⦃ λ '(a₁, h₁) '(a₀, h₀), post (a₀, h₀) (a₁, h₁) ⦄ <->
+      ⊢ ⦃ pre ⦄ c₀ ≈ c₁ ⦃ post ⦄.
+  Proof.
+    intros A₀ A₁ pre post c₀ c₁.
+    split.
+    - apply rsymmetry.
+    - intros.
+      apply rsymmetry.
+      apply better_r.
+      eapply r_swap_post ; [ prop_fun_eq ; reflexivity | ].
+      apply H.
+  Qed.
+
+  Lemma det_jdg_sym : forall {A : choice_type} {P Q} (c0 c1 : raw_code A) h0 h1,
+      det_jdg P Q c0 c1 h0 h1 <->
+      det_jdg (λ '(h₁, h₀), P (h₀, h₁)) (λ '(a₁, h₁) '(a₀, h₀), Q (a₀, h₀) (a₁, h₁)) c1 c0 h1 h0.
+  Proof.
+    intros.
+    rewrite det_iff_sem.
+    rewrite det_iff_sem.
+    now rewrite rsymmetry_iff.
+  Qed.
+
+  Lemma det_jdg_trans :
+    forall {A : choice_type} {P Q} (c0 c1 c2 : raw_code A) h0 h1 h2,
+    forall (Hq : forall {a b c}, Q a b -> Q b c -> Q a c),
+    forall (Hp : forall {a c}, P (a, c) -> exists b, P (a, b) /\ P (b, c)),
+      det_jdg P Q c0 c1 h0 h1 ->
+      det_jdg P Q c1 c2 h1 h2 ->
+      det_jdg P Q c0 c2 h0 h2.
+  Proof.
+    intros A P Q c0 c1 c2 h0 h1 h2 Hq Hp H01 H12.
+
+    unfold det_jdg in H01.
+    unfold det_jdg in H12.
+    intros s0 s2 H.
+    destruct (Hp s0 s2 H) as [s1 []].
+    
+    refine (Hq _ (det_run c1 s1) _ _ _).
+    - apply H01.
+      apply H0.
+    - apply H12.
+      apply H1.
+  Qed.
+
+  Lemma det_jdg_bind_l : forall {A : choice_type} {P Q} (c0 c1 : raw_code A) f h0 h1 hf,
+      det_jdg P Q c0 c1 h0 h1 ->
+      (
+        forall x c s₀,
+          Q (det_run (ret x) (h := deterministic_ret x) s₀) c ->
+          Q (det_run (f x) (h := hf x) s₀) c) ->
+      det_jdg P Q (b ← c0 ;; f b) c1 (deterministic_bind c0 f h0 hf) h1
+      .
+  Proof.
+    intros A P Q c0 c1 f h0 h1 hf H HQ_ext.
+    intros ? ? ?.
+    specialize (H s₀ s₁ H0).
+
+    clear H0.
+    generalize dependent s₀.
+    induction h0 ; intros.
+    - now apply HQ_ext.
+    - now apply H.
+    - apply IHh0.
+      assumption.
+  Qed.
+
+  Lemma det_jdg_bind_r : forall {A : choice_type} {P Q} (c0 c1 : raw_code A) f h0 h1 hf,
+      det_jdg P Q c0 c1 h0 h1 ->
+      (
+        forall x c s₁,
+          Q c (det_run (ret x) (h := deterministic_ret x) s₁) ->
+          Q c (det_run (f x) (h := hf x) s₁)) ->
+      det_jdg P Q c0 (b ← c1 ;; f b) h0 (deterministic_bind c1 f h1 hf)
+      .
+  Proof.
+    intros A P Q c0 c1 f h0 h1 hf H HQ_ext.
+    intros ? ? ?.
+    specialize (H s₀ s₁ H0).
+
+    clear H0.
+    generalize dependent s₁.
+    induction h1 ; intros.
+    - now apply HQ_ext.
+    - now apply H.
+    - simpl.
+      apply IHh1.
+      assumption.
+  Qed.
+
+  Lemma det_jdg_bind : forall {A : choice_type} {P Q} (c0 c1 : raw_code A) f g h0 h1 hf hg,
+      det_jdg P Q c0 c1 h0 h1 ->
+      ((forall x y s₀ s₁, Q (det_run (ret x) (h := deterministic_ret x) s₀) (det_run (ret y) (h := deterministic_ret y) s₁) ->
+                  Q (det_run (f x) (h := hf x) s₀) (det_run (g y) (h := hg y) s₁))) ->
+      det_jdg P Q (b ← c0 ;; f b) (b ← c1 ;; g b) (deterministic_bind c0 f h0 hf) (deterministic_bind c1 g h1 hg)
+      .
+  Proof.
+    intros A P Q c0 c1 f g h0 h1 hf hg H HQ_ext.
+    intros ? ? ?.
+    specialize (H s₀ s₁ H0).
+    clear H0.
+
+    generalize dependent s₀.
+    generalize dependent s₁.
+    induction h1.
+    - induction h0 ; intros.
+      + now apply HQ_ext.
+      + simpl.
+        now apply H.
+      + simpl.
+        now apply IHh0.
+    - intros.
+      now apply H.
+    - intros.
+      now apply IHh1.
+  Qed.
+
+  Definition somewhat_substitution : forall {A : choice_type} {B : choiceType} (b : both A) (f : A -> raw_code B) (c : raw_code B),
+      (forall x, deterministic (f x)) ->
+          ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ ret (is_pure b) ≈ is_state b ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄ ->
+          ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← ret (is_pure b) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄ ->
+          ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← is_state b ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄.
+  Proof.
+    clear ; intros ? ? ? ? ? ? b_eq ?.
+
+    eapply r_transL.
+    2: apply H.
+    eapply r_bind.
+
+    - apply b_eq.
+    - intros.
+      simpl.
+      apply Misc.rpre_hypothesis_rule'.
+      intros ? ? [].
+      eapply rpre_weaken_rule.
+      1: subst ; apply rreflexivity_rule.
+      intros ? ? [].
+      now subst.
+  Qed.
