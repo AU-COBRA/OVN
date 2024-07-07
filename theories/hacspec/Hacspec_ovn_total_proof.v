@@ -463,25 +463,52 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     1: rewrite <- !fset_cat ; apply fsubsetxx.
   Qed.
   Fail Next Obligation.
+  
+  
+  Notation " 'SHVZK_chInput' " :=
+    (chProd (chProd MyAlg.choiceStatement MyAlg.choiceWitness) MyAlg.choiceChallenge)
+      (in custom pack_type at level 2).
+  
+  Notation " 'SHVZK_chTranscript' " :=
+    (OR_ZKP.MyAlg.choiceTranscript)
+      (in custom pack_type at level 2).
 
+  Notation " 'SHVZK_chRelation' " :=
+    (chProd MyAlg.choiceStatement MyAlg.choiceWitness)
+      (in custom pack_type at level 2).
+
+  Definition SHVZK_ideal_aux : package (fset [::]) [interface #val #[ Sigma.TRANSCRIPT ] : SHVZK_chInput → SHVZK_chTranscript ] [interface #val #[Sigma.RUN] : SHVZK_chRelation → SHVZK_chTranscript ]
+    :=
+    [package
+        #def #[ Sigma.RUN ] (hw : SHVZK_chRelation) : SHVZK_chTranscript
+        {
+          #import {sig #[ Sigma.TRANSCRIPT ] : SHVZK_chInput → SHVZK_chTranscript } as SHVZK ;;
+          e ← sample uniform #|MyParam.Challenge| ;;
+          t ← SHVZK (hw, e) ;;
+          ret t
+        }
+    ].
+  
   Program Definition maximum_ballot_secrecy_ideal_par0 : package
-      (MyAlg.Sigma_locs :|: MyAlg.Simulator_locs)
+      (MyAlg.Simulator_locs)
       [interface]
       [interface
          #val #[Sigma.RUN] : chAuxInp → chAuxSimOut ;
          #val #[MAXIMUM_BALLOT_SECRECY_RETURN] : chMidInp → chOut
       ] :=
-    mkpackage (par (Sigma.SHVZK_real_aux ∘ Sigma.SHVZK_ideal) maximum_ballot_secrecy_ideal_return) _.
+    mkpackage (par (SHVZK_ideal_aux ∘ Sigma.SHVZK_ideal) maximum_ballot_secrecy_ideal_return) _.
   Next Obligation.
     eapply valid_package_inject_export.
     2:{
-      epose (valid_par _ _ _ _ _ _ (Sigma.SHVZK_real_aux ∘ Sigma.SHVZK_ideal) _ _ _ (pack_valid maximum_ballot_secrecy_ideal_return) ).
+      epose (valid_par _ _ _ _ _ _ (SHVZK_ideal_aux ∘ Sigma.SHVZK_ideal) _ _ _ (pack_valid maximum_ballot_secrecy_ideal_return) ).
       (* *)
       rewrite <- fset0E in v.
       rewrite fsetU0 in v.
       rewrite <- fset0E in v.
       rewrite fset0U in v.
       rewrite fset0E in v.
+
+      rewrite fsetUid in v.
 
       apply v.
     }
@@ -503,10 +530,10 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
   Program Definition maximum_ballot_secrecy_ideal :
     package
-      (MyAlg.Sigma_locs :|: MyAlg.Simulator_locs)
+      (MyAlg.Simulator_locs)
       [interface #val #[Sigma.RUN] : chAuxInp → chAuxSimOut ]
       [interface #val #[MAXIMUM_BALLOT_SECRECY] : chInp → chOut ] :=
-    mkpackage (maximum_ballot_secrecy ∘ par (par (Sigma.SHVZK_real_aux ∘ Sigma.SHVZK_ideal) maximum_ballot_secrecy_ideal_return) maximum_ballot_secrecy_ideal_setup) _.
+    mkpackage (maximum_ballot_secrecy ∘ par (par (SHVZK_ideal_aux ∘ Sigma.SHVZK_ideal) maximum_ballot_secrecy_ideal_return) maximum_ballot_secrecy_ideal_setup) _.
   Next Obligation.
     rewrite <- fset0U. rewrite fset0E.
     eapply valid_link.
@@ -826,7 +853,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
                    (pack Sigma.RUN_interactive);
                    ((Sigma.SHVZK_real_aux ∘ Sigma.SHVZK_real))
                  ]
-                (Sigma.SHVZK_real_aux ∘ Sigma.SHVZK_ideal) _)
+                (SHVZK_ideal_aux ∘ Sigma.SHVZK_ideal) _)
         | unfold advantage_sum ].
 
     erewrite (hacspec_vs_RUN_interactive) with (LA := ((LA  :|: fset [::]) :|: fset [::]) :|: (fset [::] :|: fset [::])) ; [ rewrite add0r | .. ].
@@ -999,9 +1026,9 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
     rewrite <- Advantage_link.
 
-    erewrite OR_ZKP.shvzk_success with (LA := ((((LA  :|: fset [::])  :|: fset [::])  :|: fset [::]) :|: MyAlg.Sigma_locs (* Problem here, MyAlg.Sigma_locs not allowed in adversary locations! *))) ; [ | .. ].
+    erewrite OR_ZKP.shvzk_success with (LA := ((((LA  :|: fset [::])  :|: fset [::])  :|: fset [::]) :|: fset [::] (* Problem here, MyAlg.Sigma_locs not allowed in adversary locations! *))) ; [ | .. ].
     3: rewrite <- !fset0E ; rewrite !fsetU0.
-    3: admit (* ; apply H0 *).
+    3: apply H0.
     2:{
       eapply valid_link.
       1:{
@@ -1084,9 +1111,10 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
           apply fsubsetxx.
         }
       }
-      apply Sigma.SHVZK_real_aux.
+
+      apply SHVZK_ideal_aux.
     }
     easy.
-  Admitted.
+  Qed.
 
 End OVN_proof.
