@@ -238,8 +238,8 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
   Program Definition maximum_ballot_secrecy :
     package (fset [])
       [interface
-         #val #[ MAXIMUM_BALLOT_SECRECY_RETURN ] : chMidInp → chOut ;
          #val #[ Sigma.RUN ] : chAuxInp → chAuxOut ;
+         #val #[ MAXIMUM_BALLOT_SECRECY_RETURN ] : chMidInp → chOut ;
          #val #[ MAXIMUM_BALLOT_SECRECY_SETUP ] : chInp → chAuxInp
       ]
       [interface
@@ -408,17 +408,17 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       (MyAlg.Sigma_locs)
       [interface]
       [interface
-         #val #[MAXIMUM_BALLOT_SECRECY_RETURN] : chMidInp → chOut ;
-         #val #[Sigma.RUN] : chAuxInp → chAuxSimOut
+         #val #[Sigma.RUN] : chAuxInp → chAuxSimOut ;
+         #val #[MAXIMUM_BALLOT_SECRECY_RETURN] : chMidInp → chOut
       ] :=
-    mkpackage (par maximum_ballot_secrecy_real_return hacspec_or_run) _.
+    mkpackage (par hacspec_or_run maximum_ballot_secrecy_real_return) _.
   Next Obligation.
     eapply valid_package_inject_export.
     2:{
-      pose (valid_par _ _ _ _ _ _ _ _ _ (pack_valid maximum_ballot_secrecy_real_return) (pack_valid hacspec_or_run)).
+      pose (valid_par _ _ _ _ _ _ _ _ _ (pack_valid hacspec_or_run) (pack_valid maximum_ballot_secrecy_real_return) ).
       (* *)
       rewrite <- fset0E in v.
-      rewrite fset0U in v.
+      rewrite fsetU0 in v.
       rewrite <- fset0E in v.
       rewrite fset0U in v.
       rewrite fset0E in v.
@@ -426,7 +426,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       apply v.
     }
 
-    rewrite <- !fset1E.
+    rewrite <- !fset_cat.
     apply fsubsetxx.
   Qed.
 
@@ -440,18 +440,16 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     rewrite !fdisjoint1s.
     easy.
   Qed.
-  
-  Definition maximum_ballot_secrecy_real_par1 :=
-    mkpackage (par maximum_ballot_secrecy_real_par0 maximum_ballot_secrecy_real_setup) (valid_par _ _ _ _ _ _ _ _ _ _ _).
 
   Program Definition maximum_ballot_secrecy_real :
     package
-      (fset [::] :|: MyAlg.Sigma_locs)
+      (MyAlg.Sigma_locs)
       [interface #val #[Sigma.RUN] : chAuxInp → chAuxSimOut ]
       [interface #val #[MAXIMUM_BALLOT_SECRECY] : chInp → chOut ]
     :=
-    mkpackage (maximum_ballot_secrecy ∘ (par (par maximum_ballot_secrecy_real_return hacspec_or_run) maximum_ballot_secrecy_real_setup)) _.
+    mkpackage (maximum_ballot_secrecy ∘ (par (par hacspec_or_run maximum_ballot_secrecy_real_return) maximum_ballot_secrecy_real_setup)) _.
   Next Obligation.
+    rewrite <- fset0U. rewrite fset0E.
     eapply valid_link.
     1: apply maximum_ballot_secrecy.
     eapply (valid_par_upto
@@ -466,48 +464,62 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
   Qed.
   Fail Next Obligation.
 
+  Program Definition maximum_ballot_secrecy_ideal_par0 : package
+      (MyAlg.Sigma_locs :|: MyAlg.Simulator_locs)
+      [interface]
+      [interface
+         #val #[Sigma.RUN] : chAuxInp → chAuxSimOut ;
+         #val #[MAXIMUM_BALLOT_SECRECY_RETURN] : chMidInp → chOut
+      ] :=
+    mkpackage (par (Sigma.SHVZK_real_aux ∘ Sigma.SHVZK_ideal) maximum_ballot_secrecy_ideal_return) _.
+  Next Obligation.
+    eapply valid_package_inject_export.
+    2:{
+      epose (valid_par _ _ _ _ _ _ (Sigma.SHVZK_real_aux ∘ Sigma.SHVZK_ideal) _ _ _ (pack_valid maximum_ballot_secrecy_ideal_return) ).
+      (* *)
+      rewrite <- fset0E in v.
+      rewrite fsetU0 in v.
+      rewrite <- fset0E in v.
+      rewrite fset0U in v.
+      rewrite fset0E in v.
+
+      apply v.
+    }
+
+    rewrite <- !fset_cat.
+    apply fsubsetxx.
+  Qed.
+
+  Lemma maximum_ballot_secrecy_ideal_parable : Parable maximum_ballot_secrecy_ideal_par0 maximum_ballot_secrecy_ideal_setup.
+  Proof.
+    unfold Parable.
+    rewrite !domm_set ; unfold ".1".
+    rewrite domm0.
+    rewrite !fsetU0.
+    rewrite fdisjointUl.
+    rewrite !fdisjoint1s.
+    easy.
+  Qed.
+
   Program Definition maximum_ballot_secrecy_ideal :
     package
-      (fset [::] :|: (MyAlg.Sigma_locs :|: MyAlg.Simulator_locs))
+      (MyAlg.Sigma_locs :|: MyAlg.Simulator_locs)
       [interface #val #[Sigma.RUN] : chAuxInp → chAuxSimOut ]
       [interface #val #[MAXIMUM_BALLOT_SECRECY] : chInp → chOut ] :=
-    mkpackage (maximum_ballot_secrecy ∘ par (par maximum_ballot_secrecy_ideal_return (Sigma.SHVZK_real_aux ∘ Sigma.SHVZK_ideal)) maximum_ballot_secrecy_ideal_setup) _.
+    mkpackage (maximum_ballot_secrecy ∘ par (par (Sigma.SHVZK_real_aux ∘ Sigma.SHVZK_ideal) maximum_ballot_secrecy_ideal_return) maximum_ballot_secrecy_ideal_setup) _.
   Next Obligation.
+    rewrite <- fset0U. rewrite fset0E.
     eapply valid_link.
     1: apply maximum_ballot_secrecy.
-
-    eapply valid_par_upto.
-    {
-      unfold Parable.
-      rewrite !domm_set ; unfold ".1".
-      rewrite domm0.
-      rewrite !fsetU0.
-      rewrite fdisjointUl.
-      rewrite !fdisjoint1s.
-
-      unfold link, domm ; simpl.
-
-      rewrite <- fset1E.
-      rewrite !fdisjoint1s.
-
-      easy.
-    }
-    { refine (valid_par _ _ _ _ _ _ _ (Sigma.SHVZK_real_aux ∘ Sigma.SHVZK_ideal) _ (pack_valid maximum_ballot_secrecy_ideal_return) _ ). }
-    { apply maximum_ballot_secrecy_ideal_setup. }
-    {
-      rewrite <- !fset0E.
-      rewrite fset0U fsetU0.
-      apply fsubsetxx.
-    }
-    {
-      rewrite <- !fset0E.
-      rewrite fset0U fsetU0.
-      apply fsub0set.
-    }
-    {
-      rewrite <- !fset_cat.
-      apply fsubsetxx.
-    }
+    eapply (valid_par_upto
+             _ _ _ _ _ _ _ _ _ _ _
+             maximum_ballot_secrecy_ideal_parable
+           ).
+    1: apply maximum_ballot_secrecy_ideal_par0.
+    1: apply maximum_ballot_secrecy_ideal_setup.
+    1: rewrite <- !fset0E, fsetU0 ; apply fsubsetxx.
+    1: rewrite <- !fset0E, fsetU0 ; apply fsub0set.
+    1: rewrite <- !fset_cat ; apply fsubsetxx.
   Qed.
   Fail Next Obligation.
 
@@ -623,12 +635,21 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       (* admit. *)
   Admitted.
 
+
+  Lemma swap_two_fset :
+    (forall T a b, fset (T := T) [a;b] = fset [b;a]).
+  Admitted.
+
+  Lemma swap_three_fset :
+    (forall T a b c, fset (T := T) [a;b;c] = fset [c;a;b]).
+  Admitted.
+
   Lemma maximum_ballot_secrecy_success:
     ∀ LA A,
       ValidPackage LA [interface
                          #val #[ MAXIMUM_BALLOT_SECRECY ] : chInp → chOut
         ] A_export A →
-      fdisjoint LA fset0 →
+      fdisjoint LA MyAlg.Sigma_locs →
       ɛ_maximum_ballot_secrecy A = 0%R.
   Proof.
     intros.
@@ -637,17 +658,15 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     From Crypt Require Import SigmaProtocol.
 
     Set Printing Coercions.
-    pose run_interactive_or_shvzk.
     apply (AdvantageE_le_0 _ _ _ ).
     unfold maximum_ballot_secrecy_real, maximum_ballot_secrecy_ideal, pack.
     rewrite <- Advantage_link.
 
     (* Setup is equal *)
-    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (par (par maximum_ballot_secrecy_real_return OR_ZKP.hacspec_or_run) maximum_ballot_secrecy_ideal_setup)) | ].
-
+    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (par (par OR_ZKP.hacspec_or_run maximum_ballot_secrecy_real_return) maximum_ballot_secrecy_ideal_setup)) | ].
+    
     set (AdE := AdvantageE _ _) at 2.
-    erewrite (Advantage_par maximum_ballot_secrecy_real_par0 maximum_ballot_secrecy_real_setup maximum_ballot_secrecy_ideal_setup).
-    2,3,4: apply pack_valid.
+    rewrite (Advantage_par maximum_ballot_secrecy_real_par0 maximum_ballot_secrecy_real_setup maximum_ballot_secrecy_ideal_setup).
     2: apply (flat_valid_package _ _ _ _ (pack_valid maximum_ballot_secrecy_real_setup)).
     2, 3, 4: repeat (apply trimmed_empty_package || apply trimmed_package_cons).
     subst AdE.
@@ -695,22 +714,112 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     }
 
     do 2 rewrite <- (par_commut maximum_ballot_secrecy_ideal_setup _ _).
-    erewrite Advantage_par ; [ | admit.. ].
+    rewrite (Advantage_par maximum_ballot_secrecy_ideal_setup maximum_ballot_secrecy_real_par0 maximum_ballot_secrecy_ideal_par0).
+    2: apply (flat_valid_package _ _ _ _ (pack_valid maximum_ballot_secrecy_real_par0)).
+    2, 3, 4: repeat (apply trimmed_empty_package || apply trimmed_package_cons).
 
-    (* OR return is equal *)
-    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (par maximum_ballot_secrecy_real_return (Sigma.SHVZK_real_aux ∘ Sigma.SHVZK_ideal))) | ].
+    unfold maximum_ballot_secrecy_real_par0, maximum_ballot_secrecy_ideal_par0, pack.
 
-    set (AdE := AdvantageE _ _ _) at 1.
-    rewrite (par_commut maximum_ballot_secrecy_real_return).
-    rewrite (par_commut maximum_ballot_secrecy_ideal_return).
-    rewrite Advantage_par ; [ | admit.. ].
+
+    (* Return is equal *)
+    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (par OR_ZKP.hacspec_or_run maximum_ballot_secrecy_ideal_return)) | ].
+
+    set (AdE := AdvantageE _ _) at 2.
+    rewrite (Advantage_par hacspec_or_run maximum_ballot_secrecy_real_return maximum_ballot_secrecy_ideal_return).
+    2: apply (flat_valid_package _ _ _ _ (pack_valid maximum_ballot_secrecy_real_return)).
+    2, 3, 4: repeat (apply trimmed_empty_package || apply trimmed_package_cons).
     subst AdE.
 
-    erewrite maximum_ballot_secrecy_return_success ; [ rewrite addr0 | admit.. ].
+    erewrite maximum_ballot_secrecy_return_success with (LA := ((LA  :|: fset [::]) :|: fset [::]) :|: (MyAlg.Sigma_locs :|: fset [::])) ; [ rewrite add0r | .. ].
+    3,4: rewrite <- fset0E ; rewrite fsetU0 ; apply fdisjoints0.
+    2:{
+      eapply valid_link.
+      2:{
+        eapply valid_par_upto.
+        {
+          unfold Parable.
+          rewrite !domm_set ; unfold ".1".
+          rewrite domm0.
+          rewrite !fsetU0.
+          rewrite domm_ID_fset.
+          rewrite !fdisjoint1s.
+          rewrite notin_fset.
+          reflexivity.
+        }
+        {
+          apply hacspec_or_run.
+        }
+        {
+          apply valid_ID.
+          apply (flat_valid_package _ _ _ _ (pack_valid maximum_ballot_secrecy_real_return)).
+        }
+        {
+          apply fsubsetxx.
+        }
+        {
+          rewrite <- fset0E.
+          rewrite fset0U.
+          apply fsubsetxx.
+        }
+        {
+          rewrite <- fset_cat.
+          simpl.
+          apply fsubsetxx.
+        }
+      }
+      1:{
+        eapply valid_link.
+        1:{
+          eapply valid_link.
+          1: apply H.
+          apply maximum_ballot_secrecy.
+        }
+
+        eapply valid_par_upto.
+        {
+          unfold Parable.
+          rewrite !domm_set ; unfold ".1".
+          rewrite domm0.
+          rewrite !fsetU0.
+          rewrite domm_ID_fset.
+          rewrite !fdisjoint1s.
+          rewrite notin_fset.
+          reflexivity.
+        }
+        {
+          apply maximum_ballot_secrecy_ideal_setup.
+        }
+        {
+          apply valid_ID.
+          apply (flat_valid_package _ _ _ _ (pack_valid maximum_ballot_secrecy_real_par0)).
+        }
+        {
+          rewrite <- fset0E.
+          rewrite fset0U.
+          apply fsubsetxx.
+        }
+        {
+          rewrite <- fset0E.
+          rewrite fset0U.
+          apply fsubsetxx.
+        }
+        {
+          rewrite <- fset_cat.
+          simpl.
+          
+          rewrite swap_three_fset.
+          apply fsubsetxx.
+        }
+      }
+    }
+
+    do 2 rewrite <- (par_commut maximum_ballot_secrecy_ideal_return _ _).
+    rewrite (Advantage_par maximum_ballot_secrecy_ideal_return hacspec_or_run (pack Sigma.SHVZK_real_aux ∘ pack Sigma.SHVZK_ideal)).
+    2: apply (flat_valid_package _ _ _ _ (pack_valid hacspec_or_run)).
+    4: unfold trimmed ; rewrite <- link_trim_commut ; f_equal.
+    2, 3, 4: repeat (apply trimmed_empty_package || apply trimmed_package_cons).
 
     (* OR zkp is equal *)
-    erewrite Advantage_par ; [ | admit.. ].
-
     eapply Order.le_trans ; [
         eapply (Advantage_triangle_chain (hacspec_or_run)
                  [
@@ -720,10 +829,263 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
                 (Sigma.SHVZK_real_aux ∘ Sigma.SHVZK_ideal) _)
         | unfold advantage_sum ].
 
-    erewrite (hacspec_vs_RUN_interactive) ; [ rewrite add0r | admit.. ].
-    erewrite Sigma.run_interactive_shvzk ; [ rewrite add0r | admit.. ].
+    erewrite (hacspec_vs_RUN_interactive) with (LA := ((LA  :|: fset [::]) :|: fset [::]) :|: (fset [::] :|: fset [::])) ; [ rewrite add0r | .. ].
+    3: rewrite <- !fset0E ; rewrite !fsetU0 ; apply H0.
+    2:{
+      eapply valid_link.
+      2:{
+        eapply valid_par_upto.
+        {
+          unfold Parable.
+          rewrite !domm_set ; unfold ".1".
+          rewrite domm0.
+          rewrite !fsetU0.
+          rewrite domm_ID_fset.
+          rewrite !fdisjoint1s.
+          rewrite notin_fset.
+          reflexivity.
+        }
+        {
+          apply maximum_ballot_secrecy_ideal_return.
+        }
+        {
+          apply valid_ID.
+          apply (flat_valid_package _ _ _ _ (pack_valid hacspec_or_run)).
+        }
+        {
+          apply fsubsetxx.
+        }
+        {
+          rewrite <- fset0E.
+          rewrite fset0U.
+          apply fsubsetxx.
+        }
+        {
+          rewrite <- fset_cat.
+          simpl.
+          apply fsubsetxx.
+        }
+      }
+      1:{
+        eapply valid_link.
+        1:{
+          eapply valid_link.
+          1: apply H.
+          apply maximum_ballot_secrecy.
+        }
+
+        eapply valid_par_upto.
+        {
+          unfold Parable.
+          rewrite !domm_set ; unfold ".1".
+          rewrite domm0.
+          rewrite !fsetU0.
+          rewrite domm_ID_fset.
+          rewrite !fdisjoint1s.
+          rewrite notin_fset.
+          reflexivity.
+        }
+        {
+          apply maximum_ballot_secrecy_ideal_setup.
+        }
+        {
+          apply valid_ID.
+          apply (flat_valid_package _ _ _ _ (pack_valid maximum_ballot_secrecy_real_par0)).
+        }
+        {
+          rewrite <- fset0E.
+          rewrite fset0U.
+          apply fsubsetxx.
+        }
+        {
+          rewrite <- fset_cat.
+          simpl.
+
+          rewrite swap_two_fset.
+          apply fsubsetxx.
+        }
+        {
+          rewrite <- fset_cat.
+          simpl.
+
+          rewrite swap_three_fset.
+          apply fsubsetxx.
+        }
+      }
+    }
+
+    erewrite (Sigma.run_interactive_shvzk MyAlg.Simulator_locs (fun x => {code r ← sample uniform #|MyParam.Challenge| ;; MyAlg.Simulate x r })) with (LA := ((LA  :|: fset [::]) :|: fset [::]) :|: (fset [::] :|: fset [::])) ; [ rewrite add0r | .. ].
+    3: rewrite <- !fset0E ; rewrite !fsetU0 ; apply H0.
+    2:{
+      eapply valid_link.
+      2:{
+        eapply valid_par_upto.
+        {
+          unfold Parable.
+          rewrite !domm_set ; unfold ".1".
+          rewrite domm0.
+          rewrite !fsetU0.
+          rewrite domm_ID_fset.
+          rewrite !fdisjoint1s.
+          rewrite notin_fset.
+          reflexivity.
+        }
+        {
+          apply maximum_ballot_secrecy_ideal_return.
+        }
+        {
+          apply valid_ID.
+          apply (flat_valid_package _ _ _ _ (pack_valid hacspec_or_run)).
+        }
+        {
+          apply fsubsetxx.
+        }
+        {
+          rewrite <- fset0E.
+          rewrite fset0U.
+          apply fsubsetxx.
+        }
+        {
+          rewrite <- fset_cat.
+          simpl.
+          apply fsubsetxx.
+        }
+      }
+      1:{
+        eapply valid_link.
+        1:{
+          eapply valid_link.
+          1: apply H.
+          apply maximum_ballot_secrecy.
+        }
+
+        eapply valid_par_upto.
+        {
+          unfold Parable.
+          rewrite !domm_set ; unfold ".1".
+          rewrite domm0.
+          rewrite !fsetU0.
+          rewrite domm_ID_fset.
+          rewrite !fdisjoint1s.
+          rewrite notin_fset.
+          reflexivity.
+        }
+        {
+          apply maximum_ballot_secrecy_ideal_setup.
+        }
+        {
+          apply valid_ID.
+          apply (flat_valid_package _ _ _ _ (pack_valid maximum_ballot_secrecy_real_par0)).
+        }
+        {
+          rewrite <- fset0E.
+          rewrite fset0U.
+          apply fsubsetxx.
+        }
+        {
+          rewrite <- fset_cat.
+          simpl.
+          rewrite swap_two_fset.
+          apply fsubsetxx.
+        }
+        {
+          rewrite <- fset_cat.
+          simpl.
+          rewrite swap_three_fset.
+          apply fsubsetxx.
+        }
+      }
+    }
+
     rewrite <- Advantage_link.
-    erewrite OR_ZKP.shvzk_success ; [ | admit.. ].
+
+    erewrite OR_ZKP.shvzk_success with (LA := ((((LA  :|: fset [::])  :|: fset [::])  :|: fset [::]) :|: MyAlg.Sigma_locs (* Problem here, MyAlg.Sigma_locs not allowed in adversary locations! *))) ; [ | .. ].
+    3: rewrite <- !fset0E ; rewrite !fsetU0.
+    3: admit (* ; apply H0 *).
+    2:{
+      eapply valid_link.
+      1:{
+        eapply valid_link.
+        1:{
+          eapply valid_link.
+          1:{
+            eapply valid_link.
+            1: apply H.
+            apply maximum_ballot_secrecy.
+          }
+
+          eapply valid_par_upto.
+          {
+            unfold Parable.
+            rewrite !domm_set ; unfold ".1".
+            rewrite domm0.
+            rewrite !fsetU0.
+            rewrite domm_ID_fset.
+            rewrite !fdisjoint1s.
+            rewrite notin_fset.
+            reflexivity.
+          }
+          {
+            apply maximum_ballot_secrecy_ideal_setup.
+          }
+          {
+            apply valid_ID.
+            apply (flat_valid_package _ _ _ _ (pack_valid maximum_ballot_secrecy_ideal_par0)).
+          }
+          {
+            rewrite <- fset0E.
+            rewrite fset0U.
+            apply fsubsetxx.
+          }
+          {
+            rewrite <- fset_cat.
+            simpl.
+            apply fsubsetxx.
+          }
+          {
+            rewrite <- fset_cat.
+            simpl.
+            rewrite swap_three_fset.
+            apply fsubsetxx.
+          }
+        }
+        eapply valid_par_upto.
+        {
+          unfold Parable.
+          rewrite !domm_set ; unfold ".1".
+          rewrite domm0.
+          rewrite !fsetU0.
+          rewrite domm_ID_fset.
+          rewrite !fdisjoint1s.
+          rewrite notin_fset.
+          reflexivity.
+        }
+        {
+          apply maximum_ballot_secrecy_ideal_return.
+        }
+        {
+          apply valid_ID.
+          apply (flat_valid_package _ _ _ _ (pack_valid hacspec_or_run)).
+        }
+        {
+          rewrite <- fset0E.
+          rewrite fset0U.
+          apply fsubsetxx.
+        }
+        {
+          rewrite <- fset_cat.
+          simpl.
+          apply fsubsetxx.
+        }
+        {
+          rewrite <- fset_cat.
+          simpl.
+          rewrite swap_two_fset.
+          apply fsubsetxx.
+        }
+      }
+      apply Sigma.SHVZK_real_aux.
+    }
     easy.
   Admitted.
 
