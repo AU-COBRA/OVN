@@ -355,8 +355,6 @@ pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
     let params: CastVoteParam<G::Z> = ctx.parameter_cursor().get()?;
 
     let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i as usize, state.g_pow_xis);
-    let g_pow_xi_yi_vi =
-        compute_group_element_for_vote::<G>(params.cvp_xi, params.cvp_vote, g_pow_yi);
 
     let zkp_vi = zkp_one_out_of_two::<G>(
         params.cvp_zkp_random_w,
@@ -366,6 +364,10 @@ pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
         params.cvp_xi,
         params.cvp_vote,
     );
+
+    let g_pow_xi_yi_vi =
+        compute_group_element_for_vote::<G>(params.cvp_xi, params.cvp_vote, g_pow_yi);
+
     let mut cast_vote_state_ret = state.clone();
     cast_vote_state_ret.g_pow_xi_yi_vis[params.cvp_i as usize] = g_pow_xi_yi_vi;
     cast_vote_state_ret.zkp_vis[params.cvp_i as usize] = zkp_vi;

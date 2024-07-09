@@ -104,14 +104,136 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
   Include HGPA.
 
   (* begin details : helper defintions *)
-  Definition somewhat_let_substitution :
-               forall {A C : choice_type} {B : choiceType} (f : C -> raw_code B) (c : raw_code B) (y : both A) (r : both A -> both C),
-                 (forall x, deterministic (f x)) ->
-          ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ b_temp ← is_state y ;; temp ← is_state (r (ret_both b_temp)) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄ ->
-          ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← is_state (letb 'b := y in r b) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄.
+  (* Definition somewhat_let_substitution : *)
+  (*              forall {A C : choice_type} {B : choiceType} (f : C -> raw_code B) (c : raw_code B) (y : both A) (r : both A -> both C), *)
+  (*                (forall x, deterministic (f x)) -> *)
+  (*         ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ b_temp ← is_state y ;; temp ← is_state (r (ret_both b_temp)) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄ -> *)
+  (*         ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← is_state (letb 'b := y in r b) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄. *)
+  (* Proof. *)
+  (*   intros. *)
+  (* Qed. *)
+
+  Definition r_bind_feq :
+               forall {A B} (a b : raw_code A) (f g : A -> raw_code B) post,
+               ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ a ≈ b ⦃ Logic.eq ⦄
+               → (∀ (a₀ : A), ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ f a₀ ≈ g a₀ ⦃ post ⦄) →
+               ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ x ← a ;; f x ≈ x ← b ;; g x ⦃ post ⦄.
   Proof.
     intros.
-  Admitted.
+    eapply r_bind with (mid := pre_to_post (λ '(s₀, s₁), s₀ = s₁)) ;
+      [eapply rpost_weaken_rule ; [ apply H | now intros [] [] ? ]
+      | intros ].
+    apply rpre_hypothesis_rule ; intros ? ? [] ; eapply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ subst ; apply H0 | now simpl ; intros ? ? [] ].
+  Qed.
+
+  (* TODO: This is not true in general! *)
+  Axiom somewhat_let_substitution :
+             forall {A C : choice_type} {B : choiceType} (f : C -> raw_code B) (c : raw_code B) (y : both A) (r : both A -> both C),
+               (forall x, deterministic (f x)) ->
+               ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ b_temp ← is_state y ;; temp ← is_state (r (ret_both b_temp)) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄ ->
+               ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← is_state (letb 'b := y in r b) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄.
+
+  Lemma bobble_sampleC :
+    ∀
+      {A : ord_choiceType}
+      {C : _}
+      (o : Op)
+      (c : raw_code C)
+      (v : raw_code A)
+      (f : A -> Arit o -> raw_code C),
+      ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄
+        r ← sample o ;;
+        a ← v ;;
+        f a r ≈
+        c ⦃ Logic.eq ⦄ ->
+      ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄
+        a ← v ;;
+        r ← sample o ;;
+        f a r ≈
+        c ⦃ Logic.eq ⦄.
+  Proof.
+    intros.
+    replace
+      (a ← v ;; r ← sample o ;; f a r) with
+      ('(a,r) ← (a ← v ;; r ← sample o ;; ret (a, r)) ;; f a r) by now rewrite bind_assoc.
+    eapply r_transR with (c₁ := '(a,r) ← _ ;; f a r).
+    2: apply r_bind_feq ; [ apply rsamplerC | intros [] ].
+    2: apply rreflexivity_rule.
+    rewrite !bind_assoc.
+    simpl.
+    setoid_rewrite bind_assoc.
+    simpl.
+    apply H.
+  Qed.
+
+  (* Lemma bobble_swap : *)
+  (*   ∀ *)
+  (*     {A B C : choice_type} *)
+  (*     (x : raw_code C) *)
+  (*     (y : raw_code A) *)
+  (*     (c : raw_code B) *)
+  (*     (f : C -> A -> raw_code B), *)
+  (*     ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄ *)
+  (*       b ← y ;; *)
+  (*       a ← x ;; *)
+  (*       f a b ≈ *)
+  (*       c ⦃ Logic.eq ⦄ -> *)
+  (*     ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄ *)
+  (*       a ← x ;; *)
+  (*       b ← y ;; *)
+  (*       f a b ≈ *)
+  (*       c ⦃ Logic.eq ⦄. *)
+  (* Proof. *)
+  (*   intros. *)
+  (*   eapply r_transR. *)
+  (*   1: apply H. *)
+  (*   eapply from_sem_jdg. *)
+  (*   repeat setoid_rewrite repr_bind. simpl. *)
+  (*   rewrite <- rswap_helper. *)
+  (*   rewrite <- rswap_helper. *)
+  (*   eapply (swap_ruleR (λ a₀ a₁, repr (f a₀ a₁)) _ _). *)
+  (*   1: intros ; apply to_sem_jdg ; eapply rpre_weaken_rule ; [ apply rreflexivity_rule | easy ]. *)
+  (*   1: easy. *)
+  (*   intros. *)
+  (*   unshelve eapply coupling_eq. *)
+  (*   + exact (λ '(h₀, h₁), h₀ = h₁). *)
+  (*   + apply to_sem_jdg in H. *)
+  (*     unfold fromPrePost. *)
+  (*     unfold semantic_judgement. *)
+  (*     simpl. *)
+  (*     simpl. *)
+  (*     unfold Datatypes_prod__canonical__choice_Choice. *)
+  (*     replace (Datatypes_prod__canonical__choice_Choice _ _) with (C × A). *)
+  (*     simpl. *)
+      
+  (*     eapply to_sem_jdg in h. repeat setoid_rewrite repr_cmd_bind in h. *)
+  (*     rewrite <- rswap_cmd_helper in h. *)
+  (*     rewrite <- rswap_cmd_helper in h. *)
+  (*     apply h. *)
+  (*   + reflexivity. *)
+    
+  (*   eapply swap_ruleR. *)
+    
+  (*   epose rswap_helper. *)
+  (*   epose (rswap_ruleR). *)
+    
+  (*   replace *)
+  (*     (a ← x ;; b ← y ;; f a b) with *)
+  (*     ('(a,b) ← (a ← x ;; b ← y ;; ret (a, b)) ;; f a b) by now do 2 setoid_rewrite bind_assoc. *)
+  (*   eapply r_transR with (c₁ := '(a,b) ← (b ← y ;; a ← x ;; ret (a, b)) ;; f a b). *)
+  (*   2: apply r_bind_feq ; [  | intros [] ; apply rreflexivity_rule ]. *)
+  (*   2:{ *)
+  (*     apply rswap_ruleR. *)
+  (*     1: easy. *)
+  (*     1: now intros ; apply r_ret. *)
+      
+  (*     apply rreflexivity_rule. *)
+  (*   rewrite !bind_assoc. *)
+  (*   simpl. *)
+  (*   setoid_rewrite bind_assoc. *)
+  (*   simpl. *)
+  (*   apply H. *)
+  (* Qed. *)
   (* end details : helper defintions *)
 
   Notation " 'chState' " :=
@@ -153,15 +275,25 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     [package
       #def #[ MAXIMUM_BALLOT_SECRECY_SETUP ] ('(state_inp, (cvp_i, cvp_xi, cvp_vote)) : chInp) : chAuxInp
       {
-        let state := ret_both (state_inp : t_OvnContractState) in
+        let state := ret_both (state_inp :
+                         t_OvnContractState) in
 
         (* before zkp_vi *)
         g_pow_yi ← is_state (compute_g_pow_yi (cast_int (WS2 := _) (ret_both cvp_i)) (f_g_pow_xis state)) ;;
 
         (* zkp_vi *)
         (* (f_cvp_zkp_random_w params) (f_cvp_zkp_random_r params) (f_cvp_zkp_random_d params) g_pow_yi (f_cvp_xi params) (f_cvp_vote params) *)
-        let cStmt : OR_ZKP.MyAlg.choiceStatement := fto ((is_pure (f_g_pow (ret_both cvp_xi)) , g_pow_yi : gT , g_pow_yi : gT) : OR_ZKP.MyParam.Statement) in (* x, h , y *)
-        let cWitn : OR_ZKP.MyAlg.choiceWitness := fto ((FieldToWitness (is_pure (ret_both cvp_xi)) : 'Z_q, is_pure (ret_both (cvp_vote : 'bool)), g_pow_yi) : OR_ZKP.MyParam.Witness) in (* xi, vi, h *)
+        let cStmt : OR_ZKP.MyAlg.choiceStatement :=
+          fto ((
+                is_pure (f_g_pow (ret_both cvp_xi)),
+                g_pow_yi : gT ,
+                is_pure (f_prod (f_pow (ret_both g_pow_yi) (ret_both cvp_xi)) (if cvp_vote then f_g else f_group_one)) : gT
+              ) : OR_ZKP.MyParam.Statement) in (* x, h , y *)
+        let cWitn : OR_ZKP.MyAlg.choiceWitness :=
+          fto ((
+                FieldToWitness (is_pure (ret_both cvp_xi)) : 'Z_q,
+                is_pure (ret_both (cvp_vote : 'bool)),
+                g_pow_yi) : OR_ZKP.MyParam.Witness) in (* xi, vi, h *)
         ret (cStmt, cWitn)
     }].
   Next Obligation.
@@ -200,14 +332,12 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
          let state := ret_both (state_inp : t_OvnContractState) in
 
          (* before zkp_vi *)
-         g_pow_yi ← is_state (compute_g_pow_yi (cast_int (WS2 := _) (ret_both cvp_i)) (f_g_pow_xis state)) ;;
-        let g_pow_yi := ret_both g_pow_yi in
 
-        let zkp_vi := ret_both (OR_ZKP.or_sigma_ret_to_hacspec_ret transcript) in
-
+         let zkp_vi := ret_both (OR_ZKP.or_sigma_ret_to_hacspec_ret transcript) in
+         
         (* after zkp_vi *)
         temp ← is_state (
-            letb g_pow_xi_yi_vi := compute_group_element_for_vote (ret_both cvp_xi) (ret_both (cvp_vote : 'bool)) g_pow_yi in
+            letb g_pow_xi_yi_vi := compute_group_element_for_vote (ret_both cvp_xi) (ret_both (cvp_vote : 'bool)) (ret_both ((otf transcript.1.1.1).1.2)) in
             letb cast_vote_state_ret := f_clone state in
             letb cast_vote_state_ret := Build_t_OvnContractState[cast_vote_state_ret] (f_g_pow_xi_yi_vis := update_at_usize (f_g_pow_xi_yi_vis cast_vote_state_ret) (cast_int (WS2 := _) (ret_both cvp_i)) g_pow_xi_yi_vi) in
             letb cast_vote_state_ret := Build_t_OvnContractState[cast_vote_state_ret] (f_zkp_vis := update_at_usize (f_zkp_vis cast_vote_state_ret) (cast_int (WS2 := _) (ret_both cvp_i)) zkp_vi) in
@@ -624,14 +754,14 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     (* (* unfold maximum_ballot_secrecy_real, maximum_ballot_secrecy_ovn, pack. *) *)
     (* (* fold chElement. *) *)
 
-    apply: eq_rel_perf_ind.
-    1: apply maximum_ballot_secrecy_ovn.
-    1: apply maximum_ballot_secrecy_real.
+    apply: eq_rel_perf_ind_eq.
+    (* 1: apply maximum_ballot_secrecy_ovn. *)
+    (* 1: apply maximum_ballot_secrecy_real. *)
 
-    1:{ instantiate (1 := heap_ignore MyAlg.Sigma_locs).
-        ssprove_invariant.
-        apply fsubsetUr. }
-    2:apply H.
+    (* 1:{ instantiate (1 := heap_ignore MyAlg.Sigma_locs). *)
+    (*     ssprove_invariant. *)
+    (*     apply fsubsetUr. } *)
+    (* 2:apply H. *)
     2:rewrite <- fset0E ; apply fdisjoints0.
     2:apply H0.
     clear H H0.
@@ -658,228 +788,209 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     clear e e0.
 
     destruct x as [? [[i xi] vote]].
+    fold chElement.
 
-    (* apply r_const_sample_L ; [ apply LosslessOp_uniform | intros ]. *)
-    (* apply r_const_sample_L ; [ apply LosslessOp_uniform | intros ]. *)
-    (* apply r_const_sample_L ; [ apply LosslessOp_uniform | intros ]. *)
+    unfold code_link at 1. fold @code_link.
+
+    (* set (par (par _ _) _). *)
+    (* epose (lookup_op_spec_inv f MAXIMUM_BALLOT_SECRECY_SETUP (t_OvnContractState × (int32 × f_Z × 'bool)) (chProd MyAlg.choiceStatement MyAlg.choiceWitness) _). *)
+    (* setoid_rewrite e. *)
+    unfold lookup_op.
+    simpl.
+
+    destruct choice_type_eqP ; [ | subst ; contradiction ].
+    destruct choice_type_eqP ; [ | subst ; contradiction ].
+    subst.
+    rewrite !cast_fun_K.
+
+    clear e e0.
+
+    rewrite bind_assoc.
+    simpl (bind (ret _) _).
+
+    destruct choice_type_eqP ; [ | subst ; contradiction ].
+    destruct choice_type_eqP ; [ | subst ; contradiction ].
+    subst.
+    rewrite !cast_fun_K.
+
+    clear e e0.
+
+    destruct choice_type_eqP ; [ | subst ; contradiction ].
+    destruct choice_type_eqP ; [ | subst ; contradiction ].
+    subst.
+    rewrite !cast_fun_K.
+
+    clear e e0.
 
     unfold cast_vote at 1.
     fold chElement.
 
-    simpl.
-    
-    destruct choice_type_eqP ; [ | subst ; contradiction ].
-    destruct choice_type_eqP ; [ | subst ; contradiction ].
-    subst.
-    rewrite !cast_fun_K.
+    eapply r_transR.
+    {
+      apply r_bind_feq ; [ apply rreflexivity_rule | intros ].
 
-    clear e e0.
+      apply r_bind_feq ; [ replace (MyParam.R _ _) with true ; [ simpl ; apply rreflexivity_rule |  ] | intros ].
+      1:{
+        rewrite !otf_fto.
+        unfold MyParam.R.
 
-    apply rsymmetry.
-    rewrite bind_assoc.
-    setoid_rewrite bind_rewrite.
-    simpl.
+        symmetry.
+        repeat (apply /andP ; split).
+        - apply /eqP.
 
-    destruct choice_type_eqP ; [ | subst ; contradiction ].
-    destruct choice_type_eqP ; [ | subst ; contradiction ].
-    subst.
-    rewrite !cast_fun_K.
+          rewrite pow_witness_to_field.
+          rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
 
-    clear e e0.
+          unfold HGPA.HacspecGroup.g.
+          rewrite WitnessToFieldCancel.
 
-    replace (is_state _)
-      with
-      (ret (is_pure (compute_g_pow_yi (cast_int (ret_both i)) (f_g_pow_xis (ret_both s))))) by admit.
-    rewrite bind_rewrite.
+          now Misc.push_down_sides.
+        - apply eqxx.
+        - apply /eqP.
+          unfold HGPA.HacspecGroup.g.
 
-    replace (MyParam.R _ _) with true by admit.
-    simpl.
+          unfold "_ * _"%g ; simpl ; unfold setoid_lower2 , F , sg_prod, U ; simpl.
+
+          rewrite pow_witness_to_field.
+          rewrite WitnessToFieldCancel.
+          Misc.push_down_sides.
+          now destruct vote.
+      }
+
+      apply rreflexivity_rule.
+    }
+    eapply r_transR ; [ | ].
+    {
+      apply r_nice_swap_rule ; [ easy | easy | ].
+
+      apply bobble_sampleC ; fold @bind.
+      eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros w ].
+      apply bobble_sampleC ; fold @bind.
+      eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros d ].
+      apply bobble_sampleC ; fold @bind.
+      eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros r ].
+
+      apply rreflexivity_rule.
+    }
+    hnf.
 
     eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros w ].
     eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros d ].
     eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros r ].
 
-    rewrite bind_assoc.
-    rewrite !otf_fto.
-    setoid_rewrite bind_rewrite.
-
-    destruct choice_type_eqP ; [ | subst ; contradiction ].
-    destruct choice_type_eqP ; [ | subst ; contradiction ].
-    subst.
-    rewrite !cast_fun_K.
-
     (* Back to lhs *)
-    apply rsymmetry.
 
-    rewrite !bind_assoc.
-    rewrite bind_rewrite.
-    rewrite !bind_assoc ; fold chElement.
-    rewrite bind_rewrite.
-    rewrite bind_rewrite.
-    rewrite bind_rewrite.
-    rewrite bind_assoc.
-    simpl (is_state (solve_lift _)).
-    unfold bind at 2.
-    simpl (is_state _) at 2.
-    unfold bind at 2.
-
-    rewrite bind_assoc.
-    simpl (is_state (solve_lift _)).
-    unfold bind at 2.
-
-    hnf.
-    unfold Hacspec_Lib_Pre.Ok.
-
-    unfold ".1", ".2".
-
-    unfold prod_both at 1.
-    unfold bind_both at 1.
-    simpl.
-    setoid_rewrite bind_assoc.
-    setoid_rewrite bind_assoc.
-    unfold bind at 3.
-    replace (is_state f_accept) with (ret (is_pure f_accept)) by admit.
-    rewrite bind_rewrite.
-
-    destruct (_ == _).
-    {
-      setoid_rewrite bind_rewrite.
-
-      rewrite !bind_assoc.
-      rewrite bind_rewrite.
-      rewrite bind_rewrite.
-
-      rewrite !bind_assoc.
-      rewrite bind_rewrite.
-      rewrite bind_rewrite.
-
-      rewrite !bind_assoc.
-      rewrite bind_rewrite.
-      rewrite bind_rewrite.
-
-      rewrite !bind_assoc.
-      rewrite bind_rewrite.
-      rewrite bind_rewrite.
-
-      rewrite !bind_assoc.
-      rewrite bind_rewrite.
-      rewrite bind_rewrite.
-      rewrite bind_rewrite.
-
-      rewrite !bind_assoc.
-      setoid_rewrite bind_assoc.
-      setoid_rewrite bind_assoc.
-      setoid_rewrite bind_assoc.
-      setoid_rewrite bind_assoc.
-      setoid_rewrite bind_assoc.
-      setoid_rewrite bind_assoc.
-      setoid_rewrite bind_assoc.
-      setoid_rewrite bind_assoc.
-      setoid_rewrite bind_assoc.
-      setoid_rewrite bind_rewrite.
-      setoid_rewrite bind_rewrite.
-      setoid_rewrite bind_rewrite.
-      setoid_rewrite bind_assoc.
-      setoid_rewrite bind_assoc.
-      setoid_rewrite bind_assoc.
-      setoid_rewrite bind_assoc.
-      do 3 setoid_rewrite bind_assoc.
-      do 3 setoid_rewrite bind_assoc.
-      do 3 setoid_rewrite bind_assoc.
-
-
-      rewrite bind_assoc.
-
-    setoid_rewrite bind_rewrite.
-    
-    rewrite bind_assoc.
-
-
-    (* 
-
-    
-    
-    setoid_rewrite bind_rewrite.
+    (rewrite !bind_rewrite || rewrite !bind_assoc).
+    (rewrite !bind_rewrite || rewrite !bind_assoc).
     fold chElement.
-    destruct x as [? [[i xi] vote]].
+    (rewrite !bind_rewrite || rewrite !bind_assoc).
+    fold chElement.
+    rewrite bind_rewrite.
+    rewrite bind_rewrite.
+    unfold ".2".
+    unfold f_parameter_cursor.
+    do 5 unfold prod_both at 1.
+    simpl (is_pure _).
 
+    rewrite bind_rewrite.
+    rewrite bind_assoc.
+
+    replace (f_cvp_i (solve_lift ret_both _)) with (ret_both i) by now apply both_eq.
+    replace (f_cvp_xi (solve_lift ret_both _)) with (ret_both xi) by now apply both_eq.
+    replace (f_cvp_vote (solve_lift ret_both _)) with (ret_both vote) by now apply both_eq.
+    replace (f_cvp_zkp_random_w (solve_lift ret_both _)) with (ret_both (WitnessToField (otf w))) by now apply both_eq.
+    replace (f_cvp_zkp_random_d (solve_lift ret_both _)) with (ret_both (WitnessToField (otf d))) by now apply both_eq.
+    replace (f_cvp_zkp_random_r (solve_lift ret_both _)) with (ret_both (WitnessToField (otf r))) by now apply both_eq.
+
+    apply somewhat_let_substitution ; [ admit | ].
+
+    apply r_bind_feq ; [ apply rreflexivity_rule | intros ].
     
-      ssprove_sync_eq. intros.
+    apply r_nice_swap_rule ; [ easy | easy | ].
+    rewrite bind_assoc.
+    set (is_state _).
+    unfold bind at 2.
+    subst r0.
+    apply r_nice_swap_rule ; [ easy | easy | ].
 
-      Transparent Simulate.
-      unfold Simulate.
-      Transparent Commit.
-      unfold Commit.
-      Transparent Response.
-      unfold Response.
-      unfold prog. rewrite bind_ret.
-
-      destruct (otf mv) as [[m vi] n] eqn:mvo.
-      destruct (otf hy) as [[x h] y] eqn:hyo.
-
-    apply (AdvantageE_le_0 _ _ _ ).
-    simpl.
-    
-    rewrite <- Advantage_link.
-
-    (* Setup is equal *)
-    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (par (par OR_ZKP.hacspec_or_run maximum_ballot_secrecy_real_return) maximum_ballot_secrecy_ideal_setup)) | ].
-    
-    set (AdE := AdvantageE _ _) at 2.
-    rewrite (Advantage_par maximum_ballot_secrecy_real_par0 maximum_ballot_secrecy_real_setup maximum_ballot_secrecy_ideal_setup).
-    2: apply (flat_valid_package _ _ _ _ (pack_valid maximum_ballot_secrecy_real_setup)).
-    2, 3, 4: repeat (apply trimmed_empty_package || apply trimmed_package_cons).
-    subst AdE.
-
-    erewrite maximum_ballot_secrecy_setup_success with (LA := (LA :|: fset [::]) :|: (MyAlg.Sigma_locs :|: fset [::])) ; [ rewrite add0r | .. ].
-    3,4: rewrite <- fset0E ; rewrite fsetU0 ; apply fdisjoints0.
+    rewrite !otf_fto.
+    unfold ".1", ".2".
+    rewrite !WitnessToFieldCancel.
+    replace (_ == _) with (vote).
     2:{
-      eapply valid_link.
-      1:{
-        eapply valid_link.
-        1: apply H.
-        apply maximum_ballot_secrecy.
-      }
+      symmetry.
+      apply /eqP.
+      unfold HGPA.HacspecGroup.g.
 
-      eapply valid_par_upto.
-      {
-        unfold Parable.
-        rewrite <- !fset1E.
-        rewrite !domm_set ; unfold ".1".
-        rewrite domm0.
-        rewrite !fsetU0.
-        rewrite fdisjointUl.
-        rewrite !fdisjoint1s.
+      unfold "_ * _"%g ; simpl ; unfold setoid_lower2 , F , sg_prod, U ; simpl.
+
+      rewrite pow_witness_to_field.
+      rewrite WitnessToFieldCancel.
+      Misc.push_down_sides.
+
+      destruct vote.
+      - reflexivity.
+      - red ; intros.
+        apply generator_is_not_one.
+        apply both_equivalence_is_pure_eq.
+        set (ret_both _) in H0.
+
+        rewrite <- (@mul1g v_G_is_group).
+        rewrite <- mulVg.
+        rewrite <- mulgA.
+        rewrite hacspec_function_guarantees2 in H0.
+        setoid_rewrite H0.
+
+        rewrite mulgA.
+        rewrite mulVg.
+        rewrite (@mul1g v_G_is_group).
         reflexivity.
-      }
-      {
-        apply maximum_ballot_secrecy_real_par0.
-      }
-      {
-        apply valid_ID.
-        apply (flat_valid_package _ _ _ _ (pack_valid maximum_ballot_secrecy_real_setup)).
-      }
-      {
-        apply fsubsetxx.
-      }
-      {
-        rewrite <- fset0E.
-        rewrite fset0U.
-        apply fsubsetxx.
-      }
-      {
-        rewrite <- fset_cat.
-        apply fsubsetxx.
-      }
     }
 
-    do 2 rewrite <- (par_commut maximum_ballot_secrecy_ideal_setup _ _).
-    rewrite (Advantage_par maximum_ballot_secrecy_ideal_setup maximum_ballot_secrecy_real_par0 maximum_ballot_secrecy_ideal_par0).
-    2: apply (flat_valid_package _ _ _ _ (pack_valid maximum_ballot_secrecy_real_par0)).
-    2, 3, 4: repeat (apply trimmed_empty_package || apply trimmed_package_cons).
+    set (zkp_one_out_of_two _ _ _ _ _ _).
+    
+    simpl (is_state _) at 2.
+    setoid_rewrite bind_rewrite.
+    unfold Hacspec_Lib_Pre.Ok.
+    simpl (is_state _) at 2.
+    setoid_rewrite bind_rewrite.
 
-  Qed.
-  
+    apply somewhat_let_substitution ; [ admit | ].
+    eapply r_bind. 1: apply rreflexivity_rule.
+    intros.
+    
+    (* apply r_bind_feq ; [ apply rreflexivity_rule | intros ]. *)
+
+    destruct a₀0 as [[[[[[[[[[]]]]]]]]]], a₁ as [[[[[[[[[[]]]]]]]]]].
+    apply rpre_hypothesis_rule ; intros ? ? ?.
+    inversion_clear H0.
+    eapply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ subst | now simpl ; intros ? ? ? ].
+      
+    replace (is_pure (f_g_pow _)) with s0 by admit.
+    replace (is_pure (f_prod _ _)) with s1 by admit.
+
+    setoid_rewrite bind_rewrite.
+    setoid_rewrite bind_assoc.
+    setoid_rewrite bind_assoc.
+
+    apply r_bind_feq ; [ apply rreflexivity_rule | intros ].
+
+    setoid_rewrite bind_rewrite.
+    setoid_rewrite bind_assoc.
+    simpl.
+
+    simpl.
+    rewrite !otf_fto.
+    unfold ".1", ".2".
+    rewrite !WitnessToFieldCancel.
+
+    apply r_bind_feq ; [ | intros ].
+    1:{
+      apply rreflexivity_rule.
+    }
+    now apply r_ret.
+  Admitted.
+
   Definition ɛ_maximum_ballot_secrecy A :=
     AdvantageE
       (maximum_ballot_secrecy_real)
