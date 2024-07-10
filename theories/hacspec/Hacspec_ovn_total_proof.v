@@ -127,11 +127,43 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
   Qed.
 
   (* TODO: This is not true in general! *)
-  Axiom somewhat_let_substitution :
+  Lemma somewhat_let_substitution :
              forall {A C : choice_type} {B : choiceType} (f : C -> raw_code B) (c : raw_code B) (y : both A) (r : both A -> both C),
-               (forall x, deterministic (f x)) ->
                ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ b_temp ← is_state y ;; temp ← is_state (r (ret_both b_temp)) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄ ->
-               ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← is_state (letb 'b := y in r b) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄.
+               ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← is_state (letb 'b := y in r ((b))) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄.
+  Proof.
+    intros.
+    unfold let_both at 1.
+    eapply r_transR ; [ eapply rpost_weaken_rule ; [ apply H | now intros [] [] [] | .. ] | ].
+    rewrite <- bind_assoc.
+    apply r_bind_feq.
+    2:intros ; eapply rpost_weaken_rule ; [ apply rreflexivity_rule | now intros [] [] H0 ; inversion H0 ].
+
+    pose (determ := (fun (y : both A) => both_deterministic y)).
+    pose (y_det := both_deterministic y).
+
+    pose (hd₀ := determ ).
+    pose (hd₁ := deterministic_bind _ _ y_det (fun x => determ (ret_both x))).
+    simpl in hd₁.
+
+    eapply r_transL.
+    2:{
+      apply r_bind_feq.
+      1:{
+        apply r_nice_swap_rule ; [ easy | easy | ].
+        epose p_eq.
+        eapply rpost_weaken_rule.
+        1: apply r0.
+        1:now intros [] [] [[] ?].
+      }
+      intros.
+      apply rreflexivity_rule.
+    }
+    simpl.
+
+    apply both_pure_eq.
+    now rewrite <- hacspec_function_guarantees.
+  Qed.
 
   Lemma bobble_sampleC :
     ∀
@@ -948,7 +980,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     (* Actual equality of code *)
     (***************************)
 
-    apply somewhat_let_substitution ; [ admit | ].
+    apply somewhat_let_substitution.
     apply r_bind_feq ; [ apply rreflexivity_rule | intros ].
 
     (* unfold hacspec_ret_to_or_sigma_ret. *)
@@ -999,7 +1031,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
         reflexivity.
     }
 
-    set (f := fun _ => _) at 3 ; apply (somewhat_let_substitution _ _ _ f) ; subst f ; hnf ; [ admit | ].
+    set (f := fun _ => _) at 3 ; apply (somewhat_let_substitution _ _ _ f) ; subst f ; hnf.
 
     apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c.1.1.1.1.1.1.1.1.1 = (is_pure (f_g_pow (ret_both xi)), is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) (if vote then f_g else f_group_one)))
                                                    (* (c.1.1.1.1.1.1.1.1.1.1 = (_, a₀, _).1.1) *)).
@@ -1024,11 +1056,51 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
         eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
         eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
 
-        eapply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) f_g)))  ; [ admit | intros ].
+        eapply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) f_g)))  ; [  | intros ].
+        1:{
+          eapply r_transR.
+          1:{
+            apply r_nice_swap_rule ; [ easy | easy | ].
+            eapply rpost_weaken_rule.
+            1: apply (p_eq _ (fun '(a, b) => a = b)).
+            now intros [] [] [[] ?].
+          }
+
+          eapply r_transL.
+          1:{
+            apply r_nice_swap_rule ; [ easy | easy | ].
+            eapply rpost_weaken_rule.
+            1: apply (p_eq _ (fun '(a, b) => a = b)).
+            now intros [] [] [[] ?].
+          }
+
+          now apply r_ret.
+        }
+        
         apply rpre_hypothesis_rule ; intros ? ? [? []].
         eapply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ | now simpl ; intros ? ? [] ].
 
-        eapply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_g_pow (ret_both xi)))) ; [ admit | intros ].
+        eapply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_g_pow (ret_both xi)))) ; [ | intros ].
+        1:{
+          eapply r_transR.
+          1:{
+            apply r_nice_swap_rule ; [ easy | easy | ].
+            eapply rpost_weaken_rule.
+            1: apply (p_eq _ (fun '(a, b) => a = b)).
+            now intros [] [] [[] ?].
+          }
+
+          eapply r_transL.
+          1:{
+            apply r_nice_swap_rule ; [ easy | easy | ].
+            eapply rpost_weaken_rule.
+            1: apply (p_eq _ (fun '(a, b) => a = b)).
+            now intros [] [] [[] ?].
+          }
+
+          now apply r_ret.
+        }
+
         apply rpre_hypothesis_rule ; intros ? ? [? []].
         eapply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ | now simpl ; intros ? ? [] ].
 
@@ -1045,11 +1117,56 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
         eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
         eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
 
-        eapply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) f_group_one)))  ; [ admit | intros ].
+        eapply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) f_group_one))  ; [ | intros ].
+        1:{
+          eapply r_transR.
+          1:{
+            apply r_nice_swap_rule ; [ easy | easy | ].
+            eapply rpost_weaken_rule.
+            1: apply (p_eq _ (fun '(a, b) => a = b)).
+            now intros [] [] [[] ?].
+          }
+
+          eapply r_transL.
+          1:{
+            apply r_nice_swap_rule ; [ easy | easy | ].
+            eapply rpost_weaken_rule.
+            1: apply (p_eq _ (fun '(a, b) => a = b)).
+            now intros [] [] [[] ?].
+          }
+          apply r_ret.
+          intros ? ? ?.
+          split ; [ assumption | split ; [ reflexivity | ] ].
+
+          Misc.push_down_sides.
+          setoid_rewrite (@mulg1 v_G_is_group).
+          reflexivity.
+        }
+
         apply rpre_hypothesis_rule ; intros ? ? [? []].
         eapply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ | now simpl ; intros ? ? [] ].
 
-        eapply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_g_pow (ret_both xi)))) ; [ admit | intros ].
+        eapply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_g_pow (ret_both xi)))) ; [ | intros ].
+        1:{
+          eapply r_transR.
+          1:{
+            apply r_nice_swap_rule ; [ easy | easy | ].
+            eapply rpost_weaken_rule.
+            1: apply (p_eq _ (fun '(a, b) => a = b)).
+            now intros [] [] [[] ?].
+          }
+
+          eapply r_transL.
+          1:{
+            apply r_nice_swap_rule ; [ easy | easy | ].
+            eapply rpost_weaken_rule.
+            1: apply (p_eq _ (fun '(a, b) => a = b)).
+            now intros [] [] [[] ?].
+          }
+
+          now apply r_ret.
+        }
+
         apply rpre_hypothesis_rule ; intros ? ? [? []].
         eapply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ | now simpl ; intros ? ? [] ].
 
@@ -1080,7 +1197,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
     simpl.
     now repeat (apply f_equal || (apply functional_extensionality ; intros) || f_equal).
-  Admitted.
+  Qed.
 
   Definition ɛ_maximum_ballot_secrecy A :=
     AdvantageE

@@ -252,21 +252,94 @@ Proof.
     now simpl in H.
 Qed.
 
+Theorem both_pure_eq {A} (a : both A) (b : both A) :
+  is_pure a = is_pure b <-> ⊢ ⦃ fun '(a, b) => a = b ⦄ is_state a ≈ is_state b ⦃ Logic.eq ⦄.
+Proof.
+
+  replace (⊢ ⦃ fun '(a, b) => a = b ⦄ is_state a ≈ is_state b ⦃ Logic.eq ⦄) with
+    (⊢ ⦃ fun '(a, b) => a = b ⦄ ret (is_pure a) ≈ ret (is_pure b) ⦃ Logic.eq ⦄).
+  2:{
+    rewrite (boolp.propeqP).
+    split ; intros.
+    -
+    intros.
+    eapply r_transR.
+    2:{
+      eapply rpost_weaken_rule.
+      1: apply (p_eq _ (fun '(a, b) => a = b)).
+      now intros [] [] [[] ?].
+    }
+    apply r_nice_swap_rule ; [ easy | easy | ].
+
+    eapply r_transR.
+    2:{
+      eapply rpost_weaken_rule.
+      1: apply (p_eq _ (fun '(a, b) => a = b)).
+      now intros [] [] [[] ?].
+    }
+    apply r_nice_swap_rule ; [ easy | easy | ].
+
+    apply H.
+    -
+    intros.
+    eapply r_transL.
+    2:{
+      eapply rpost_weaken_rule.
+      1: apply (p_eq _ (fun '(a, b) => a = b)).
+      now intros [] [] [[] ?].
+    }
+
+    eapply r_transR.
+    1:{
+      eapply rpost_weaken_rule.
+      1: apply (p_eq _ (fun '(a, b) => a = b)).
+      now intros [] [] [[] ?].
+    }
+    apply r_nice_swap_rule ; [ easy | easy | ].
+
+    apply H.
+  }
+  split.
+  - intros.
+    now apply r_ret.
+  - intros.
+    destruct (is_pure a == is_pure b) eqn:a_eq_b ; [ now apply /eqP | ].
+    apply (@sem_to_det _ _ _ _ (ret (is_pure a)) (ret (is_pure b)) (deterministic_ret _) (deterministic_ret _)) in H.
+    specialize (H empty_heap empty_heap erefl).
+    unfold pre_to_post_ret in H.
+    now simpl in H.
+Qed.
+
 Corollary both_equivalence_is_pure_eq : forall {A} {a : both A} {b : both A},
     a ≈both b <-> is_pure a = is_pure b.
 Proof.
   intros.
   unfold both_equivalence.
-  now rewrite <- both_pure.
+  split ; [ easy | split ; [ easy | ] ].
+  epose (proj1 (both_pure_eq _ _) H).
+  eapply r_transR.
+  1:{
+    apply r.
+  }
+  eapply rpost_weaken_rule.
+  1:{
+    apply better_r.
+    refine (r_reflexivity_alt true_precond (is_state a) _ _ _).
+    1: rewrite <- !fset0E ; apply (ChoiceEquality.is_valid_code) ; apply a.
+    1: easy.
+    1: easy.
+  }
+  now intros [] [] [? _].
 Qed.
 
-Corollary both_equivalence_is_state_equivalence : forall {A} (a : both A) (b : both A),
-    a ≈both b <-> ⊢ ⦃ true_precond ⦄ is_state a ≈ is_state b ⦃ fun '(a, h₀) '(b, h₁) => (a = b) ⦄.
-Proof.
-  intros.
-  unfold both_equivalence.
-  now rewrite both_pure.
-Qed.
+(* Corollary both_equivalence_is_state_equivalence : forall {A} (a : both A) (b : both A), *)
+(*     a ≈both b <-> ⊢ ⦃ true_precond ⦄ is_state a ≈ is_state b ⦃ fun '(a, h₀) '(b, h₁) => (a = b) ⦄. *)
+(* Proof. *)
+(*   intros. *)
+(*   unfold both_equivalence. *)
+(*   split ; [ easy | split ; [ | easy ] ]. *)
+(*   apply both_pure. *)
+(* Qed. *)
 
 Lemma both_eq_reflexivity : forall {A : choice_type} (a : both A),
     a ≈both a.
@@ -393,17 +466,17 @@ Proof.
   reflexivity.
 Qed.
 
-Corollary state_eq_pure :
-  forall {A B} (f : both A -> both B) (x : both A),
-  (⊢ ⦃ true_precond ⦄ is_state (f x) ≈ is_state (f (ret_both (is_pure x))) ⦃ fun '(a, _) '(b, _) => a = b ⦄)
-<-> (is_pure (f x) = is_pure (f (ret_both (is_pure x)))).
-Proof.
-  split ; intros.
-  - apply both_pure.
-    apply H.
-  - apply both_pure.
-    apply H.
-Qed.
+(* Corollary state_eq_pure : *)
+(*   forall {A B} (f : both A -> both B) (x : both A), *)
+(*   (⊢ ⦃ true_precond ⦄ is_state (f x) ≈ is_state (f (ret_both (is_pure x))) ⦃ fun '(a, _) '(b, _) => a = b ⦄) *)
+(* <-> (is_pure (f x) = is_pure (f (ret_both (is_pure x)))). *)
+(* Proof. *)
+(*   split ; intros. *)
+(*   - apply both_pure. *)
+(*     apply H. *)
+(*   - apply both_pure. *)
+(*     apply H. *)
+(* Qed. *)
 
 Corollary both_eq_guarantees : forall {A} (x y : both A),
     x ≈both y <-> ret_both (is_pure x) ≈both ret_both (is_pure y).
@@ -1102,7 +1175,7 @@ Qed.
 Lemma running_state_is_pure : forall {A} (x : both A) h, fst (det_run (is_state x) (h := both_deterministic _) h) = is_pure x.
 Proof.
   intros.
-  epose (p_eq x).
+  epose (p_eq x true_precond).
   apply (sem_to_det _ _ _ _ (both_deterministic _) (deterministic_ret _)) in r.
   unfold det_jdg in r.
   specialize (r h h Logic.I).
