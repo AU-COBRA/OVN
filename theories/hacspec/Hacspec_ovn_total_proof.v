@@ -69,24 +69,6 @@ Import GroupScope GRing.Theory.
 
 Import PackageNotation.
 
-(* From Hammer Require Import Reflect. *)
-(* From Hammer Require Import Hammer. *)
-(* Hammer_version. *)
-(* Hammer_objects. *)
-
-(* (* Set Hammer Z3. *) *)
-(* (* Unset Hammer Parallel. *) *)
-(* (* (* (* disable the preliminary sauto tactic *) *) *) *)
-(* (* (* Set Hammer SAutoLimit 0. *) *) *)
-(* (* Set Hammer GSMode 1. *) *)
-(* (* Set Hammer ATPLimit 30. *) *)
-(* (* Hammer_cleanup. *) *)
-
-(* Require Import SMTCoq.SMTCoq. *)
-(* (* Set SMT Solver "z3". (** Use Z3, also "CVC4" **) *) *)
-
-(* From mathcomp Require Import ring. *)
-
 From OVN Require Import Hacspec_ovn.
 From OVN Require Import Hacspec_helpers.
 From OVN Require Import Hacspec_ovn_group_and_field.
@@ -104,14 +86,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
   Include HGPA.
 
   (* begin details : helper defintions *)
-  (* Definition somewhat_let_substitution : *)
-  (*              forall {A C : choice_type} {B : choiceType} (f : C -> raw_code B) (c : raw_code B) (y : both A) (r : both A -> both C), *)
-  (*                (forall x, deterministic (f x)) -> *)
-  (*         ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ b_temp ← is_state y ;; temp ← is_state (r (ret_both b_temp)) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄ -> *)
-  (*         ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← is_state (letb 'b := y in r b) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄. *)
-  (* Proof. *)
-  (*   intros. *)
-  (* Qed. *)
 
   Definition r_bind_feq :
                forall {A B} (a b : raw_code A) (f g : A -> raw_code B) post,
@@ -197,76 +171,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     simpl.
     apply H.
   Qed.
-
-  (* Lemma bobble_swap : *)
-  (*   ∀ *)
-  (*     {A B C : choice_type} *)
-  (*     (x : raw_code C) *)
-  (*     (y : raw_code A) *)
-  (*     (c : raw_code B) *)
-  (*     (f : C -> A -> raw_code B), *)
-  (*     ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄ *)
-  (*       b ← y ;; *)
-  (*       a ← x ;; *)
-  (*       f a b ≈ *)
-  (*       c ⦃ Logic.eq ⦄ -> *)
-  (*     ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄ *)
-  (*       a ← x ;; *)
-  (*       b ← y ;; *)
-  (*       f a b ≈ *)
-  (*       c ⦃ Logic.eq ⦄. *)
-  (* Proof. *)
-  (*   intros. *)
-  (*   eapply r_transR. *)
-  (*   1: apply H. *)
-  (*   eapply from_sem_jdg. *)
-  (*   repeat setoid_rewrite repr_bind. simpl. *)
-  (*   rewrite <- rswap_helper. *)
-  (*   rewrite <- rswap_helper. *)
-  (*   eapply (swap_ruleR (λ a₀ a₁, repr (f a₀ a₁)) _ _). *)
-  (*   1: intros ; apply to_sem_jdg ; eapply rpre_weaken_rule ; [ apply rreflexivity_rule | easy ]. *)
-  (*   1: easy. *)
-  (*   intros. *)
-  (*   unshelve eapply coupling_eq. *)
-  (*   + exact (λ '(h₀, h₁), h₀ = h₁). *)
-  (*   + apply to_sem_jdg in H. *)
-  (*     unfold fromPrePost. *)
-  (*     unfold semantic_judgement. *)
-  (*     simpl. *)
-  (*     simpl. *)
-  (*     unfold Datatypes_prod__canonical__choice_Choice. *)
-  (*     replace (Datatypes_prod__canonical__choice_Choice _ _) with (C × A). *)
-  (*     simpl. *)
-
-  (*     eapply to_sem_jdg in h. repeat setoid_rewrite repr_cmd_bind in h. *)
-  (*     rewrite <- rswap_cmd_helper in h. *)
-  (*     rewrite <- rswap_cmd_helper in h. *)
-  (*     apply h. *)
-  (*   + reflexivity. *)
-
-  (*   eapply swap_ruleR. *)
-
-  (*   epose rswap_helper. *)
-  (*   epose (rswap_ruleR). *)
-
-  (*   replace *)
-  (*     (a ← x ;; b ← y ;; f a b) with *)
-  (*     ('(a,b) ← (a ← x ;; b ← y ;; ret (a, b)) ;; f a b) by now do 2 setoid_rewrite bind_assoc. *)
-  (*   eapply r_transR with (c₁ := '(a,b) ← (b ← y ;; a ← x ;; ret (a, b)) ;; f a b). *)
-  (*   2: apply r_bind_feq ; [  | intros [] ; apply rreflexivity_rule ]. *)
-  (*   2:{ *)
-  (*     apply rswap_ruleR. *)
-  (*     1: easy. *)
-  (*     1: now intros ; apply r_ret. *)
-
-  (*     apply rreflexivity_rule. *)
-  (*   rewrite !bind_assoc. *)
-  (*   simpl. *)
-  (*   setoid_rewrite bind_assoc. *)
-  (*   simpl. *)
-  (*   apply H. *)
-  (* Qed. *)
-  (* end details : helper defintions *)
+  (* end details *)
 
   Notation " 'chState' " :=
     t_OvnContractState
@@ -292,8 +197,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     (OR_ZKP.MyAlg.choiceTranscript)
     (in custom pack_type at level 2).
 
-  (* × t_CastVoteParam = (int32 × v_Z × v_Z × v_Z × v_Z × 'bool) *)
-
   Definition MAXIMUM_BALLOT_SECRECY_SETUP : nat := 10.
   Definition MAXIMUM_BALLOT_SECRECY_RETURN : nat := 11.
   Definition MAXIMUM_BALLOT_SECRECY : nat := 12.
@@ -310,14 +213,10 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
         let state := ret_both (state_inp :
                          t_OvnContractState) in
 
-        (* before zkp_vi *)
         g_pow_yi ← is_state (compute_g_pow_yi (cast_int (WS2 := _) (ret_both cvp_i)) (f_g_pow_xis state)) ;;
 
-        (* zkp_vi *)
-        (* (f_cvp_zkp_random_w params) (f_cvp_zkp_random_r params) (f_cvp_zkp_random_d params) g_pow_yi (f_cvp_xi params) (f_cvp_vote params) *)
         let cStmt : OR_ZKP.MyAlg.choiceStatement :=
           fto ((
-                (* g ^+ FieldToWitness (cvp_xi), *)
                 is_pure (f_g_pow (ret_both cvp_xi)),
                 g_pow_yi : gT ,
                 is_pure (f_prod (f_pow (ret_both g_pow_yi) (ret_both cvp_xi)) (if cvp_vote then f_g else f_group_one)) : gT
@@ -461,14 +360,12 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
         let p_i := ret_both cvp_i : both int32 in
 
         yi ← sample (uniform #|'Z_q|) ;;
-        (* c ← sample (uniform #|'Z_q|) ;; *)
 
         h ← is_state (compute_g_pow_yi (cast_int (WS2 := _) p_i) (f_g_pow_xis state)) ;;
 
-        let y := g ^+ (otf yi * FieldToWitness cvp_xi + (if cvp_vote then 1 else 0))%R in
+        let y := ((h : gT) ^+ (FieldToWitness cvp_xi) * (if cvp_vote then g else is_pure f_group_one))%g in
 
         ret (fto (is_pure (f_g_pow (ret_both cvp_xi)) : gT, h : gT, y), fto ( FieldToWitness cvp_xi, cvp_vote, h : gT ))
-        (* ret (fto (x : gT, h : gT, y), c) *)
       }].
   Next Obligation.
     eapply (valid_package_cons _ _ _ _ _ _ [] []).
@@ -485,7 +382,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       all: repeat (apply valid_sampler ; intros).
       all: repeat (rewrite !otf_fto ; ssprove_valid'_2).
       all: ssprove_valid'_2.
-      (* 1,2: now rewrite in_fset in_cons eqxx. *)
     - unfold "\notin".
       rewrite <- !fset0E.
       rewrite imfset0.
@@ -533,15 +429,12 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
                 (f_or_zkp_r1 := ret_both zkp_r1)
                 (f_or_zkp_r2 := ret_both zkp_r2)
               in
-            letb g_pow_xi_yi_vi_list := update_at_usize (f_g_pow_xi_yi_vis state) (cast_int (WS2 := U32) (p_i)) (ret_both y) in
+            letb g_pow_xi_yi_vi_list := update_at_usize (f_g_pow_xi_yi_vis state) (cast_int (WS2 := U32) (p_i)) (ret_both (is_pure (compute_group_element_for_vote (ret_both cvp_xi) (ret_both (cvp_vote : 'bool)) (ret_both ((otf transcript.1.1.1).1.2))))) in
             letb state := (Build_t_OvnContractState[state] (f_g_pow_xi_yi_vis := g_pow_xi_yi_vi_list)) in
             letb zkp_vi_list := update_at_usize (f_zkp_vis state) (cast_int (WS2 := U32) (p_i)) (zkp_vi) in
             letb state := (Build_t_OvnContractState[state] (f_zkp_vis := zkp_vi_list))
         in
         state) ;;
-                          (* params.cvp_i as usize *)
-          (* g_pow_xi_yi_vis *)
-            (* zkp_vis *)
         ret (Some res)
     }].
     Next Obligation.
@@ -558,7 +451,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       all: repeat (apply valid_sampler ; intros).
       all: repeat (rewrite !otf_fto ; ssprove_valid'_2).
       all: ssprove_valid'_2.
-      (* all: now rewrite in_fset ; repeat (rewrite in_cons ; simpl) ; rewrite eqxx. *)
     - unfold "\notin".
       rewrite <- !fset0E.
       rewrite imfset0.
@@ -579,7 +471,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     eapply valid_package_inject_export.
     2:{
       pose (valid_par _ _ _ _ _ _ _ _ _ (pack_valid hacspec_or_run) (pack_valid maximum_ballot_secrecy_real_return) ).
-      (* *)
       rewrite <- fset0E in v.
       rewrite fsetU0 in v.
       rewrite <- fset0E in v.
@@ -716,7 +607,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     eapply valid_package_inject_export.
     2:{
       epose (valid_par _ _ _ _ _ _ (SHVZK_ideal_aux ∘ Sigma.SHVZK_ideal) _ _ _ (pack_valid maximum_ballot_secrecy_ideal_return) ).
-      (* *)
       rewrite <- fset0E in v.
       rewrite fsetU0 in v.
       rewrite <- fset0E in v.
@@ -781,20 +671,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       ɛ_maximum_ballot_secrecy_OVN A = 0%R.
   Proof.
     intros.
-
-    (* Transparent maximum_ballot_secrecy_real. *)
-    (* (* unfold ɛ_maximum_ballot_secrecy_OVN. *) *)
-    (* (* unfold maximum_ballot_secrecy_real, maximum_ballot_secrecy_ovn, pack. *) *)
-    (* (* fold chElement. *) *)
-
     apply: eq_rel_perf_ind_eq.
-    (* 1: apply maximum_ballot_secrecy_ovn. *)
-    (* 1: apply maximum_ballot_secrecy_real. *)
-
-    (* 1:{ instantiate (1 := heap_ignore MyAlg.Sigma_locs). *)
-    (*     ssprove_invariant. *)
-    (*     apply fsubsetUr. } *)
-    (* 2:apply H. *)
     2:rewrite <- fset0E ; apply fdisjoints0.
     2:apply H0.
     clear H H0.
@@ -810,8 +687,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
     subst.
     simpl.
-    (* simpl (lookup_op _ _). *)
-
 
     destruct choice_type_eqP ; [ | subst ; contradiction ].
     destruct choice_type_eqP ; [ | subst ; contradiction ].
@@ -825,9 +700,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
     unfold code_link at 1. fold @code_link.
 
-    (* set (par (par _ _) _). *)
-    (* epose (lookup_op_spec_inv f MAXIMUM_BALLOT_SECRECY_SETUP (t_OvnContractState × (int32 × f_Z × 'bool)) (chProd MyAlg.choiceStatement MyAlg.choiceWitness) _). *)
-    (* setoid_rewrite e. *)
     unfold lookup_op.
     simpl.
 
@@ -872,7 +744,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
         - apply /eqP.
 
           rewrite pow_witness_to_field.
-          (* reflexivity. *)
           rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
 
           unfold HGPA.HacspecGroup.g.
@@ -912,8 +783,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros d ].
     eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros r ].
 
-    (* Back to lhs *)
-
     (rewrite !bind_rewrite || rewrite !bind_assoc).
     (rewrite !bind_rewrite || rewrite !bind_assoc).
     fold chElement.
@@ -921,7 +790,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     fold chElement.
     rewrite bind_rewrite.
     rewrite bind_rewrite.
-    (* unfold ".2" ; fold @snd. *)
     unfold f_parameter_cursor.
     do 5 unfold prod_both at 1.
     simpl (is_pure _).
@@ -983,10 +851,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     apply somewhat_let_substitution.
     apply r_bind_feq ; [ apply rreflexivity_rule | intros ].
 
-    (* unfold hacspec_ret_to_or_sigma_ret. *)
-    (* unfold or_sigma_ret_to_hacspec_ret. *)
-    (* simpl. *)
-
     rewrite !otf_fto.
     rewrite !WitnessToFieldCancel.
 
@@ -995,10 +859,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       setoid_rewrite bind_rewrite ;
       apply r_nice_swap_rule ; [ easy | easy | ].
     simpl.
-
-  (*   (s0, s1) = *)
-  (* (is_pure (f_g_pow (ret_both xi)), *)
-  (*  is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) (if vote then f_g else f_group_one))) *)
 
     replace (_ == _) with vote.
     2:{
@@ -1033,11 +893,8 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
     set (f := fun _ => _) at 3 ; apply (somewhat_let_substitution _ _ _ f) ; subst f ; hnf.
 
-    apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c.1.1.1.1.1.1.1.1.1 = (is_pure (f_g_pow (ret_both xi)), is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) (if vote then f_g else f_group_one)))
-                                                   (* (c.1.1.1.1.1.1.1.1.1.1 = (_, a₀, _).1.1) *)).
+    apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c.1.1.1.1.1.1.1.1.1 = (is_pure (f_g_pow (ret_both xi)), is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) (if vote then f_g else f_group_one)))).
     1:{
-      (* /\ a = c *)
-
       subst b.
       set (zkp_one_out_of_two _ _ _ _ _ _).
       subst b.
@@ -1056,7 +913,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
         eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
         eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
 
-        eapply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) f_g)))  ; [  | intros ].
+        apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) f_g)))  ; [  | intros ].
         1:{
           eapply r_transR.
           1:{
@@ -1076,11 +933,11 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
           now apply r_ret.
         }
-        
-        apply rpre_hypothesis_rule ; intros ? ? [? []].
-        eapply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ | now simpl ; intros ? ? [] ].
 
-        eapply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_g_pow (ret_both xi)))) ; [ | intros ].
+        apply rpre_hypothesis_rule ; intros ? ? [? []].
+        apply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ | now simpl ; intros ? ? [] ].
+
+        apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_g_pow (ret_both xi)))) ; [ | intros ].
         1:{
           eapply r_transR.
           1:{
@@ -1117,7 +974,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
         eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
         eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
 
-        eapply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) f_group_one))  ; [ | intros ].
+        apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) f_group_one))  ; [ | intros ].
         1:{
           eapply r_transR.
           1:{
@@ -1146,7 +1003,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
         apply rpre_hypothesis_rule ; intros ? ? [? []].
         eapply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ | now simpl ; intros ? ? [] ].
 
-        eapply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_g_pow (ret_both xi)))) ; [ | intros ].
+        apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_g_pow (ret_both xi)))) ; [ | intros ].
         1:{
           eapply r_transR.
           1:{
@@ -1197,7 +1054,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
     simpl.
     now repeat (apply f_equal || (apply functional_extensionality ; intros) || f_equal).
-  Qed.
+  (* Admitted. *) Qed. (* Slow (Finished transaction in 1532.826 secs (1528.976u,0.631s) (successful)) *)
 
   Definition ɛ_maximum_ballot_secrecy A :=
     AdvantageE
@@ -1221,7 +1078,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
       Opaque MyAlg.Simulate.
 
-      simpl (lookup_op _ _) ; fold chElement.
+      unfold lookup_op.
 
       rewrite !setmE.
       rewrite <- fset1E in H.
@@ -1230,7 +1087,8 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       inversion H ; subst.
 
       rewrite eqxx.
-      simpl.
+      unfold ".2".
+      unfold mkdef.
 
       destruct choice_type_eqP ; [ | now apply r_ret ].
       destruct choice_type_eqP ; [ | now apply r_ret ].
@@ -1247,8 +1105,15 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       split ; [ | reflexivity ].
       repeat rewrite pair_equal_spec ; repeat split.
 
-      admit.
-  Admitted.
+      f_equal.
+      f_equal.
+
+      rewrite pow_witness_to_field.
+      Misc.push_down_sides.
+      rewrite WitnessToFieldCancel.
+      now destruct cvp_vote.
+    }
+  Qed.
 
   Lemma maximum_ballot_secrecy_return_success:
     maximum_ballot_secrecy_real_return ≈₀ maximum_ballot_secrecy_ideal_return.
@@ -1284,37 +1149,49 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       clear e e0.
 
       destruct x as [[state [[cvp_i cvp_xi] cvp_vote]] transcript].
+
       destruct transcript as [[[zkp_xhy zkp_abab] zkp_c] zkp_rdrd].
-      destruct (otf zkp_xhy) as [[x h] y].
-      destruct (otf zkp_abab) as [[[zkp_a1 zkp_b1] zkp_a2] zkp_b2].
-      destruct (otf zkp_rdrd) as [[[zkp_r1 zkp_d1] zkp_r2] zkp_d2].
+      destruct (otf zkp_xhy) as [[x h] y] eqn:zkp_xhy_eq.
+      destruct (otf zkp_abab) as [[[zkp_a1 zkp_b1] zkp_a2] zkp_b2] eqn:zkp_abab_eq.
+      destruct (otf zkp_rdrd) as [[[zkp_r1 zkp_d1] zkp_r2] zkp_d2] eqn:zkp_rdrd_eq.
+      
+      repeat (set (f := fun _ => _) at 3 ; apply (somewhat_let_substitution _ _ _ f) ; subst f ; hnf ; apply (somewhat_substitution _) ; rewrite bind_rewrite).
+      apply (somewhat_substitution _) ; rewrite bind_rewrite.
 
-      (* apply somewhat_substitution ; [ admit | admit | rewrite bind_rewrite ]. *)
-      (* cbn. *)
-      (* setoid_rewrite bind_ret. *)
-      (* apply somewhat_substitution ; [ admit | admit | rewrite bind_rewrite ]. *)
+      apply r_nice_swap_rule ; [ easy | easy | ].
+      repeat (set (f := fun _ => _) at 3 ; apply (somewhat_let_substitution _ _ _ f) ; subst f ; hnf ; apply (somewhat_substitution _) ; rewrite bind_rewrite).
+      apply (somewhat_substitution _) ; rewrite bind_rewrite.
 
-      (* eapply somewhat_let_substitution. ; [admit | ]. *)
-      (* apply r_const_sample_R ; [ admit | intros ]. *)
+      apply r_ret.
+      split ; [ | easy ].
+      unfold prod_both at 1.
+      simpl.
 
-      (* eapply r_bind ; [ apply rreflexivity_rule | intros ]. *)
-      (* apply r_ret. *)
-      (* intros. inversion H0 ; subst ; clear H0. *)
-      (* split ; [ | reflexivity ]. *)
-      (* f_equal. *)
-      (* f_equal. *)
-      (* f_equal. *)
-      (* admit. *)
-  Admitted.
+      rewrite !zkp_xhy_eq.
+      rewrite !zkp_abab_eq.
+      rewrite !zkp_rdrd_eq.
+      simpl.
+
+      reflexivity.
+    }
+  Qed. (* 9.051 secs.. *)
 
 
   Lemma swap_two_fset :
     (forall T a b, fset (T := T) [a;b] = fset [b;a]).
-  Admitted.
+  Proof.
+    intros.
+    rewrite !fset_cons.
+    fset_equality.
+  Qed.
 
   Lemma swap_three_fset :
     (forall T a b c, fset (T := T) [a;b;c] = fset [c;a;b]).
-  Admitted.
+  Proof.
+    intros.
+    rewrite !fset_cons.
+    fset_equality.
+  Qed.
 
   Lemma maximum_ballot_secrecy_success:
     ∀ LA A,
@@ -1671,7 +1548,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
     rewrite <- Advantage_link.
 
-    erewrite OR_ZKP.shvzk_success with (LA := ((((LA  :|: fset [::])  :|: fset [::])  :|: fset [::]) :|: fset [::] (* Problem here, MyAlg.Sigma_locs not allowed in adversary locations! *))) ; [ | .. ].
+    erewrite OR_ZKP.shvzk_success with (LA := ((((LA  :|: fset [::])  :|: fset [::])  :|: fset [::]) :|: fset [::])) ; [ | .. ].
     3: rewrite <- !fset0E ; rewrite !fsetU0.
     3: apply H0.
     2:{

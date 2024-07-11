@@ -8,6 +8,7 @@ theories/hacspec/Hacspec_ovn_group_and_field.v
 theories/hacspec/Hacspec_ovn_sigma_setup.v
 theories/hacspec/Hacspec_ovn_schnorr.v
 theories/hacspec/Hacspec_ovn_or.v
+theories/hacspec/Hacspec_ovn_total_proof.v
 
 # -R theories/hacspec Examples
 # -arg -w

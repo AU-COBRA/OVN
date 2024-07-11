@@ -90,10 +90,10 @@ Ltac prop_fun_eq :=
   repeat (apply functional_extensionality ; intros []) ; simpl ; rewrite (boolp.propeqP).
 
 Lemma r_nice_swap_rule : forall {A} {P Q} (c₀ c₁ : raw_code A),
-  (forall (x y : heap), P (x, y) <-> P (y, x)) ->
-  (forall (x y : A * heap), Q x y <-> Q y x) ->
- ⊢ ⦃ P ⦄ c₁ ≈ c₀ ⦃ Q ⦄ ->
- ⊢ ⦃ P ⦄ c₀ ≈ c₁ ⦃ Q ⦄.
+    (forall (x y : heap), P (x, y) <-> P (y, x)) ->
+    (forall (x y : A * heap), Q x y <-> Q y x) ->
+    ⊢ ⦃ P ⦄ c₁ ≈ c₀ ⦃ Q ⦄ ->
+    ⊢ ⦃ P ⦄ c₀ ≈ c₁ ⦃ Q ⦄.
 Proof.
   intros.
   apply rsymmetry.
@@ -103,8 +103,8 @@ Proof.
 Qed.
 
 Lemma r_nice_swap : forall {A} (c₀ c₁ : raw_code A),
- ⊢ ⦃ true_precond ⦄ c₁ ≈ c₀ ⦃ fun '(v₀, _) '(v₁, _) => v₀ = v₁ ⦄ ->
- ⊢ ⦃ true_precond ⦄ c₀ ≈ c₁ ⦃ fun '(a₀, _) '(a₁, _) => a₀ = a₁ ⦄.
+    ⊢ ⦃ true_precond ⦄ c₁ ≈ c₀ ⦃ fun '(v₀, _) '(v₁, _) => v₀ = v₁ ⦄ ->
+    ⊢ ⦃ true_precond ⦄ c₀ ≈ c₁ ⦃ fun '(a₀, _) '(a₁, _) => a₀ = a₁ ⦄.
 Proof. intros ; now apply r_nice_swap_rule. Qed.
 
 Corollary r_transR_val' :
@@ -151,9 +151,9 @@ Qed.
 
 Corollary r_transL_both_eq :
   forall {A : choice_type} (c₀ c₀' c₁ : both A),
-   ⊢ ⦃ true_precond ⦄ is_state c₀ ≈ is_state c₀' ⦃ pre_to_post_ret true_precond (is_pure c₀) ⦄ ->
-   ⊢ ⦃ true_precond ⦄ is_state c₀ ≈ is_state c₁ ⦃ pre_to_post_ret true_precond (is_pure c₁) ⦄ ->
-   ⊢ ⦃ true_precond ⦄ is_state c₀' ≈ is_state c₁ ⦃ pre_to_post_ret true_precond (is_pure c₁) ⦄.
+    ⊢ ⦃ true_precond ⦄ is_state c₀ ≈ is_state c₀' ⦃ pre_to_post_ret true_precond (is_pure c₀) ⦄ ->
+    ⊢ ⦃ true_precond ⦄ is_state c₀ ≈ is_state c₁ ⦃ pre_to_post_ret true_precond (is_pure c₁) ⦄ ->
+    ⊢ ⦃ true_precond ⦄ is_state c₀' ≈ is_state c₁ ⦃ pre_to_post_ret true_precond (is_pure c₁) ⦄.
 Proof.
   intros A c₀ c₀' c₁.
   assert (deterministic (is_state c₀')) by solve_deterministic.
@@ -171,7 +171,7 @@ Qed.
 
 Corollary r_transR_both_eq :
   forall {A : choice_type} (c₀ c₀' c₁ : both A),
-   ⊢ ⦃ true_precond ⦄ is_state c₀' ≈ is_state c₀ ⦃ pre_to_post_ret true_precond (is_pure c₀) ⦄ ->
+    ⊢ ⦃ true_precond ⦄ is_state c₀' ≈ is_state c₀ ⦃ pre_to_post_ret true_precond (is_pure c₀) ⦄ ->
     ⊢ ⦃ true_precond ⦄ is_state c₁ ≈ is_state c₀ ⦃ pre_to_post_ret true_precond (is_pure c₁) ⦄ ->
     ⊢ ⦃ true_precond ⦄ is_state c₀' ≈ is_state c₁ ⦃ pre_to_post_ret true_precond (is_pure c₁) ⦄.
 Proof.
@@ -182,8 +182,8 @@ Qed.
 Corollary r_transL_val_pure :
   forall {A : choice_type} (a : both A) (b : raw_code A),
     deterministic b ->
-   ⊢ ⦃ true_precond ⦄ is_state a ≈ b ⦃ fun '(v₀, _) '(v₁, _) => v₀ = v₁ ⦄ <->
-   ⊢ ⦃ true_precond ⦄ ret (is_pure a) ≈ b ⦃ fun '(v₀, _) '(v₁, _) => v₀ = v₁ ⦄.
+    ⊢ ⦃ true_precond ⦄ is_state a ≈ b ⦃ fun '(v₀, _) '(v₁, _) => v₀ = v₁ ⦄ <->
+      ⊢ ⦃ true_precond ⦄ ret (is_pure a) ≈ b ⦃ fun '(v₀, _) '(v₁, _) => v₀ = v₁ ⦄.
 Proof.
   intros.
   pose (r := @r_transL_val A A (True) (fun x y => (x = y))).
@@ -198,8 +198,8 @@ Qed.
 Corollary r_transL_both_pure :
   forall {A : choice_type} (a : both A) (b : raw_code A),
     deterministic b ->
-   ⊢ ⦃ true_precond ⦄ is_state a ≈ b ⦃ pre_to_post_ret true_precond (is_pure a) ⦄ <->
-   ⊢ ⦃ true_precond ⦄ ret (is_pure a) ≈ b ⦃ pre_to_post_ret true_precond (is_pure a) ⦄.
+    ⊢ ⦃ true_precond ⦄ is_state a ≈ b ⦃ pre_to_post_ret true_precond (is_pure a) ⦄ <->
+      ⊢ ⦃ true_precond ⦄ ret (is_pure a) ≈ b ⦃ pre_to_post_ret true_precond (is_pure a) ⦄.
 Proof.
   intros.
   pose (r := @r_transL_val A A (True) (fun x y => (x = y /\ y = is_pure a))).
@@ -262,42 +262,42 @@ Proof.
     rewrite (boolp.propeqP).
     split ; intros.
     -
-    intros.
-    eapply r_transR.
-    2:{
-      eapply rpost_weaken_rule.
-      1: apply (p_eq _ (fun '(a, b) => a = b)).
-      now intros [] [] [[] ?].
-    }
-    apply r_nice_swap_rule ; [ easy | easy | ].
+      intros.
+      eapply r_transR.
+      2:{
+        eapply rpost_weaken_rule.
+        1: apply (p_eq _ (fun '(a, b) => a = b)).
+        now intros [] [] [[] ?].
+      }
+      apply r_nice_swap_rule ; [ easy | easy | ].
 
-    eapply r_transR.
-    2:{
-      eapply rpost_weaken_rule.
-      1: apply (p_eq _ (fun '(a, b) => a = b)).
-      now intros [] [] [[] ?].
-    }
-    apply r_nice_swap_rule ; [ easy | easy | ].
+      eapply r_transR.
+      2:{
+        eapply rpost_weaken_rule.
+        1: apply (p_eq _ (fun '(a, b) => a = b)).
+        now intros [] [] [[] ?].
+      }
+      apply r_nice_swap_rule ; [ easy | easy | ].
 
-    apply H.
+      apply H.
     -
-    intros.
-    eapply r_transL.
-    2:{
-      eapply rpost_weaken_rule.
-      1: apply (p_eq _ (fun '(a, b) => a = b)).
-      now intros [] [] [[] ?].
-    }
+      intros.
+      eapply r_transL.
+      2:{
+        eapply rpost_weaken_rule.
+        1: apply (p_eq _ (fun '(a, b) => a = b)).
+        now intros [] [] [[] ?].
+      }
 
-    eapply r_transR.
-    1:{
-      eapply rpost_weaken_rule.
-      1: apply (p_eq _ (fun '(a, b) => a = b)).
-      now intros [] [] [[] ?].
-    }
-    apply r_nice_swap_rule ; [ easy | easy | ].
+      eapply r_transR.
+      1:{
+        eapply rpost_weaken_rule.
+        1: apply (p_eq _ (fun '(a, b) => a = b)).
+        now intros [] [] [[] ?].
+      }
+      apply r_nice_swap_rule ; [ easy | easy | ].
 
-    apply H.
+      apply H.
   }
   split.
   - intros.
@@ -331,15 +331,6 @@ Proof.
   }
   now intros [] [] [? _].
 Qed.
-
-(* Corollary both_equivalence_is_state_equivalence : forall {A} (a : both A) (b : both A), *)
-(*     a ≈both b <-> ⊢ ⦃ true_precond ⦄ is_state a ≈ is_state b ⦃ fun '(a, h₀) '(b, h₁) => (a = b) ⦄. *)
-(* Proof. *)
-(*   intros. *)
-(*   unfold both_equivalence. *)
-(*   split ; [ easy | split ; [ | easy ] ]. *)
-(*   apply both_pure. *)
-(* Qed. *)
 
 Lemma both_eq_reflexivity : forall {A : choice_type} (a : both A),
     a ≈both a.
@@ -432,16 +423,16 @@ Proof.
 Qed.
 
 Ltac pattern_lhs pat :=
- match goal with | |- context [ ?lhs = ?rhs ] => let H_lhs := fresh in set (H_lhs := lhs) ; pattern pat in H_lhs ; subst H_lhs end.
+  match goal with | |- context [ ?lhs = ?rhs ] => let H_lhs := fresh in set (H_lhs := lhs) ; pattern pat in H_lhs ; subst H_lhs end.
 
 Ltac pattern_lhs_f f pat :=
- match goal with | |- context [ f ?lhs = f ?rhs ] => let H_lhs := fresh in set (H_lhs := lhs) ; pattern pat in H_lhs ; subst H_lhs end.
+  match goal with | |- context [ f ?lhs = f ?rhs ] => let H_lhs := fresh in set (H_lhs := lhs) ; pattern pat in H_lhs ; subst H_lhs end.
 
 Ltac pattern_rhs pat :=
- match goal with | |- context [ ?lhs = ?rhs ] => let H_rhs := fresh in set (H_rhs := rhs) ; pattern pat in H_rhs ; subst H_rhs end.
+  match goal with | |- context [ ?lhs = ?rhs ] => let H_rhs := fresh in set (H_rhs := rhs) ; pattern pat in H_rhs ; subst H_rhs end.
 
 Ltac pattern_rhs_f f pat :=
- match goal with | |- context [ f ?lhs = f ?rhs ] => let H_rhs := fresh in set (H_rhs := rhs) ; pattern pat in H_rhs ; subst H_rhs end.
+  match goal with | |- context [ f ?lhs = f ?rhs ] => let H_rhs := fresh in set (H_rhs := rhs) ; pattern pat in H_rhs ; subst H_rhs end.
 
 Axiom hacspec_function_guarantees : forall {A B} (f : both A -> both B) (x : both A),
     is_pure (f x) = is_pure (f (ret_both (is_pure x))).
@@ -465,18 +456,6 @@ Proof.
   rewrite (hacspec_function_guarantees (fun _ => _) x).
   reflexivity.
 Qed.
-
-(* Corollary state_eq_pure : *)
-(*   forall {A B} (f : both A -> both B) (x : both A), *)
-(*   (⊢ ⦃ true_precond ⦄ is_state (f x) ≈ is_state (f (ret_both (is_pure x))) ⦃ fun '(a, _) '(b, _) => a = b ⦄) *)
-(* <-> (is_pure (f x) = is_pure (f (ret_both (is_pure x)))). *)
-(* Proof. *)
-(*   split ; intros. *)
-(*   - apply both_pure. *)
-(*     apply H. *)
-(*   - apply both_pure. *)
-(*     apply H. *)
-(* Qed. *)
 
 Corollary both_eq_guarantees : forall {A} (x y : both A),
     x ≈both y <-> ret_both (is_pure x) ≈both ret_both (is_pure y).
@@ -513,7 +492,7 @@ Qed.
 Corollary both_eq_lift2_both : forall {A B C : choice_type} {a : both A} {va : A} {b : both B} {vb : B} {f : A -> B -> C},
     a ≈both (ret_both va) ->
     b ≈both (ret_both vb) ->
-   (lift2_both f a b) ≈both ret_both (f va vb).
+    (lift2_both f a b) ≈both ret_both (f va vb).
 Proof.
   intros.
   eapply both_eq_trans ; [ eapply (both_eq_fun_ext2 H H0) | ].
@@ -574,8 +553,8 @@ Fixpoint both_list {A} (l : list (both A)) : both (chList A) :=
   | [] => ret_both (nil : chList A)
   | (x :: xs) =>
       bind_both x (fun x =>
-      bind_both (both_list xs) (fun xs =>
-      ret_both (x :: xs : chList A)))
+                     bind_both (both_list xs) (fun xs =>
+                                                 ret_both (x :: xs : chList A)))
   end.
 
 Lemma array_from_list_helper_base :
@@ -656,9 +635,9 @@ Module Misc.
   Proof.
     intros A B f f_inv η [].
     refine ({| hasChoice.find_subdef := (fun P n => match find_subdef (fun x => P (f x)) n with
-                                                 | Some x => Some (f x)
-                                                 | None => None
-                                                 end) |}).
+                                                    | Some x => Some (f x)
+                                                    | None => None
+                                                    end) |}).
     - intros.
       destruct (find_subdef (fun x => P (f x)) n) eqn:Heq.
       + inversion H.
@@ -834,7 +813,7 @@ Module Misc.
   (* A slightly more general version where we don't fix the precondition *)
   Theorem rsame_head_cmd_alt :
     forall {A B C : ord_choiceType} {f₀ : A -> raw_code B} {f₁ : A -> raw_code C}
-      (m : command A) pre (post : postcond B C),
+           (m : command A) pre (post : postcond B C),
       ⊢ ⦃ pre ⦄
         x ← cmd m ;; ret x ≈ x ← cmd m ;; ret x
                                             ⦃ fun '(a₀, s₀) '(a₁, s₁) => pre (s₀, s₁) /\ a₀ = a₁ ⦄ ->
@@ -897,7 +876,7 @@ Module Misc.
 
   Theorem rpre_hypothesis_rule' :
     forall {A₀ A₁ : _} {p₀ : raw_code A₀} {p₁ : raw_code A₁}
-      (pre : precond) (post : postcond A₀ A₁),
+           (pre : precond) (post : postcond A₀ A₁),
       (forall s₀ s₁,
           pre (s₀, s₁) -> ⊢ ⦃ fun '(s₀', s₁') => s₀' = s₀ /\ s₁' = s₁ ⦄ p₀ ≈ p₁ ⦃ post ⦄
       ) ->
@@ -923,7 +902,7 @@ Module Misc.
 
   Theorem r_transR_both :
     forall {A B : _} {x : raw_code A} {y z : both B}
-      (pre : precond) (post : postcond A B),
+           (pre : precond) (post : postcond A B),
       y ≈both z ->
       ⊢ ⦃ pre ⦄ x ≈ is_state z ⦃ post ⦄ ->
       ⊢ ⦃ pre ⦄ x ≈ is_state y ⦃ post ⦄.
@@ -941,7 +920,7 @@ Module Misc.
 
   Corollary make_pure :
     forall {A B : _} {x : raw_code A} {y : both B}
-      (pre : precond) (post : postcond A B),
+           (pre : precond) (post : postcond A B),
       ⊢ ⦃ pre ⦄ x ≈ ret (is_pure y) ⦃ post ⦄ ->
       ⊢ ⦃ pre ⦄ x ≈ is_state y ⦃ post ⦄.
   Proof.
@@ -979,12 +958,12 @@ Module Misc.
     match goal with | |- context [ ?lhs ≈both ?rhs ] => let H_rhs := fresh in set (H_rhs := rhs) ; pattern pat in H_rhs ; subst H_rhs end.
 
   Lemma both_eta : forall {A : choice_type} (a : both A), a =
-      {|
-        both_prog := {| is_pure := is_pure a ; is_state := is_state a |};
-        both_prog_valid := ValidBoth_eta (both_prog_valid a)
-          ;
-        p_eq := p_eq a;
-      |}.
+                                                            {|
+                                                              both_prog := {| is_pure := is_pure a ; is_state := is_state a |};
+                                                              both_prog_valid := ValidBoth_eta (both_prog_valid a)
+                                                            ;
+                                                              p_eq := p_eq a;
+                                                            |}.
   Proof. now intros ? [[] [] ?]. Qed.
 
   Lemma valid_both_ext : forall {A : choice_type} {a b : both A},
@@ -996,23 +975,23 @@ Module Misc.
     subst.
     rewrite boolp.propeqE.
     split ; intros ; now refine {|
-          ChoiceEquality.is_valid_code := _;
-          is_valid_both := _
-        |}.
+                           ChoiceEquality.is_valid_code := _;
+                           is_valid_both := _
+                         |}.
   Qed.
 
   Lemma unfold_both : (forall {A B : choice_type} (f : both A -> both B) (a : both A),
-      f a ≈both
-        {|
-             both_prog :=
-               {|
-                 is_pure := is_pure (f (ret_both (is_pure a)));
-                 is_state := x ← ret (is_pure a) ;;
-                   is_state (f (ret_both x))
-               |};
-             both_prog_valid := ValidBoth_eta (both_prog_valid (f (ret_both (is_pure a))));
-             p_eq := p_eq (f (ret_both (is_pure a)))
-        |}).
+                          f a ≈both
+                            {|
+                              both_prog :=
+                                {|
+                                  is_pure := is_pure (f (ret_both (is_pure a)));
+                                  is_state := x ← ret (is_pure a) ;;
+                                              is_state (f (ret_both x))
+                                |};
+                              both_prog_valid := ValidBoth_eta (both_prog_valid (f (ret_both (is_pure a))));
+                              p_eq := p_eq (f (ret_both (is_pure a)))
+                            |}).
   Proof.
     intros.
     setoid_rewrite <- both_eta.
@@ -1023,15 +1002,15 @@ Module Misc.
   Lemma prod_both_pure_eta_11 : forall {A B C D E F G H I J K} (a : both A) (b : both B) (c : both C) (d : both D) (e : both E) (f : both F) (g : both G) (h : both H) (i : both I) (j : both J) (k : both K),
       ((is_pure (both_prog a) : A,
            is_pure (both_prog b) : B,
-           is_pure (both_prog c) : C,
-           is_pure (both_prog d) : D,
-           is_pure (both_prog e) : E,
-           is_pure (both_prog f) : F,
-           is_pure (both_prog g) : G,
-           is_pure (both_prog h) : H,
-           is_pure (both_prog i) : I,
-           is_pure (both_prog j) : J,
-           is_pure (both_prog k) : K)) =
+             is_pure (both_prog c) : C,
+               is_pure (both_prog d) : D,
+                 is_pure (both_prog e) : E,
+                   is_pure (both_prog f) : F,
+                     is_pure (both_prog g) : G,
+                       is_pure (both_prog h) : H,
+                         is_pure (both_prog i) : I,
+                           is_pure (both_prog j) : J,
+                             is_pure (both_prog k) : K)) =
         is_pure (both_prog (prod_b( a , b, c, d, e, f, g, h, i, j, k ))).
   Proof. reflexivity. Qed.
 
@@ -1043,7 +1022,7 @@ Module Misc.
     | [ |- context [?lhs = ?rhs ] ] =>
         set (H_lhs := lhs) at 1 ;
         set (H_rhs := rhs) at 1
-   end.
+    end.
 
   Ltac apply_to_pure_sides H H_lhs H_rhs :=
     match goal with
@@ -1055,37 +1034,36 @@ Module Misc.
     | [ |- context [ _ = _ ] ] =>
         get_both_sides H_lhs H_rhs ;
         H
-   end.
+    end.
 
   Ltac push_down :=
-    (* Remove (is_pure (ret_both (is_pure _))) *)
     match goal with
     | H : _ |- _ => simpl in H
     end ;
     match goal with
     | H := is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))) (ret_both (is_pure (both_prog ?b))))) : _ |- _  =>
-      subst H ;
-      set (is_pure a) ;
-      push_down ;
-      set (is_pure b) ;
-      push_down
-    | H := is_pure (both_prog (?f ?a ?b)) |- _  =>
-      subst H ;
-      rewrite (hacspec_function_guarantees2 f a b) ;
-      set (is_pure a) ;
-      push_down ;
-      set (is_pure b) ;
-      push_down
-    | H := is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))))) : _ |- _  =>
-      subst H ;
-      set (is_pure a) ;
-      push_down
-    | H := is_pure (both_prog (?f ?a)) : _ |- _  =>
-      subst H ;
-      rewrite (hacspec_function_guarantees f a) ;
-      set (is_pure a) ;
-      push_down
-   | H : _ |- _ => subst H
+             subst H ;
+             set (is_pure a) ;
+             push_down ;
+             set (is_pure b) ;
+             push_down
+        | H := is_pure (both_prog (?f ?a ?b)) |- _  =>
+                 subst H ;
+                 rewrite (hacspec_function_guarantees2 f a b) ;
+                 set (is_pure a) ;
+                 push_down ;
+                 set (is_pure b) ;
+                 push_down
+            | H := is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))))) : _ |- _  =>
+                     subst H ;
+                     set (is_pure a) ;
+                     push_down
+                | H := is_pure (both_prog (?f ?a)) : _ |- _  =>
+                         subst H ;
+                         rewrite (hacspec_function_guarantees f a) ;
+                         set (is_pure a) ;
+                         push_down
+                    | H : _ |- _ => subst H
     end ; simpl.
 
   Ltac push_down_sides :=
@@ -1099,31 +1077,31 @@ Module Misc.
     get_both_sides H_lhs H_rhs ; subst H_lhs ;
     push_down ; simpl.
 
-   Ltac pull_up_assert :=
-     match goal with
+  Ltac pull_up_assert :=
+    match goal with
     | |- is_pure (both_prog (?f
-        (ret_both (is_pure (both_prog ?a)))
-        (ret_both (is_pure (both_prog ?b))))) = _ =>
+                               (ret_both (is_pure (both_prog ?a)))
+                               (ret_both (is_pure (both_prog ?b))))) = _ =>
         let H_a := fresh in
         let H_b := fresh in
         eassert (H_a : (is_pure a) = _) ;
         [ |
           eassert (H_b : (is_pure b) = _) ;
           [ | rewrite H_a ; rewrite H_b ; rewrite <- (hacspec_function_guarantees2 f) ; reflexivity ]
-          ]
-   | |- is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))))) = _ =>
-       let H_a := fresh in
-       eassert (H_a : (is_pure a) = _) ;
-       [ | rewrite H_a ; rewrite <- (hacspec_function_guarantees f) ; reflexivity ]
+        ]
+    | |- is_pure (both_prog (?f (ret_both (is_pure (both_prog ?a))))) = _ =>
+        let H_a := fresh in
+        eassert (H_a : (is_pure a) = _) ;
+        [ | rewrite H_a ; rewrite <- (hacspec_function_guarantees f) ; reflexivity ]
     end.
 
-   Ltac pull_up H :=
-     let H_rewrite := fresh in
-     eassert (H_rewrite : H = _) by repeat (pull_up_assert ; reflexivity) ; rewrite H_rewrite ; clear H_rewrite.
+  Ltac pull_up H :=
+    let H_rewrite := fresh in
+    eassert (H_rewrite : H = _) by repeat (pull_up_assert ; reflexivity) ; rewrite H_rewrite ; clear H_rewrite.
 
-   Ltac pull_up_side H :=
-     let H_rewrite := fresh in
-     eassert (H_rewrite : H = _) ; subst H ; [ repeat pull_up_assert ; reflexivity | ] ; rewrite H_rewrite ; clear H_rewrite.
+  Ltac pull_up_side H :=
+    let H_rewrite := fresh in
+    eassert (H_rewrite : H = _) ; subst H ; [ repeat pull_up_assert ; reflexivity | ] ; rewrite H_rewrite ; clear H_rewrite.
 
   Ltac remove_solve_lift :=
     repeat progress (rewrite (hacspec_function_guarantees2 _ (solve_lift _)) ; simpl) ;
@@ -1188,7 +1166,7 @@ Qed.
 
 Lemma state_equality_is_decidable :
   forall {A} (x y : both A),
-  decidable (⊢ ⦃ fun '(h0, h1) => h0 = h1 ⦄ is_state x ≈ is_state y ⦃ fun a b => fst a = fst b ⦄).
+    decidable (⊢ ⦃ fun '(h0, h1) => h0 = h1 ⦄ is_state x ≈ is_state y ⦃ fun a b => fst a = fst b ⦄).
 Proof.
   intros.
   eapply (decidable_iff (det_jdg (fun '(h0, h1) => h0 = h1) (fun a b => fst a = fst b) (is_state x) (is_state y) (both_deterministic _) (both_deterministic _))).
@@ -1217,418 +1195,416 @@ Set Warnings "-notation-overridden,-ambiguous-paths".
 From mathcomp Require Import all_ssreflect all_algebra.
 From Coq Require Import Utf8.
 
-  (* Helper functions *)
-  Lemma card_prod_iprod3 :
-    ∀ i j k,
-      #|Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (fintype_ordinal__canonical__fintype_Finite i) (fintype_ordinal__canonical__fintype_Finite j)) (fintype_ordinal__canonical__fintype_Finite k)| = (i * j * k)%N.
-  Proof.
-    intros i j k.
-    rewrite !card_prod. simpl. rewrite !card_ord. reflexivity.
-  Qed.
+(* Helper functions *)
+Lemma card_prod_iprod3 :
+  ∀ i j k,
+    #|Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (fintype_ordinal__canonical__fintype_Finite i) (fintype_ordinal__canonical__fintype_Finite j)) (fintype_ordinal__canonical__fintype_Finite k)| = (i * j * k)%N.
+Proof.
+  intros i j k.
+  rewrite !card_prod. simpl. rewrite !card_ord. reflexivity.
+Qed.
 
-  Definition ch3prod {i j k} `{Positive i} `{Positive j} `{Positive k}
-    (xyz : Arit (uniform (i * j * k))) :
-    Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (Arit (uniform i)) (Arit (uniform j))) (Arit (uniform k)) :=
-    let '(xy,z) := ch2prod xyz in
-    let '(x,y) := ch2prod xy in
-    (x,y,z).
+Definition ch3prod {i j k} `{Positive i} `{Positive j} `{Positive k}
+  (xyz : Arit (uniform (i * j * k))) :
+  Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (Arit (uniform i)) (Arit (uniform j))) (Arit (uniform k)) :=
+  let '(xy,z) := ch2prod xyz in
+  let '(x,y) := ch2prod xy in
+  (x,y,z).
 
-  Definition prod3ch {i j k} `{Positive i} `{Positive j} `{Positive k}
-    (xyz : Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (Arit (uniform i)) (Arit (uniform j))) (Arit (uniform k))) :
-    Arit (uniform (i * j * k)) :=
-    prod2ch (prod2ch (fst xyz),snd xyz).
+Definition prod3ch {i j k} `{Positive i} `{Positive j} `{Positive k}
+  (xyz : Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (Arit (uniform i)) (Arit (uniform j))) (Arit (uniform k))) :
+  Arit (uniform (i * j * k)) :=
+  prod2ch (prod2ch (fst xyz),snd xyz).
 
-  Definition ch3prod_prod3ch :
-    ∀ {i j k} `{Positive i} `{Positive j} `{Positive k}
-      (x : Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (Arit (uniform i)) (Arit (uniform j))) (Arit (uniform k))),
-      ch3prod (prod3ch x) = x.
-  Proof.
-    intros i j k hi hj hk xyz.
-    unfold ch3prod, prod3ch.
-    destruct xyz as [[]].
-    now rewrite !ch2prod_prod2ch.
-  Qed.
+Definition ch3prod_prod3ch :
+  ∀ {i j k} `{Positive i} `{Positive j} `{Positive k}
+    (x : Datatypes_prod__canonical__fintype_Finite (Datatypes_prod__canonical__fintype_Finite (Arit (uniform i)) (Arit (uniform j))) (Arit (uniform k))),
+    ch3prod (prod3ch x) = x.
+Proof.
+  intros i j k hi hj hk xyz.
+  unfold ch3prod, prod3ch.
+  destruct xyz as [[]].
+  now rewrite !ch2prod_prod2ch.
+Qed.
 
-  Definition prod3ch_ch3prod :
-    ∀ {i j k} `{Positive i} `{Positive j} `{Positive k} (x : Arit (uniform (i * j * k))),
-      prod3ch (ch3prod x) = x.
-  Proof.
-    intros i j k hi hj hk xyz.
-    unfold ch3prod, prod3ch in *.
-    rewrite -[RHS](prod2ch_ch2prod xyz).
-    destruct (ch2prod xyz) as [xy z].
-    set (s := xy) at 1 ; rewrite -(prod2ch_ch2prod xy) ; subst s.
-    destruct (ch2prod xy) as [x y].
-    rewrite ch2prod_prod2ch.
-    reflexivity.
-  Qed.
+Definition prod3ch_ch3prod :
+  ∀ {i j k} `{Positive i} `{Positive j} `{Positive k} (x : Arit (uniform (i * j * k))),
+    prod3ch (ch3prod x) = x.
+Proof.
+  intros i j k hi hj hk xyz.
+  unfold ch3prod, prod3ch in *.
+  rewrite -[RHS](prod2ch_ch2prod xyz).
+  destruct (ch2prod xyz) as [xy z].
+  set (s := xy) at 1 ; rewrite -(prod2ch_ch2prod xy) ; subst s.
+  destruct (ch2prod xy) as [x y].
+  rewrite ch2prod_prod2ch.
+  reflexivity.
+Qed.
 
-  Lemma r_uniform_triple :
-    ∀ {A : ord_choiceType} i j k `{H : Positive i} `{H0 : Positive j} `{H1 : Positive k}
-      (r : fin_family (mkpos (cond_pos := H) i) → fin_family (mkpos (cond_pos := H0) j) → fin_family (mkpos (cond_pos := H1) k) → raw_code A),
-      (∀ x y z, ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ r x y z ≈ r x y z ⦃ Logic.eq ⦄) →
-      ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
-        xyz ← sample uniform (i * j * k) ;;
-      let '(x,y,z) := ch3prod xyz in r x y z
-                                       ≈
-                                       x ← sample uniform i ;;
-                                     y ← sample uniform j ;;
-                                     z ← sample uniform k ;;
-                                     r x y z
-                                       ⦃ Logic.eq ⦄.
-  Proof.
-    intros A i j k pi pj pk r h.
-    eapply r_transR.
-    1:{
-      eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros ].
-      apply r_uniform_prod.
-      intros ; apply rreflexivity_rule.
-    }
-    simpl.
-    eapply r_transR.
-    1:{
-      apply r_uniform_prod.
-      intros ; apply rreflexivity_rule.
-    }
-    simpl.
-    eapply r_uniform_bij with (f := fun (xyz : Arit (uniform (i * j * k))) =>
-                                      let '(x,y,z) := ch3prod xyz in
-                                      (prod2ch (x,prod2ch(y,z))) : Arit (uniform (i * (j * k)))).
+Lemma r_uniform_triple :
+  ∀ {A : ord_choiceType} i j k `{H : Positive i} `{H0 : Positive j} `{H1 : Positive k}
+    (r : fin_family (mkpos (cond_pos := H) i) → fin_family (mkpos (cond_pos := H0) j) → fin_family (mkpos (cond_pos := H1) k) → raw_code A),
+    (∀ x y z, ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ r x y z ≈ r x y z ⦃ Logic.eq ⦄) →
+    ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
+      xyz ← sample uniform (i * j * k) ;;
+    let '(x,y,z) := ch3prod xyz in r x y z
+                                     ≈
+                                     x ← sample uniform i ;;
+                                   y ← sample uniform j ;;
+                                   z ← sample uniform k ;;
+                                   r x y z
+                                     ⦃ Logic.eq ⦄.
+Proof.
+  intros A i j k pi pj pk r h.
+  eapply r_transR.
+  1:{
+    eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros ].
+    apply r_uniform_prod.
+    intros ; apply rreflexivity_rule.
+  }
+  simpl.
+  eapply r_transR.
+  1:{
+    apply r_uniform_prod.
+    intros ; apply rreflexivity_rule.
+  }
+  simpl.
+  eapply r_uniform_bij with (f := fun (xyz : Arit (uniform (i * j * k))) =>
+                                    let '(x,y,z) := ch3prod xyz in
+                                    (prod2ch (x,prod2ch(y,z))) : Arit (uniform (i * (j * k)))).
+  {
+    apply Bijective with (g :=  fun (xyz : Arit (uniform (i * (j * k)))) =>
+                                  let '(x,yz) := ch2prod xyz in
+                                  let '(y,z) := ch2prod yz in
+                                  prod3ch (x,y,z) : Arit (uniform (i * j * k))).
     {
-      apply Bijective with (g :=  fun (xyz : Arit (uniform (i * (j * k)))) =>
-                                    let '(x,yz) := ch2prod xyz in
-                                    let '(y,z) := ch2prod yz in
-                                    prod3ch (x,y,z) : Arit (uniform (i * j * k))).
-      {
-        intros xyz.
-        rewrite -[RHS](prod3ch_ch3prod xyz).
-        destruct (ch3prod xyz) as [[x y] z].
-        now rewrite !ch2prod_prod2ch.
-      }
-      {
-        intros xyz.
-        rewrite -[RHS](prod2ch_ch2prod xyz).
-        destruct (ch2prod xyz) as [x yz].
-        set (s := yz) at 1 ; rewrite <- (prod2ch_ch2prod yz) ; subst s.
-        destruct (ch2prod yz) as [y z].
-        now rewrite !ch3prod_prod3ch.
-      }
+      intros xyz.
+      rewrite -[RHS](prod3ch_ch3prod xyz).
+      destruct (ch3prod xyz) as [[x y] z].
+      now rewrite !ch2prod_prod2ch.
     }
     {
       intros xyz.
-      unfold ch3prod.
-      destruct ch2prod.
-      destruct ch2prod.
-      rewrite ch2prod_prod2ch.
-      rewrite ch2prod_prod2ch.
-      apply rreflexivity_rule.
+      rewrite -[RHS](prod2ch_ch2prod xyz).
+      destruct (ch2prod xyz) as [x yz].
+      set (s := yz) at 1 ; rewrite <- (prod2ch_ch2prod yz) ; subst s.
+      destruct (ch2prod yz) as [y z].
+      now rewrite !ch3prod_prod3ch.
     }
-  Qed.
+  }
+  {
+    intros xyz.
+    unfold ch3prod.
+    destruct ch2prod.
+    destruct ch2prod.
+    rewrite ch2prod_prod2ch.
+    rewrite ch2prod_prod2ch.
+    apply rreflexivity_rule.
+  }
+Qed.
 
-  Lemma if_bind : forall {A B} (k : A -> B) (a c : A) b,
-      (let 'x :=
-         if b
-         then a
-         else c
-       in
-       k x)
-      =
-        (if b then k a else k c).
-  Proof. now intros ? ? ? ? ? []. Qed.
+Lemma if_bind : forall {A B} (k : A -> B) (a c : A) b,
+    (let 'x :=
+       if b
+       then a
+       else c
+     in
+     k x)
+    =
+      (if b then k a else k c).
+Proof. now intros ? ? ? ? ? []. Qed.
 
-  Lemma if_then_if : forall {A} (a c e : A) b,
+Lemma if_then_if : forall {A} (a c e : A) b,
+    (if b
+     then
+       if b
+       then a
+       else c
+     else
+       e)
+    =
       (if b
-       then
-         if b
-         then a
-         else c
-       else
-         e)
-      =
-        (if b
-         then a
-         else e).
-  Proof. now intros ? ? ? ? []. Qed.
+       then a
+       else e).
+Proof. now intros ? ? ? ? []. Qed.
 
-  Lemma if_else_if : forall {A} (a c d : A) b,
+Lemma if_else_if : forall {A} (a c d : A) b,
+    (if b
+     then
+       a
+     else
+       if b
+       then c
+       else d)
+    =
       (if b
-       then
-         a
-       else
-         if b
-         then c
-         else d)
-      =
-        (if b
-         then a
-         else d).
-  Proof. now intros ? ? ? ? []. Qed.
+       then a
+       else d).
+Proof. now intros ? ? ? ? []. Qed.
 
-  Lemma if_if : forall {A} (a c d e : A) b,
+Lemma if_if : forall {A} (a c d e : A) b,
+    (if b
+     then
+       if b
+       then a
+       else c
+     else
+       if b
+       then d
+       else e)
+    =
       (if b
-       then
-         if b
-         then a
-         else c
-       else
-         if b
-         then d
-         else e)
-      =
-        (if b
-         then a
-         else e).
-  Proof. now intros ? ? ? ? ? []. Qed.
+       then a
+       else e).
+Proof. now intros ? ? ? ? ? []. Qed.
 
-  Lemma if_const : forall {A} (a: A) b, (if b then a else a) = a.
-  Proof. now intros ? ? []. Qed.
+Lemma if_const : forall {A} (a: A) b, (if b then a else a) = a.
+Proof. now intros ? ? []. Qed.
 
-  (* Helper function *)
-  Lemma compute_in_post_cond_R :
-    forall {A B C : choice_type} (a : raw_code A) (b : raw_code B) (f : B -> C) pre post,
+(* Helper function *)
+Lemma compute_in_post_cond_R :
+  forall {A B C : choice_type} (a : raw_code A) (b : raw_code B) (f : B -> C) pre post,
     ⊢ ⦃ pre ⦄ a ≈ b ⦃ fun '(x,h0) '(y,h1) => post (x, h0) (f y, h1) ⦄ ->
     ⊢ ⦃ pre ⦄ a ≈ v ← b ;; ret (f v) ⦃ post ⦄.
-  Proof.
-    intros.
-    eapply r_transL.
-    2:{
-      eapply r_bind.
-      + apply H.
-      + intros.
-        apply r_ret.
-        intros.
-        apply H0.
-    }
-    rewrite bind_ret.
-    apply rreflexivity_rule.
-  Qed.
-
-  (** Helper tactics *)
-  Ltac remove_ret_both_is_pure_from_args :=
-    match goal with
-    | [ |- context [ ?f (ret_both (is_pure ?x)) ?y ] ] =>
-        setoid_rewrite (both_eq_fun_ext (fun k => f k y) (ret_both (is_pure x)) x) ; [ | now rewrite ret_both_is_pure_cancel]
-    | [ |- context [ ?f ?x (ret_both (is_pure ?y)) ] ] =>
-        setoid_rewrite (both_eq_fun_ext (fun k => f x k) (ret_both (is_pure y)) y) ; [ | now rewrite ret_both_is_pure_cancel]
-    | [ |- context [ ?f (ret_both (is_pure ?y)) ] ] =>
-        setoid_rewrite (both_eq_fun_ext f (ret_both (is_pure y)) y) ; [ | now rewrite ret_both_is_pure_cancel]
-    end.
-
-  Ltac lower_proof proof :=
-    intros ;
-    unfold lower1 ;
-    unfold lower2 ;
-    apply (proj1 both_equivalence_is_pure_eq) ;
-    repeat remove_ret_both_is_pure_from_args ;
-    rewrite proof.
-
-  Lemma swap_samples :
-    forall {n m : nat} {C} `{Positive n} `{Positive m} (c : 'I_n -> 'I_m -> raw_code C),
-      ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
-      a0 ← sample uniform n ;;
-      a1 ← sample uniform m ;;
-      c a0 a1 ≈
-      a1 ← sample uniform m ;;
-      a0 ← sample uniform n ;;
-      c a0 a1
-     ⦃ Logic.eq ⦄.
-  Proof.
-    intros.
-
-    eapply r_transR.
-    {
-      apply r_uniform_prod.
-      intros.
-      apply rreflexivity_rule.
-    }
-    apply r_nice_swap_rule ; [ easy | easy | ].
-    eapply r_transR.
-    {
-      apply r_uniform_prod.
-      intros.
-      apply rreflexivity_rule.
-    }
-    eapply r_uniform_bij with (f := fun x => let '(a,b) := ch2prod x in prod2ch (b,a)).
-    {
-      clear.
-      econstructor.
-      Unshelve.
-      3: refine (fun x => let '(a,b) := ch2prod x in prod2ch (b,a)).
-      all: intros x ; rewrite <- (prod2ch_ch2prod x) ; destruct (ch2prod x) ; now rewrite !ch2prod_prod2ch.
-    }
-    intros.
-    destruct (ch2prod x).
-    rewrite (ch2prod_prod2ch).
-
-    apply rreflexivity_rule.
-  Qed.
-
-    Definition deterministic_bind :
-    forall {A B} (b : raw_code A) (f : A -> raw_code B)
-      (H : deterministic b)
-      (H0 : forall x, deterministic (f x)),
-      deterministic (temp ← b ;; f temp).
-  Proof.
-    intros.
-    induction H.
-    - simpl.
-      apply H0.
-    - simpl.
-      apply deterministic_get.
-      apply X.
-    - simpl.
-      apply deterministic_put.
-      apply IHdeterministic.
-  Defined.
-
-  Definition det_iff_sem :
-    ∀ {A B : choice_type} (pre : precond) (post : postcond A B) (c₀ : raw_code A) (c₁ : raw_code B)
-      (hd₀ : deterministic c₀) (hd₁ : deterministic c₁),
-      det_jdg pre post c₀ c₁ hd₀ hd₁ <-> ⊢ ⦃ pre ⦄ c₀ ≈ c₁ ⦃ post ⦄.
-  Proof.
-    split ; [ apply det_to_sem | apply sem_to_det ].
-  Qed.
-
-  Lemma rsymmetry_iff :
-    ∀ {A₀ A₁ : ord_choiceType} {pre : precond} {post}
-      {c₀ : raw_code A₀} {c₁ : raw_code A₁},
-      ⊢ ⦃ λ '(h₁, h₀), pre (h₀, h₁) ⦄ c₁ ≈ c₀
-        ⦃ λ '(a₁, h₁) '(a₀, h₀), post (a₀, h₀) (a₁, h₁) ⦄ <->
-      ⊢ ⦃ pre ⦄ c₀ ≈ c₁ ⦃ post ⦄.
-  Proof.
-    intros A₀ A₁ pre post c₀ c₁.
-    split.
-    - apply rsymmetry.
-    - intros.
-      apply rsymmetry.
-      apply better_r.
-      eapply r_swap_post ; [ prop_fun_eq ; reflexivity | ].
-      apply H.
-  Qed.
-
-  Lemma det_jdg_sym : forall {A : choice_type} {P Q} (c0 c1 : raw_code A) h0 h1,
-      det_jdg P Q c0 c1 h0 h1 <->
-      det_jdg (λ '(h₁, h₀), P (h₀, h₁)) (λ '(a₁, h₁) '(a₀, h₀), Q (a₀, h₀) (a₁, h₁)) c1 c0 h1 h0.
-  Proof.
-    intros.
-    rewrite det_iff_sem.
-    rewrite det_iff_sem.
-    now rewrite rsymmetry_iff.
-  Qed.
-
-  Lemma det_jdg_trans :
-    forall {A : choice_type} {P Q} (c0 c1 c2 : raw_code A) h0 h1 h2,
-    forall (Hq : forall {a b c}, Q a b -> Q b c -> Q a c),
-    forall (Hp : forall {a c}, P (a, c) -> exists b, P (a, b) /\ P (b, c)),
-      det_jdg P Q c0 c1 h0 h1 ->
-      det_jdg P Q c1 c2 h1 h2 ->
-      det_jdg P Q c0 c2 h0 h2.
-  Proof.
-    intros A P Q c0 c1 c2 h0 h1 h2 Hq Hp H01 H12.
-
-    unfold det_jdg in H01.
-    unfold det_jdg in H12.
-    intros s0 s2 H.
-    destruct (Hp s0 s2 H) as [s1 []].
-    
-    refine (Hq _ (det_run c1 s1) _ _ _).
-    - apply H01.
-      apply H0.
-    - apply H12.
-      apply H1.
-  Qed.
-
-  Lemma det_jdg_bind_l : forall {A : choice_type} {P Q} (c0 c1 : raw_code A) f h0 h1 hf,
-      det_jdg P Q c0 c1 h0 h1 ->
-      (
-        forall x c s₀,
-          Q (det_run (ret x) (h := deterministic_ret x) s₀) c ->
-          Q (det_run (f x) (h := hf x) s₀) c) ->
-      det_jdg P Q (b ← c0 ;; f b) c1 (deterministic_bind c0 f h0 hf) h1
-      .
-  Proof.
-    intros A P Q c0 c1 f h0 h1 hf H HQ_ext.
-    intros ? ? ?.
-    specialize (H s₀ s₁ H0).
-
-    clear H0.
-    generalize dependent s₀.
-    induction h0 ; intros.
-    - now apply HQ_ext.
-    - now apply H.
-    - apply IHh0.
-      assumption.
-  Qed.
-
-  Lemma det_jdg_bind_r : forall {A : choice_type} {P Q} (c0 c1 : raw_code A) f h0 h1 hf,
-      det_jdg P Q c0 c1 h0 h1 ->
-      (
-        forall x c s₁,
-          Q c (det_run (ret x) (h := deterministic_ret x) s₁) ->
-          Q c (det_run (f x) (h := hf x) s₁)) ->
-      det_jdg P Q c0 (b ← c1 ;; f b) h0 (deterministic_bind c1 f h1 hf)
-      .
-  Proof.
-    intros A P Q c0 c1 f h0 h1 hf H HQ_ext.
-    intros ? ? ?.
-    specialize (H s₀ s₁ H0).
-
-    clear H0.
-    generalize dependent s₁.
-    induction h1 ; intros.
-    - now apply HQ_ext.
-    - now apply H.
-    - simpl.
-      apply IHh1.
-      assumption.
-  Qed.
-
-  Lemma det_jdg_bind : forall {A : choice_type} {P Q} (c0 c1 : raw_code A) f g h0 h1 hf hg,
-      det_jdg P Q c0 c1 h0 h1 ->
-      ((forall x y s₀ s₁, Q (det_run (ret x) (h := deterministic_ret x) s₀) (det_run (ret y) (h := deterministic_ret y) s₁) ->
-                  Q (det_run (f x) (h := hf x) s₀) (det_run (g y) (h := hg y) s₁))) ->
-      det_jdg P Q (b ← c0 ;; f b) (b ← c1 ;; g b) (deterministic_bind c0 f h0 hf) (deterministic_bind c1 g h1 hg)
-      .
-  Proof.
-    intros A P Q c0 c1 f g h0 h1 hf hg H HQ_ext.
-    intros ? ? ?.
-    specialize (H s₀ s₁ H0).
-    clear H0.
-
-    generalize dependent s₀.
-    generalize dependent s₁.
-    induction h1.
-    - induction h0 ; intros.
-      + now apply HQ_ext.
-      + simpl.
-        now apply H.
-      + simpl.
-        now apply IHh0.
-    - intros.
-      now apply H.
-    - intros.
-      now apply IHh1.
-  Qed.
-
-  Definition somewhat_substitution : forall {A : choice_type} {B : choiceType} (b : both A) (f : A -> raw_code B) (c : raw_code B),
-      (forall x, deterministic (f x)) ->
-          ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ ret (is_pure b) ≈ is_state b ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄ ->
-          ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← ret (is_pure b) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄ ->
-          ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← is_state b ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄.
-  Proof.
-    clear ; intros ? ? ? ? ? ? b_eq ?.
-
-    eapply r_transL.
-    2: apply H.
+Proof.
+  intros.
+  eapply r_transL.
+  2:{
     eapply r_bind.
+    + apply H.
+    + intros.
+      apply r_ret.
+      intros.
+      apply H0.
+  }
+  rewrite bind_ret.
+  apply rreflexivity_rule.
+Qed.
 
-    - apply b_eq.
-    - intros.
-      simpl.
-      apply Misc.rpre_hypothesis_rule'.
-      intros ? ? [].
-      eapply rpre_weaken_rule.
-      1: subst ; apply rreflexivity_rule.
-      intros ? ? [].
-      now subst.
-  Qed.
+(** Helper tactics *)
+Ltac remove_ret_both_is_pure_from_args :=
+  match goal with
+  | [ |- context [ ?f (ret_both (is_pure ?x)) ?y ] ] =>
+      setoid_rewrite (both_eq_fun_ext (fun k => f k y) (ret_both (is_pure x)) x) ; [ | now rewrite ret_both_is_pure_cancel]
+  | [ |- context [ ?f ?x (ret_both (is_pure ?y)) ] ] =>
+      setoid_rewrite (both_eq_fun_ext (fun k => f x k) (ret_both (is_pure y)) y) ; [ | now rewrite ret_both_is_pure_cancel]
+  | [ |- context [ ?f (ret_both (is_pure ?y)) ] ] =>
+      setoid_rewrite (both_eq_fun_ext f (ret_both (is_pure y)) y) ; [ | now rewrite ret_both_is_pure_cancel]
+  end.
+
+Ltac lower_proof proof :=
+  intros ;
+  unfold lower1 ;
+  unfold lower2 ;
+  apply (proj1 both_equivalence_is_pure_eq) ;
+  repeat remove_ret_both_is_pure_from_args ;
+  rewrite proof.
+
+Lemma swap_samples :
+  forall {n m : nat} {C} `{Positive n} `{Positive m} (c : 'I_n -> 'I_m -> raw_code C),
+    ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
+      a0 ← sample uniform n ;;
+    a1 ← sample uniform m ;;
+    c a0 a1 ≈
+      a1 ← sample uniform m ;;
+    a0 ← sample uniform n ;;
+    c a0 a1
+      ⦃ Logic.eq ⦄.
+Proof.
+  intros.
+
+  eapply r_transR.
+  {
+    apply r_uniform_prod.
+    intros.
+    apply rreflexivity_rule.
+  }
+  apply r_nice_swap_rule ; [ easy | easy | ].
+  eapply r_transR.
+  {
+    apply r_uniform_prod.
+    intros.
+    apply rreflexivity_rule.
+  }
+  eapply r_uniform_bij with (f := fun x => let '(a,b) := ch2prod x in prod2ch (b,a)).
+  {
+    clear.
+    econstructor.
+    Unshelve.
+    3: refine (fun x => let '(a,b) := ch2prod x in prod2ch (b,a)).
+    all: intros x ; rewrite <- (prod2ch_ch2prod x) ; destruct (ch2prod x) ; now rewrite !ch2prod_prod2ch.
+  }
+  intros.
+  destruct (ch2prod x).
+  rewrite (ch2prod_prod2ch).
+
+  apply rreflexivity_rule.
+Qed.
+
+Definition deterministic_bind :
+  forall {A B} (b : raw_code A) (f : A -> raw_code B)
+         (H : deterministic b)
+         (H0 : forall x, deterministic (f x)),
+    deterministic (temp ← b ;; f temp).
+Proof.
+  intros.
+  induction H.
+  - simpl.
+    apply H0.
+  - simpl.
+    apply deterministic_get.
+    apply X.
+  - simpl.
+    apply deterministic_put.
+    apply IHdeterministic.
+Defined.
+
+Definition det_iff_sem :
+  ∀ {A B : choice_type} (pre : precond) (post : postcond A B) (c₀ : raw_code A) (c₁ : raw_code B)
+    (hd₀ : deterministic c₀) (hd₁ : deterministic c₁),
+    det_jdg pre post c₀ c₁ hd₀ hd₁ <-> ⊢ ⦃ pre ⦄ c₀ ≈ c₁ ⦃ post ⦄.
+Proof.
+  split ; [ apply det_to_sem | apply sem_to_det ].
+Qed.
+
+Lemma rsymmetry_iff :
+  ∀ {A₀ A₁ : ord_choiceType} {pre : precond} {post}
+    {c₀ : raw_code A₀} {c₁ : raw_code A₁},
+    ⊢ ⦃ λ '(h₁, h₀), pre (h₀, h₁) ⦄ c₁ ≈ c₀
+      ⦃ λ '(a₁, h₁) '(a₀, h₀), post (a₀, h₀) (a₁, h₁) ⦄ <->
+      ⊢ ⦃ pre ⦄ c₀ ≈ c₁ ⦃ post ⦄.
+Proof.
+  intros A₀ A₁ pre post c₀ c₁.
+  split.
+  - apply rsymmetry.
+  - intros.
+    apply rsymmetry.
+    apply better_r.
+    eapply r_swap_post ; [ prop_fun_eq ; reflexivity | ].
+    apply H.
+Qed.
+
+Lemma det_jdg_sym : forall {A : choice_type} {P Q} (c0 c1 : raw_code A) h0 h1,
+    det_jdg P Q c0 c1 h0 h1 <->
+      det_jdg (λ '(h₁, h₀), P (h₀, h₁)) (λ '(a₁, h₁) '(a₀, h₀), Q (a₀, h₀) (a₁, h₁)) c1 c0 h1 h0.
+Proof.
+  intros.
+  rewrite det_iff_sem.
+  rewrite det_iff_sem.
+  now rewrite rsymmetry_iff.
+Qed.
+
+Lemma det_jdg_trans :
+  forall {A : choice_type} {P Q} (c0 c1 c2 : raw_code A) h0 h1 h2,
+  forall (Hq : forall {a b c}, Q a b -> Q b c -> Q a c),
+  forall (Hp : forall {a c}, P (a, c) -> exists b, P (a, b) /\ P (b, c)),
+    det_jdg P Q c0 c1 h0 h1 ->
+    det_jdg P Q c1 c2 h1 h2 ->
+    det_jdg P Q c0 c2 h0 h2.
+Proof.
+  intros A P Q c0 c1 c2 h0 h1 h2 Hq Hp H01 H12.
+
+  unfold det_jdg in H01.
+  unfold det_jdg in H12.
+  intros s0 s2 H.
+  destruct (Hp s0 s2 H) as [s1 []].
+  
+  refine (Hq _ (det_run c1 s1) _ _ _).
+  - apply H01.
+    apply H0.
+  - apply H12.
+    apply H1.
+Qed.
+
+Lemma det_jdg_bind_l : forall {A : choice_type} {P Q} (c0 c1 : raw_code A) f h0 h1 hf,
+    det_jdg P Q c0 c1 h0 h1 ->
+    (
+      forall x c s₀,
+        Q (det_run (ret x) (h := deterministic_ret x) s₀) c ->
+        Q (det_run (f x) (h := hf x) s₀) c) ->
+    det_jdg P Q (b ← c0 ;; f b) c1 (deterministic_bind c0 f h0 hf) h1
+.
+Proof.
+  intros A P Q c0 c1 f h0 h1 hf H HQ_ext.
+  intros ? ? ?.
+  specialize (H s₀ s₁ H0).
+
+  clear H0.
+  generalize dependent s₀.
+  induction h0 ; intros.
+  - now apply HQ_ext.
+  - now apply H.
+  - apply IHh0.
+    assumption.
+Qed.
+
+Lemma det_jdg_bind_r : forall {A : choice_type} {P Q} (c0 c1 : raw_code A) f h0 h1 hf,
+    det_jdg P Q c0 c1 h0 h1 ->
+    (
+      forall x c s₁,
+        Q c (det_run (ret x) (h := deterministic_ret x) s₁) ->
+        Q c (det_run (f x) (h := hf x) s₁)) ->
+    det_jdg P Q c0 (b ← c1 ;; f b) h0 (deterministic_bind c1 f h1 hf)
+.
+Proof.
+  intros A P Q c0 c1 f h0 h1 hf H HQ_ext.
+  intros ? ? ?.
+  specialize (H s₀ s₁ H0).
+
+  clear H0.
+  generalize dependent s₁.
+  induction h1 ; intros.
+  - now apply HQ_ext.
+  - now apply H.
+  - simpl.
+    apply IHh1.
+    assumption.
+Qed.
+
+Lemma det_jdg_bind : forall {A : choice_type} {P Q} (c0 c1 : raw_code A) f g h0 h1 hf hg,
+    det_jdg P Q c0 c1 h0 h1 ->
+    ((forall x y s₀ s₁, Q (det_run (ret x) (h := deterministic_ret x) s₀) (det_run (ret y) (h := deterministic_ret y) s₁) ->
+                        Q (det_run (f x) (h := hf x) s₀) (det_run (g y) (h := hg y) s₁))) ->
+    det_jdg P Q (b ← c0 ;; f b) (b ← c1 ;; g b) (deterministic_bind c0 f h0 hf) (deterministic_bind c1 g h1 hg)
+.
+Proof.
+  intros A P Q c0 c1 f g h0 h1 hf hg H HQ_ext.
+  intros ? ? ?.
+  specialize (H s₀ s₁ H0).
+  clear H0.
+
+  generalize dependent s₀.
+  generalize dependent s₁.
+  induction h1.
+  - induction h0 ; intros.
+    + now apply HQ_ext.
+    + simpl.
+      now apply H.
+    + simpl.
+      now apply IHh0.
+  - intros.
+    now apply H.
+  - intros.
+    now apply IHh1.
+Qed.
+
+Definition somewhat_substitution : forall {A : choice_type} {B : choiceType} (b : both A) (f : A -> raw_code B) (c : raw_code B),
+    ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← ret (is_pure b) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄ ->
+    ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← is_state b ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄.
+Proof.
+  clear ; intros ? ? ? ? ? ?.
+
+  eapply r_transL.
+  2: apply H.
+  eapply r_bind.
+
+  - apply r_nice_swap_rule ; [ easy | | apply p_eq ] ; now intros [] [] ; cbn.
+  - intros.
+    simpl.
+    apply Misc.rpre_hypothesis_rule'.
+    intros ? ? [[]].
+    eapply rpre_weaken_rule.
+    1: subst ; apply rreflexivity_rule.
+    intros ? ? [].
+    now subst.
+Qed.
