@@ -662,12 +662,94 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       (maximum_ballot_secrecy_real)
       A.
 
-  Lemma maximum_ballot_secrecy_success_ovn:
+  Definition unfolded :=
+    (forall (s : t_OvnContractState)
+         (i : uint32)
+         (xi : v_Z)
+         (vote : 'bool)
+         (w d r : Arit (uniform #|'Z_q|)),
+      ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
+            temp ← is_state
+            (letb ' g_pow_yi := compute_g_pow_yi (cast_int (ret_both i)) (f_g_pow_xis (ret_both s))
+               in letb ' zkp_vi
+             := zkp_one_out_of_two (ret_both (WitnessToField (otf w)))
+                  (ret_both (WitnessToField (otf r))) (ret_both (WitnessToField (otf d)))
+                  g_pow_yi (ret_both xi) (ret_both vote)
+               in letb ' g_pow_xi_yi_vi
+             := compute_group_element_for_vote (ret_both xi) (ret_both vote) g_pow_yi
+               in letb ' cast_vote_state_ret := f_branch (ret_both s)
+               in letb ' cast_vote_state_ret0
+             := Build_t_OvnContractState [cast_vote_state_ret]
+                  ( f_g_pow_xi_yi_vis := update_at_usize
+                                           (f_g_pow_xi_yi_vis cast_vote_state_ret)
+                                           (cast_int (ret_both i)) g_pow_xi_yi_vi)
+               in letb ' cast_vote_state_ret1
+             := Build_t_OvnContractState [cast_vote_state_ret0]
+                  ( f_zkp_vis := update_at_usize (f_zkp_vis cast_vote_state_ret0)
+                                   (cast_int (ret_both i)) zkp_vi)
+               in prod_b (f_accept, cast_vote_state_ret1)) ;;
+            ret (Option_Some temp.2) ≈
+            a ← is_state (compute_g_pow_yi (cast_int (ret_both i)) (f_g_pow_xis (ret_both s))) ;;
+          x ← (v ← is_state
+                 (zkp_one_out_of_two (ret_both (WitnessToField (otf w)))
+                    (ret_both (WitnessToField (otf r))) (ret_both (WitnessToField (otf d)))
+                    (ret_both
+                       (otf
+                          (fto
+                             (is_pure (f_g_pow (ret_both xi)) : gT, a : gT,
+                               is_pure
+                                 (f_prod (f_pow (ret_both (a : gT)) (ret_both xi))
+                                    (if vote then f_g else f_group_one)) : gT))).1.2)
+                    (ret_both
+                       (HGPA.field_equality.WitnessToField (otf (fto (FieldToWitness xi, vote, (a : gT)))).1.1))
+                    (ret_both
+                       ((otf
+                           (fto
+                              (is_pure (f_g_pow (ret_both xi)) : gT, a : gT,
+                                is_pure
+                                  (f_prod (f_pow (ret_both (a : gT)) (ret_both xi))
+                                     (if vote then f_g else f_group_one)) : gT))).2 ==
+                          ((otf
+                              (fto
+                                 (is_pure (f_g_pow (ret_both xi)) : gT, a : gT,
+                                   is_pure
+                                     (f_prod (f_pow (ret_both (a : gT)) (ret_both xi))
+                                        (if vote then f_g else f_group_one)) : gT))).1.2
+                             ^+ (otf (fto (FieldToWitness xi, vote, (a : gT)))).1.1 * HGPA.HacspecGroup.g)%g : 'bool))) ;;
+               ret
+                 (hacspec_ret_to_or_sigma_ret
+                    (otf
+                       (fto
+                          (is_pure (f_g_pow (ret_both xi)) : gT, a : gT,
+                            is_pure
+                              (f_prod (f_pow (ret_both a) (ret_both xi)) (if vote then f_g else f_group_one)) : gT)))
+                    v)) ;;
+          x0 ← (temp ← is_state
+                  (letb ' g_pow_xi_yi_vi
+                   := compute_group_element_for_vote (ret_both xi) (ret_both vote)
+                        (ret_both (otf x.1.1.1).1.2)
+                     in letb ' cast_vote_state_ret := ret_both s
+                     in letb ' cast_vote_state_ret0
+                   := Build_t_OvnContractState [cast_vote_state_ret]
+                        ( f_g_pow_xi_yi_vis := update_at_usize
+                                                 (f_g_pow_xi_yi_vis cast_vote_state_ret)
+                                                 (cast_int (ret_both i)) g_pow_xi_yi_vi)
+                     in letb ' cast_vote_state_ret1
+                   := Build_t_OvnContractState [cast_vote_state_ret0]
+                        ( f_zkp_vis := update_at_usize (f_zkp_vis cast_vote_state_ret0)
+                                         (cast_int (ret_both i))
+                                         (ret_both (or_sigma_ret_to_hacspec_ret x)))
+                     in prod_b (f_accept, cast_vote_state_ret1)) ;;
+                ret (Option_Some temp.2)) ;;
+          ret x0 ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄).
+
+  Lemma maximum_ballot_secrecy_success_ovn_unfold :
     ∀ LA A,
       ValidPackage LA [interface
                          #val #[ MAXIMUM_BALLOT_SECRECY ] : chInp → chOut
         ] A_export A →
       fdisjoint LA MyAlg.Sigma_locs →
+      unfolded ->
       ɛ_maximum_ballot_secrecy_OVN A = 0%R.
   Proof.
     intros.
@@ -833,7 +915,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
                                           (cast_int (ret_both i)) zkp_vi)
                       in prod_b (f_accept, cast_vote_state_ret1))) by reflexivity.
     subst b0.
-    rewrite H1. clear H0 H1.
+    rewrite H2. clear H0 H2.
 
     rewrite bind_assoc.
     setoid_rewrite bind_rewrite.
@@ -843,61 +925,106 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     set (temp := is_state _).
     set (lhs := fun _ => _) at 3.
     subst temp.
+    
+    subst b.
+    replace (lhs) with (fun (temp : (v_A × t_OvnContractState)%pack) => ret (Option_Some temp.2)) by now apply functional_extensionality ; intros []. subst lhs. hnf.
 
-    (***************************)
-    (* Actual equality of code *)
-    (***************************)
+    apply H1.
+  Time Qed.
 
-    apply somewhat_let_substitution.
-    apply r_bind_feq ; [ apply rreflexivity_rule | intros ].
+  Time Lemma maximum_ballot_secrecy_success_ovn_bind :
+    forall     (xi : v_Z)
+         (vote : 'bool)
+         (w d r : Arit (uniform #|'Z_q|)),
+          forall (a₀ : v_G),
+          ((@rel_jdg (chElement t_OrZKPCommit) (chElement t_OrZKPCommit)
+    (fun '(pair s₀ s₁) => @Logic.eq heap s₀ s₁)
+    (fun '(pair a b) '(pair c d0) =>
+     and (@Logic.eq heap b d0)
+       (and (@Logic.eq (Choice.sort (chElement t_OrZKPCommit)) a c)
+          (c.1.1.1.1.1.1.1.1.1 =
+          (is_pure (both_prog (f_g_pow (ret_both xi))),
+           is_pure
+             (both_prog
+                (f_prod (f_pow (ret_both a₀) (ret_both xi)) (if vote then f_g else f_group_one))))))))
+    (@is_state t_OrZKPCommit
+       (@both_prog t_OrZKPCommit
+          (zkp_one_out_of_two
+             (@ret_both
+                (@f_Z HacspecGroup.v_G HacspecGroup.v_G_t_copy HacspecGroup.v_G_t_partial_eq
+                   HacspecGroup.v_G_t_eq HacspecGroup.v_G_t_clone HacspecGroup.v_G_t_serialize
+                   HacspecGroup.OVN.v_G_t_Group_temp)
+                (@GRing.RMorphism.sort
+                   (@reverse_coercion GRing.SemiRing.type predArgType
+                      (fintype_ordinal__canonical__GRing_SemiRing (Zp_trunc q))
+                      (ordinal (S (S (Zp_trunc q)))))
+                   (GRing_Field__to__GRing_SemiRing FT.equivalent_field) WitnessToField
+                   (@otf (fintype_ordinal__canonical__fintype_Finite (S (S (Zp_trunc q)))) w)))
+             (@ret_both
+                (@f_Z HacspecGroup.v_G HacspecGroup.v_G_t_copy HacspecGroup.v_G_t_partial_eq
+                   HacspecGroup.v_G_t_eq HacspecGroup.v_G_t_clone HacspecGroup.v_G_t_serialize
+                   HacspecGroup.OVN.v_G_t_Group_temp)
+                (@GRing.RMorphism.sort
+                   (@reverse_coercion GRing.SemiRing.type predArgType
+                      (fintype_ordinal__canonical__GRing_SemiRing (Zp_trunc q))
+                      (ordinal (S (S (Zp_trunc q)))))
+                   (GRing_Field__to__GRing_SemiRing FT.equivalent_field) WitnessToField
+                   (@otf (fintype_ordinal__canonical__fintype_Finite (S (S (Zp_trunc q)))) r)))
+             (@ret_both
+                (@f_Z HacspecGroup.v_G HacspecGroup.v_G_t_copy HacspecGroup.v_G_t_partial_eq
+                   HacspecGroup.v_G_t_eq HacspecGroup.v_G_t_clone HacspecGroup.v_G_t_serialize
+                   HacspecGroup.OVN.v_G_t_Group_temp)
+                (@GRing.RMorphism.sort
+                   (@reverse_coercion GRing.SemiRing.type predArgType
+                      (fintype_ordinal__canonical__GRing_SemiRing (Zp_trunc q))
+                      (ordinal (S (S (Zp_trunc q)))))
+                   (GRing_Field__to__GRing_SemiRing FT.equivalent_field) WitnessToField
+                   (@otf (fintype_ordinal__canonical__fintype_Finite (S (S (Zp_trunc q)))) d)))
+             (@ret_both v_G a₀)
+             (@ret_both
+                (@f_Z v_G v_G_t_copy v_G_t_partial_eq v_G_t_eq v_G_t_clone v_G_t_serialize
+                   v_G_t_Group_temp) xi) (@ret_both chBool vote))))
+    (@is_state t_OrZKPCommit
+       (@both_prog t_OrZKPCommit
+          (zkp_one_out_of_two
+             (@ret_both
+                (@f_Z HacspecGroup.v_G HacspecGroup.v_G_t_copy HacspecGroup.v_G_t_partial_eq
+                   HacspecGroup.v_G_t_eq HacspecGroup.v_G_t_clone HacspecGroup.v_G_t_serialize
+                   HacspecGroup.OVN.v_G_t_Group_temp)
+                (@GRing.RMorphism.sort
+                   (@reverse_coercion GRing.SemiRing.type predArgType
+                      (fintype_ordinal__canonical__GRing_SemiRing (Zp_trunc q))
+                      (ordinal (S (S (Zp_trunc q)))))
+                   (GRing_Field__to__GRing_SemiRing FT.equivalent_field) WitnessToField
+                   (@otf (fintype_ordinal__canonical__fintype_Finite (S (S (Zp_trunc q)))) w)))
+             (@ret_both
+                (@f_Z HacspecGroup.v_G HacspecGroup.v_G_t_copy HacspecGroup.v_G_t_partial_eq
+                   HacspecGroup.v_G_t_eq HacspecGroup.v_G_t_clone HacspecGroup.v_G_t_serialize
+                   HacspecGroup.OVN.v_G_t_Group_temp)
+                (@GRing.RMorphism.sort
+                   (@reverse_coercion GRing.SemiRing.type predArgType
+                      (fintype_ordinal__canonical__GRing_SemiRing (Zp_trunc q))
+                      (ordinal (S (S (Zp_trunc q)))))
+                   (GRing_Field__to__GRing_SemiRing FT.equivalent_field) WitnessToField
+                   (@otf (fintype_ordinal__canonical__fintype_Finite (S (S (Zp_trunc q)))) r)))
+             (@ret_both
+                (@f_Z HacspecGroup.v_G HacspecGroup.v_G_t_copy HacspecGroup.v_G_t_partial_eq
+                   HacspecGroup.v_G_t_eq HacspecGroup.v_G_t_clone HacspecGroup.v_G_t_serialize
+                   HacspecGroup.OVN.v_G_t_Group_temp)
+                (@GRing.RMorphism.sort
+                   (@reverse_coercion GRing.SemiRing.type predArgType
+                      (fintype_ordinal__canonical__GRing_SemiRing (Zp_trunc q))
+                      (ordinal (S (S (Zp_trunc q)))))
+                   (GRing_Field__to__GRing_SemiRing FT.equivalent_field) WitnessToField
+                   (@otf (fintype_ordinal__canonical__fintype_Finite (S (S (Zp_trunc q)))) d)))
+             (@ret_both v_G a₀)
+             (@ret_both
+                (@f_Z v_G v_G_t_copy v_G_t_partial_eq v_G_t_eq v_G_t_clone v_G_t_serialize
+                   v_G_t_Group_temp) xi) (@ret_both chBool vote))))).
+  Proof.
+    intros.
 
-    rewrite !otf_fto.
-    rewrite !WitnessToFieldCancel.
-
-    apply r_nice_swap_rule ; [ easy | easy | ];
-      rewrite bind_assoc;
-      setoid_rewrite bind_rewrite ;
-      apply r_nice_swap_rule ; [ easy | easy | ].
-    simpl.
-
-    replace (_ == _) with vote.
-    2:{
-      symmetry.
-      apply /eqP.
-      unfold HGPA.HacspecGroup.g.
-
-      unfold "_ * _"%g ; simpl ; unfold setoid_lower2 , F , sg_prod, U ; simpl.
-
-      rewrite pow_witness_to_field.
-      rewrite WitnessToFieldCancel.
-      Misc.push_down_sides.
-
-      destruct vote.
-      - reflexivity.
-      - red ; intros.
-        apply generator_is_not_one.
-        apply both_equivalence_is_pure_eq.
-        set (ret_both _) in H0.
-
-        rewrite <- (@mul1g v_G_is_group).
-        rewrite <- mulVg.
-        rewrite <- mulgA.
-        rewrite hacspec_function_guarantees2 in H0.
-        setoid_rewrite H0.
-
-        rewrite mulgA.
-        rewrite mulVg.
-        rewrite (@mul1g v_G_is_group).
-        reflexivity.
-    }
-
-    set (f := fun _ => _) at 3 ; apply (somewhat_let_substitution _ _ _ f) ; subst f ; hnf.
-
-    apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c.1.1.1.1.1.1.1.1.1 = (is_pure (f_g_pow (ret_both xi)), is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) (if vote then f_g else f_group_one)))).
     1:{
-      subst b.
-      set (zkp_one_out_of_two _ _ _ _ _ _).
-      subst b.
       unfold zkp_one_out_of_two at 1 2.
       repeat unfold let_both at 1.
 
@@ -1030,6 +1157,103 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
         apply r_ret.
         now intros ? ? ? ; subst.
     }
+  Admitted. (* Slow *)
+
+  Lemma maximum_ballot_secrecy_success_ovn:
+    ∀ LA A,
+      ValidPackage LA [interface
+                         #val #[ MAXIMUM_BALLOT_SECRECY ] : chInp → chOut
+        ] A_export A →
+      fdisjoint LA MyAlg.Sigma_locs →
+
+      ɛ_maximum_ballot_secrecy_OVN A = 0%R.
+  Proof.
+      intros.
+    apply (maximum_ballot_secrecy_success_ovn_unfold LA A H H0).
+    clear H0.
+    unfold unfolded.
+    intros.
+
+    (***************************)
+    (* Actual equality of code *)
+    (***************************)
+
+    apply somewhat_let_substitution.
+    apply r_bind_feq ; [ apply rreflexivity_rule | intros ].
+
+    rewrite !otf_fto.
+    rewrite !WitnessToFieldCancel.
+
+    apply r_nice_swap_rule ; [ easy | easy | ];
+      rewrite bind_assoc;
+      setoid_rewrite bind_rewrite ;
+      apply r_nice_swap_rule ; [ easy | easy | ].
+    simpl.
+
+    replace (_ == _) with vote.
+    2:{
+      symmetry.
+      apply /eqP.
+      unfold HGPA.HacspecGroup.g.
+
+      unfold "_ * _"%g ; simpl ; unfold setoid_lower2 , F , sg_prod, U ; simpl.
+
+      rewrite pow_witness_to_field.
+      rewrite WitnessToFieldCancel.
+      Misc.push_down_sides.
+
+      destruct vote.
+      - reflexivity.
+      - red ; intros.
+        apply generator_is_not_one.
+        apply both_equivalence_is_pure_eq.
+        set (ret_both _) in H0.
+
+        rewrite <- (@mul1g v_G_is_group).
+        rewrite <- mulVg.
+        rewrite <- mulgA.
+        rewrite hacspec_function_guarantees2 in H0.
+        setoid_rewrite H0.
+
+        rewrite mulgA.
+        rewrite mulVg.
+        rewrite (@mul1g v_G_is_group).
+        reflexivity.
+    }
+
+    set (f := fun _ => _) at 3 ; apply (somewhat_let_substitution _ _ _ f) ; subst f ; hnf.
+
+    (* Time apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c.1.1.1.1.1.1.1.1.1 = (is_pure (f_g_pow (ret_both xi)), is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) (if vote then f_g else f_group_one)))). *)
+    (* 46.151 secs *)
+
+    (* set (f := fun _ => _) at 3. *)
+    (* Time apply r_bind with (f₀ := f) (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c.1.1.1.1.1.1.1.1.1 = (is_pure (f_g_pow (ret_both xi)), is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) (if vote then f_g else f_group_one)))). *)
+    (* 31.764 secs *)
+
+    (* set (f := fun _ => _) at 3. *)
+    (* set (g := fun _ => _) at 3. *)
+    (* Time apply r_bind with (f₀ := f) (f₁ := g) (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c.1.1.1.1.1.1.1.1.1 = (is_pure (f_g_pow (ret_both xi)), is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) (if vote then f_g else f_group_one)))). *)
+    (* 30.713 secs *)
+
+    (* subst b. *)
+
+    (* set (f := fun _ => _) at 3. *)
+    (* set (m0 := zkp_one_out_of_two _ _ _ _ _ _). *)
+    (* set (g := fun _ => _) at 3. *)
+    (* Time apply r_bind with (m₀ := is_state m0) (m₁ := is_state m0) (f₀ := f) (f₁ := g) (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c.1.1.1.1.1.1.1.1.1 = (is_pure (f_g_pow (ret_both xi)), is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) (if vote then f_g else f_group_one)))). *)
+    (* 15.664 secs *)
+
+    (* set (m0 := is_state _). *)
+    (* Time apply (r_bind m0 m0 _ _ _ (fun '(a,b) '(c,d) => b = d /\ a = c /\ c.1.1.1.1.1.1.1.1.1 = (is_pure (f_g_pow (ret_both xi)), is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) (if vote then f_g else f_group_one))))). *)
+    (* 0.024 secs *)
+
+    set (m0 := is_state _) ;
+    apply (r_bind m0 m0 _ _ _ (fun '(a,b) '(c,d) => b = d /\ a = c /\ c.1.1.1.1.1.1.1.1.1 = (is_pure (f_g_pow (ret_both xi)), is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) (if vote then f_g else f_group_one))))) ; subst m0 ; hnf.
+
+    1:{
+      clear.
+      apply (maximum_ballot_secrecy_success_ovn_bind xi vote w d r a₀).
+    }
     intros [[[[[[[[[[]]]]]]]]]] [[[[[[[[[[]]]]]]]]]].
     apply rpre_hypothesis_rule ; intros ? ? [? []].
     eapply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ | now simpl ; intros ? ? [] ].
@@ -1038,7 +1262,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     fold chElement in *.
     simpl ; simpl in H2. inversion H2. inversion_clear H1. clear H2.
     clear H0.
-
     apply r_nice_swap_rule ; [ easy | easy | ];
       rewrite bind_assoc;
       setoid_rewrite bind_rewrite ;
@@ -1049,12 +1272,11 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     rewrite !otf_fto.
 
     Misc.pattern_lhs_approx ;
-    Misc.pattern_rhs_approx ;
-    assert (H0 = H1) ; [ subst H0 H1 | rewrite H2 ; apply rreflexivity_rule ].
-
+      Misc.pattern_rhs_approx ;
+      assert (H0 = H1) ; [ subst H0 H1 | rewrite H2 ; apply rreflexivity_rule ].
     simpl.
     now repeat (apply f_equal || (apply functional_extensionality ; intros) || f_equal).
-  (* Admitted. *) Qed. (* Slow (Finished transaction in 1532.826 secs (1528.976u,0.631s) (successful)) *)
+  Time Qed.
 
   Definition ɛ_maximum_ballot_secrecy A :=
     AdvantageE
