@@ -932,231 +932,213 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     apply H1.
   Time Qed.
 
+  Lemma ovn_bind_lhs :
+    forall (xi : v_Z)
+      ((* w *) d r : Arit (uniform #|'Z_q|)),
+    forall (a₀ : v_G)
+      (a₀0 a₀1 a₀2 : v_Z)
+      (a₀3 a₀4 a₀5 a₀6 : v_G),
+      (⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
+         x ← is_state (f_prod (f_pow (ret_both a₀) (ret_both xi)) f_g) ;;
+       x0 ← is_state (f_g_pow (ret_both xi)) ;;
+       ret ((x0, x, a₀6, a₀5, a₀4, a₀3, a₀2, WitnessToField (otf d), a₀1, WitnessToField (otf r), a₀0) : t_OrZKPCommit) ≈
+         x ← is_state (f_prod (f_pow (ret_both a₀) (ret_both xi)) f_g) ;;
+       x0 ← is_state (f_g_pow (ret_both xi)) ;;
+       ret ((x0, x, a₀6, a₀5, a₀4, a₀3, a₀2, WitnessToField (otf d), a₀1, WitnessToField (otf r), a₀0) : t_OrZKPCommit)
+         ⦃ (fun '(a,b) '(c, d) =>
+              and (@Logic.eq heap b d)
+                (and (@Logic.eq t_OrZKPCommit a c)
+                   (c.1.1.1.1.1.1.1.1.1 =
+                      (is_pure (f_g_pow (ret_both xi)), is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) f_g))))) ⦄).
+  Proof.
+    intros.
+    apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) f_g)))  ; [  | intros ].
+    1:{
+      eapply r_transR.
+      1:{
+        apply r_nice_swap_rule ; [ easy | easy | ].
+        eapply rpost_weaken_rule.
+        1: apply (p_eq _ (fun '(a, b) => a = b)).
+        now intros [] [] [[] ?].
+      }
+
+      eapply r_transL.
+      1:{
+        apply r_nice_swap_rule ; [ easy | easy | ].
+        eapply rpost_weaken_rule.
+        1: apply (p_eq _ (fun '(a, b) => a = b)).
+        now intros [] [] [[] ?].
+      }
+
+      now apply r_ret.
+    }
+
+    apply rpre_hypothesis_rule ; intros ? ? [? []].
+    apply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ | now simpl ; intros ? ? [] ].
+
+    apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_g_pow (ret_both xi)))) ; [ | intros ].
+    1:{
+      eapply r_transR.
+      1:{
+        apply r_nice_swap_rule ; [ easy | easy | ].
+        eapply rpost_weaken_rule.
+        1: apply (p_eq _ (fun '(a, b) => a = b)).
+        now intros [] [] [[] ?].
+      }
+
+      eapply r_transL.
+      1:{
+        apply r_nice_swap_rule ; [ easy | easy | ].
+        eapply rpost_weaken_rule.
+        1: apply (p_eq _ (fun '(a, b) => a = b)).
+        now intros [] [] [[] ?].
+      }
+
+      now apply r_ret.
+    }
+
+    apply rpre_hypothesis_rule ; intros ? ? [? []].
+    eapply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ | now simpl ; intros ? ? [] ].
+
+    apply r_ret.
+    now intros ? ? ? ; subst.
+  Qed.
+
+  Lemma ovn_bind_rhs :
+    forall (xi : v_Z)
+      ((* w *) d r : Arit (uniform #|'Z_q|)),
+    forall (a₀ : v_G)
+      (a₀0 a₀1 a₀2 : v_Z)
+      (a₀3 a₀4 a₀5 a₀6 : v_G),
+      (⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
+            x ← is_state (f_pow (ret_both a₀) (ret_both xi)) ;;
+     x0 ← is_state (f_g_pow (ret_both xi)) ;;
+     ret ((x0, x, a₀6, a₀5, a₀4, a₀3, a₀2, a₀1, WitnessToField (otf d), a₀0, WitnessToField (otf r)) : t_OrZKPCommit) ≈
+     x ← is_state (f_pow (ret_both a₀) (ret_both xi)) ;;
+     x0 ← is_state (f_g_pow (ret_both xi)) ;;
+     ret ((x0, x, a₀6, a₀5, a₀4, a₀3, a₀2, a₀1, WitnessToField (otf d), a₀0, WitnessToField (otf r)): t_OrZKPCommit) 
+         ⦃ (fun '(a,b) '(c, d) =>
+              and (@Logic.eq heap b d)
+                (and (@Logic.eq t_OrZKPCommit a c)
+                   (c.1.1.1.1.1.1.1.1.1 =
+                      (is_pure (f_g_pow (ret_both xi)),
+           is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) f_group_one))))) ⦄).
+  Proof.
+    intros.
+    apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) f_group_one))  ; [ | intros ].
+    1:{
+      eapply r_transR.
+      1:{
+        apply r_nice_swap_rule ; [ easy | easy | ].
+        eapply rpost_weaken_rule.
+        1: apply (p_eq _ (fun '(a, b) => a = b)).
+        now intros [] [] [[] ?].
+      }
+
+      eapply r_transL.
+      1:{
+        apply r_nice_swap_rule ; [ easy | easy | ].
+        eapply rpost_weaken_rule.
+        1: apply (p_eq _ (fun '(a, b) => a = b)).
+        now intros [] [] [[] ?].
+      }
+
+      apply r_ret.
+      intros ? ? ?.
+      split ; [ assumption | split ; [ reflexivity | ] ].
+
+      Misc.push_down_sides.
+      setoid_rewrite (@mulg1 v_G_is_group).
+      reflexivity.
+    }
+
+    apply rpre_hypothesis_rule ; intros ? ? [? []].
+    apply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ | now simpl ; intros ? ? [] ].
+
+    apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_g_pow (ret_both xi)))) ; [ | intros ].
+    1:{
+      eapply r_transR.
+      1:{
+        apply r_nice_swap_rule ; [ easy | easy | ].
+        eapply rpost_weaken_rule.
+        1: apply (p_eq _ (fun '(a, b) => a = b)).
+        now intros [] [] [[] ?].
+      }
+
+      eapply r_transL.
+      1:{
+        apply r_nice_swap_rule ; [ easy | easy | ].
+        eapply rpost_weaken_rule.
+        1: apply (p_eq _ (fun '(a, b) => a = b)).
+        now intros [] [] [[] ?].
+      }
+
+      now apply r_ret.
+    }
+
+    apply rpre_hypothesis_rule ; intros ? ? [? []].
+    eapply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ | now simpl ; intros ? ? [] ].
+
+    apply r_ret.
+    now intros ? ? ? ; subst.
+  Qed.
+
   Time Lemma maximum_ballot_secrecy_success_ovn_bind :
     forall     (xi : v_Z)
          (vote : 'bool)
          (w d r : Arit (uniform #|'Z_q|)),
           forall (a₀ : v_G),
-          ((@rel_jdg (chElement t_OrZKPCommit) (chElement t_OrZKPCommit)
-    (fun '(pair s₀ s₁) => @Logic.eq heap s₀ s₁)
-    (fun '(pair a b) '(pair c d0) =>
-     and (@Logic.eq heap b d0)
+            (
+                ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄
+    is_state
+       (zkp_one_out_of_two (ret_both (WitnessToField (otf w))) (ret_both (WitnessToField (otf r)))
+          (ret_both (WitnessToField (otf d))) (ret_both a₀) (ret_both xi) 
+          (ret_both vote)) ≈
+     is_state
+       (zkp_one_out_of_two (ret_both (WitnessToField (otf w))) (ret_both (WitnessToField (otf r)))
+          (ret_both (WitnessToField (otf d))) (ret_both a₀) (ret_both xi) 
+          (ret_both vote)) 
+  ⦃ (fun '(a,b) '(c, d) =>
+     and (@Logic.eq heap b d)
        (and (@Logic.eq (Choice.sort (chElement t_OrZKPCommit)) a c)
           (c.1.1.1.1.1.1.1.1.1 =
           (is_pure (both_prog (f_g_pow (ret_both xi))),
            is_pure
              (both_prog
-                (f_prod (f_pow (ret_both a₀) (ret_both xi)) (if vote then f_g else f_group_one))))))))
-    (@is_state t_OrZKPCommit
-       (@both_prog t_OrZKPCommit
-          (zkp_one_out_of_two
-             (@ret_both
-                (@f_Z HacspecGroup.v_G HacspecGroup.v_G_t_copy HacspecGroup.v_G_t_partial_eq
-                   HacspecGroup.v_G_t_eq HacspecGroup.v_G_t_clone HacspecGroup.v_G_t_serialize
-                   HacspecGroup.OVN.v_G_t_Group_temp)
-                (@GRing.RMorphism.sort
-                   (@reverse_coercion GRing.SemiRing.type predArgType
-                      (fintype_ordinal__canonical__GRing_SemiRing (Zp_trunc q))
-                      (ordinal (S (S (Zp_trunc q)))))
-                   (GRing_Field__to__GRing_SemiRing FT.equivalent_field) WitnessToField
-                   (@otf (fintype_ordinal__canonical__fintype_Finite (S (S (Zp_trunc q)))) w)))
-             (@ret_both
-                (@f_Z HacspecGroup.v_G HacspecGroup.v_G_t_copy HacspecGroup.v_G_t_partial_eq
-                   HacspecGroup.v_G_t_eq HacspecGroup.v_G_t_clone HacspecGroup.v_G_t_serialize
-                   HacspecGroup.OVN.v_G_t_Group_temp)
-                (@GRing.RMorphism.sort
-                   (@reverse_coercion GRing.SemiRing.type predArgType
-                      (fintype_ordinal__canonical__GRing_SemiRing (Zp_trunc q))
-                      (ordinal (S (S (Zp_trunc q)))))
-                   (GRing_Field__to__GRing_SemiRing FT.equivalent_field) WitnessToField
-                   (@otf (fintype_ordinal__canonical__fintype_Finite (S (S (Zp_trunc q)))) r)))
-             (@ret_both
-                (@f_Z HacspecGroup.v_G HacspecGroup.v_G_t_copy HacspecGroup.v_G_t_partial_eq
-                   HacspecGroup.v_G_t_eq HacspecGroup.v_G_t_clone HacspecGroup.v_G_t_serialize
-                   HacspecGroup.OVN.v_G_t_Group_temp)
-                (@GRing.RMorphism.sort
-                   (@reverse_coercion GRing.SemiRing.type predArgType
-                      (fintype_ordinal__canonical__GRing_SemiRing (Zp_trunc q))
-                      (ordinal (S (S (Zp_trunc q)))))
-                   (GRing_Field__to__GRing_SemiRing FT.equivalent_field) WitnessToField
-                   (@otf (fintype_ordinal__canonical__fintype_Finite (S (S (Zp_trunc q)))) d)))
-             (@ret_both v_G a₀)
-             (@ret_both
-                (@f_Z v_G v_G_t_copy v_G_t_partial_eq v_G_t_eq v_G_t_clone v_G_t_serialize
-                   v_G_t_Group_temp) xi) (@ret_both chBool vote))))
-    (@is_state t_OrZKPCommit
-       (@both_prog t_OrZKPCommit
-          (zkp_one_out_of_two
-             (@ret_both
-                (@f_Z HacspecGroup.v_G HacspecGroup.v_G_t_copy HacspecGroup.v_G_t_partial_eq
-                   HacspecGroup.v_G_t_eq HacspecGroup.v_G_t_clone HacspecGroup.v_G_t_serialize
-                   HacspecGroup.OVN.v_G_t_Group_temp)
-                (@GRing.RMorphism.sort
-                   (@reverse_coercion GRing.SemiRing.type predArgType
-                      (fintype_ordinal__canonical__GRing_SemiRing (Zp_trunc q))
-                      (ordinal (S (S (Zp_trunc q)))))
-                   (GRing_Field__to__GRing_SemiRing FT.equivalent_field) WitnessToField
-                   (@otf (fintype_ordinal__canonical__fintype_Finite (S (S (Zp_trunc q)))) w)))
-             (@ret_both
-                (@f_Z HacspecGroup.v_G HacspecGroup.v_G_t_copy HacspecGroup.v_G_t_partial_eq
-                   HacspecGroup.v_G_t_eq HacspecGroup.v_G_t_clone HacspecGroup.v_G_t_serialize
-                   HacspecGroup.OVN.v_G_t_Group_temp)
-                (@GRing.RMorphism.sort
-                   (@reverse_coercion GRing.SemiRing.type predArgType
-                      (fintype_ordinal__canonical__GRing_SemiRing (Zp_trunc q))
-                      (ordinal (S (S (Zp_trunc q)))))
-                   (GRing_Field__to__GRing_SemiRing FT.equivalent_field) WitnessToField
-                   (@otf (fintype_ordinal__canonical__fintype_Finite (S (S (Zp_trunc q)))) r)))
-             (@ret_both
-                (@f_Z HacspecGroup.v_G HacspecGroup.v_G_t_copy HacspecGroup.v_G_t_partial_eq
-                   HacspecGroup.v_G_t_eq HacspecGroup.v_G_t_clone HacspecGroup.v_G_t_serialize
-                   HacspecGroup.OVN.v_G_t_Group_temp)
-                (@GRing.RMorphism.sort
-                   (@reverse_coercion GRing.SemiRing.type predArgType
-                      (fintype_ordinal__canonical__GRing_SemiRing (Zp_trunc q))
-                      (ordinal (S (S (Zp_trunc q)))))
-                   (GRing_Field__to__GRing_SemiRing FT.equivalent_field) WitnessToField
-                   (@otf (fintype_ordinal__canonical__fintype_Finite (S (S (Zp_trunc q)))) d)))
-             (@ret_both v_G a₀)
-             (@ret_both
-                (@f_Z v_G v_G_t_copy v_G_t_partial_eq v_G_t_eq v_G_t_clone v_G_t_serialize
-                   v_G_t_Group_temp) xi) (@ret_both chBool vote))))).
+                (f_prod (f_pow (ret_both a₀) (ret_both xi)) (if vote then f_g else f_group_one))))))) ⦄).
   Proof.
     intros.
 
-    1:{
-      unfold zkp_one_out_of_two at 1 2.
-      repeat unfold let_both at 1.
+    unfold zkp_one_out_of_two at 1 2.
+    repeat unfold let_both at 1.
 
-      destruct vote.
-      - simpl.
-        unfold Build_t_OrZKPCommit at 1 2.
-        cbn.
-        eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
-        eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
-        eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
-        eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
-        eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
-        eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
-        eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
+    destruct vote.
+    - simpl.
+      unfold Build_t_OrZKPCommit at 1 2.
+      cbn.
+      
+      apply r_bind_feq ; [apply rreflexivity_rule | intros ].
+      apply r_bind_feq ; [apply rreflexivity_rule | intros ].
+      apply r_bind_feq ; [apply rreflexivity_rule | intros ].
+      apply r_bind_feq ; [apply rreflexivity_rule | intros ].
+      apply r_bind_feq ; [apply rreflexivity_rule | intros ].
+      apply r_bind_feq ; [apply rreflexivity_rule | intros ].
+      apply r_bind_feq ; [apply rreflexivity_rule | intros ].
 
-        apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) f_g)))  ; [  | intros ].
-        1:{
-          eapply r_transR.
-          1:{
-            apply r_nice_swap_rule ; [ easy | easy | ].
-            eapply rpost_weaken_rule.
-            1: apply (p_eq _ (fun '(a, b) => a = b)).
-            now intros [] [] [[] ?].
-          }
+      apply (ovn_bind_lhs xi (* w *) d r a₀ a₀0 a₀1 a₀2 a₀3 a₀4 a₀5 a₀6 ).
+    - simpl.
+      unfold Build_t_OrZKPCommit at 1 2.
+      cbn.
+      apply r_bind_feq ; [apply rreflexivity_rule | intros ].
+      apply r_bind_feq ; [apply rreflexivity_rule | intros ].
+      apply r_bind_feq ; [apply rreflexivity_rule | intros ].
+      apply r_bind_feq ; [apply rreflexivity_rule | intros ].
+      apply r_bind_feq ; [apply rreflexivity_rule | intros ].
+      apply r_bind_feq ; [apply rreflexivity_rule | intros ].
+      apply r_bind_feq ; [apply rreflexivity_rule | intros ].
 
-          eapply r_transL.
-          1:{
-            apply r_nice_swap_rule ; [ easy | easy | ].
-            eapply rpost_weaken_rule.
-            1: apply (p_eq _ (fun '(a, b) => a = b)).
-            now intros [] [] [[] ?].
-          }
-
-          now apply r_ret.
-        }
-
-        apply rpre_hypothesis_rule ; intros ? ? [? []].
-        apply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ | now simpl ; intros ? ? [] ].
-
-        apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_g_pow (ret_both xi)))) ; [ | intros ].
-        1:{
-          eapply r_transR.
-          1:{
-            apply r_nice_swap_rule ; [ easy | easy | ].
-            eapply rpost_weaken_rule.
-            1: apply (p_eq _ (fun '(a, b) => a = b)).
-            now intros [] [] [[] ?].
-          }
-
-          eapply r_transL.
-          1:{
-            apply r_nice_swap_rule ; [ easy | easy | ].
-            eapply rpost_weaken_rule.
-            1: apply (p_eq _ (fun '(a, b) => a = b)).
-            now intros [] [] [[] ?].
-          }
-
-          now apply r_ret.
-        }
-
-        apply rpre_hypothesis_rule ; intros ? ? [? []].
-        eapply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ | now simpl ; intros ? ? [] ].
-
-        apply r_ret.
-        now intros ? ? ? ; subst.
-      - simpl.
-        unfold Build_t_OrZKPCommit at 1 2.
-        cbn.
-        eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
-        eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
-        eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
-        eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
-        eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
-        eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
-        eapply r_bind_feq ; [apply rreflexivity_rule | intros ].
-
-        apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = is_pure (f_prod (f_pow (ret_both a₀) (ret_both xi)) f_group_one))  ; [ | intros ].
-        1:{
-          eapply r_transR.
-          1:{
-            apply r_nice_swap_rule ; [ easy | easy | ].
-            eapply rpost_weaken_rule.
-            1: apply (p_eq _ (fun '(a, b) => a = b)).
-            now intros [] [] [[] ?].
-          }
-
-          eapply r_transL.
-          1:{
-            apply r_nice_swap_rule ; [ easy | easy | ].
-            eapply rpost_weaken_rule.
-            1: apply (p_eq _ (fun '(a, b) => a = b)).
-            now intros [] [] [[] ?].
-          }
-          apply r_ret.
-          intros ? ? ?.
-          split ; [ assumption | split ; [ reflexivity | ] ].
-
-          Misc.push_down_sides.
-          setoid_rewrite (@mulg1 v_G_is_group).
-          reflexivity.
-        }
-
-        apply rpre_hypothesis_rule ; intros ? ? [? []].
-        eapply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ | now simpl ; intros ? ? [] ].
-
-        apply r_bind with (mid := fun '(a,b) '(c,d) => b = d /\ a = c /\ c = (is_pure (f_g_pow (ret_both xi)))) ; [ | intros ].
-        1:{
-          eapply r_transR.
-          1:{
-            apply r_nice_swap_rule ; [ easy | easy | ].
-            eapply rpost_weaken_rule.
-            1: apply (p_eq _ (fun '(a, b) => a = b)).
-            now intros [] [] [[] ?].
-          }
-
-          eapply r_transL.
-          1:{
-            apply r_nice_swap_rule ; [ easy | easy | ].
-            eapply rpost_weaken_rule.
-            1: apply (p_eq _ (fun '(a, b) => a = b)).
-            now intros [] [] [[] ?].
-          }
-
-          now apply r_ret.
-        }
-
-        apply rpre_hypothesis_rule ; intros ? ? [? []].
-        eapply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ | now simpl ; intros ? ? [] ].
-
-        apply r_ret.
-        now intros ? ? ? ; subst.
-    }
+      apply (ovn_bind_rhs xi (* w *) d r a₀ a₀0 a₀1 a₀2 a₀3 a₀4 a₀5 a₀6 ).
+  (* Qed. *)
   Admitted. (* Slow *)
 
   Lemma maximum_ballot_secrecy_success_ovn:
