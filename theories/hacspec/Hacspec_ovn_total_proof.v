@@ -1112,11 +1112,12 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     unfold zkp_one_out_of_two at 1 2.
     repeat unfold let_both at 1.
 
+    cbn.
+
     destruct vote.
-    - simpl.
+    - cbn.
       unfold Build_t_OrZKPCommit at 1 2.
       cbn.
-      
       apply r_bind_feq ; [apply rreflexivity_rule | intros ].
       apply r_bind_feq ; [apply rreflexivity_rule | intros ].
       apply r_bind_feq ; [apply rreflexivity_rule | intros ].
@@ -1126,7 +1127,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       apply r_bind_feq ; [apply rreflexivity_rule | intros ].
 
       apply (ovn_bind_lhs xi (* w *) d r a₀ a₀0 a₀1 a₀2 a₀3 a₀4 a₀5 a₀6 ).
-    - simpl.
+    - cbn.
       unfold Build_t_OrZKPCommit at 1 2.
       cbn.
       apply r_bind_feq ; [apply rreflexivity_rule | intros ].
@@ -1138,8 +1139,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       apply r_bind_feq ; [apply rreflexivity_rule | intros ].
 
       apply (ovn_bind_rhs xi (* w *) d r a₀ a₀0 a₀1 a₀2 a₀3 a₀4 a₀5 a₀6 ).
-  (* Qed. *)
-  Admitted. (* Slow *)
+  Time Qed. (* 195 secs *) (* Slow *)
 
   Lemma maximum_ballot_secrecy_success_ovn:
     ∀ LA A,
