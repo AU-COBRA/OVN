@@ -93,8 +93,9 @@ Import PackageNotation.
 (* Given OVN over some t_Group and t_Field typeclasses, if we can proof group and field laws. And some minor extra properties, is enough to instantiate the full proofs. *)
 
 (* Most of this is just boiler-plate instantiation *)
-Module OVN_instantiation.
-  Module OVN := HacspecOVN.
+Module HacspecOvnGroupAndFieldPre (HOP : HacspecOvnParameter).
+  Module OVN := HacspecOvn HOP.
+
   Include OVN.
   Export OVN.
 
@@ -102,35 +103,20 @@ Module OVN_instantiation.
   Definition both_v_G : Type := both v_G.
   Definition v_G_type : Type := v_G.
 
-  HB.instance Definition _ :=
+  HB.instance Definition _ : is_eq_rel both_v_G :=
     is_eq_rel.Build (both_v_G) both_equivalence _ _ _.
 
-  HB.instance Definition _ :=
+  HB.instance Definition _ : is_group_op both_v_G :=
     is_group_op.Build (both_v_G)
       (f_prod)
       (f_group_inv)
       (f_group_one)
       (f_g).
 
-  (* A proof of the group laws *)
-  Parameter both_group_properties : is_setoid_group_properties.axioms_ (both_v_G) (group_op.class OVN_instantiation_both_v_G__canonical__Hacspec_ovn_group_and_field_group_op) (eqR.class OVN_instantiation_both_v_G__canonical__Hacspec_ovn_group_and_field_eqR).
-  HB.instance Definition _ := both_group_properties.
-
-  (* Any both type has a setoid lowering structure, as we have pointwise equality on [is_pure] *)
-  HB.instance Definition _ : is_setoid_lower both_v_G :=
-    is_setoid_lower.Build both_v_G v_G_type (fun x => is_pure x) ret_both ret_both_is_pure_cancel (fun x => erefl)  (fun x y H => proj1 both_equivalence_is_pure_eq H)  (fun x y H => both_eq_fun_ext _ _ _).
-
-  (* We can thus define the group on [v_G] *)
-  HB.instance Definition _ : fingroup.FinGroup v_G_type := fingroup.FinGroup.class (Hacspec_ovn_group_and_field_T__canonical__fingroup_FinGroup OVN_instantiation_both_v_G__canonical__Hacspec_ovn_group_and_field_setoid_lower_to_group).
-
-  (* and add a notation for it *)
-  Notation v_G_is_group := OVN_instantiation_v_G_type__canonical__fingroup_FinGroup.
-
-  (** Field instantiation *)
   Definition both_Z : Type := both f_Z.
   Definition Z_type : Type := f_Z.
 
-  HB.instance Definition _ :=
+  HB.instance Definition _ : is_eq_rel both_Z :=
     is_eq_rel.Build (both_Z) both_equivalence _ _ _.
 
   HB.instance Definition _ : is_field_op both_Z :=
@@ -143,18 +129,62 @@ Module OVN_instantiation.
       f_opp
       f_field_zero.
 
-  (* A proof of the field laws *)
-  Parameter both_field_properties : is_setoid_field_properties.axioms_ (both_Z) (field_op.class OVN_instantiation_both_Z__canonical__Hacspec_ovn_group_and_field_field_op) (eqR.class OVN_instantiation_both_Z__canonical__Hacspec_ovn_group_and_field_eqR).
+End HacspecOvnGroupAndFieldPre.
 
+Module Type HacspecOvnGroupAndFieldParameter (HOP : HacspecOvnParameter).
+  Module GroupAndFieldPre := HacspecOvnGroupAndFieldPre HOP.
+  Include GroupAndFieldPre.
+  Export GroupAndFieldPre.
+
+  (* A proof of the group laws *)
+  Parameter both_group_properties :
+    is_setoid_group_properties.axioms_
+      (both_v_G)
+      (group_op.class HacspecOvnGroupAndFieldPre_both_v_G__canonical__Hacspec_ovn_group_and_field_group_op)
+      (eqR.class HacspecOvnGroupAndFieldPre_both_v_G__canonical__Hacspec_ovn_group_and_field_eqR).
+
+  (* A proof of the field laws *)
+  Parameter both_field_properties :
+    is_setoid_field_properties.axioms_
+      (both_Z)
+      (field_op.class HacspecOvnGroupAndFieldPre_both_Z__canonical__Hacspec_ovn_group_and_field_field_op)
+      (eqR.class HacspecOvnGroupAndFieldPre_both_Z__canonical__Hacspec_ovn_group_and_field_eqR).
+End HacspecOvnGroupAndFieldParameter.
+
+Module HacspecOvnGroupAndField (HOP : HacspecOvnParameter) (HOGP : HacspecOvnGroupAndFieldParameter HOP).
+  Include HOGP.
+  Export HOGP.
+
+  HB.instance Definition _ := both_group_properties.
+
+  (* Any both type has a setoid lowering structure, as we have pointwise equality on [is_pure] *)
+  HB.instance Definition _ : is_setoid_lower both_v_G :=
+    is_setoid_lower.Build both_v_G v_G_type (fun x => is_pure x) ret_both ret_both_is_pure_cancel (fun x => erefl)  (fun x y H => proj1 both_equivalence_is_pure_eq H)  (fun x y H => both_eq_fun_ext _ _ _).
+
+  (* We can thus define the group on [v_G] *)
+  HB.instance Definition _ : fingroup.FinGroup v_G_type := fingroup.FinGroup.class (Hacspec_ovn_group_and_field_T__canonical__fingroup_FinGroup GroupAndFieldPre_both_v_G__canonical__Hacspec_ovn_group_and_field_setoid_lower_to_group).
+
+  (* and add a notation for it *)
+  Notation v_G_is_group := GroupAndFieldPre_v_G_type__canonical__fingroup_FinGroup.
+  Check v_G_is_group : finGroupType.
+
+  (* Field *)
   HB.instance Definition _ := both_field_properties.
 
   (* Same lowering structure as for groups, but for [Z] instead of [v_G] *)
   HB.instance Definition _ : is_setoid_lower both_Z :=
     is_setoid_lower.Build both_Z Z_type (fun x => is_pure x) ret_both ret_both_is_pure_cancel (fun x => erefl)  (fun x y H => proj1 both_equivalence_is_pure_eq H)  (fun x y H => both_eq_fun_ext _ _ _).
 
-  HB.instance Definition _ : GRing.Field Z_type := GRing.Field.class (Hacspec_ovn_group_and_field_T__canonical__FinRing_Field OVN_instantiation_both_Z__canonical__Hacspec_ovn_group_and_field_setoid_lower_to_field).
+  HB.instance Definition _ : GRing.Field Z_type := GRing.Field.class (Hacspec_ovn_group_and_field_T__canonical__FinRing_Field GroupAndFieldPre_both_Z__canonical__Hacspec_ovn_group_and_field_setoid_lower_to_field).
 
-  Notation v_Z_is_field := OVN_instantiation_Z_type__canonical__GRing_Field.
+  Notation v_Z_is_field := GroupAndFieldPre_Z_type__canonical__GRing_Field.
+  Check v_Z_is_field : fieldType.
+End HacspecOvnGroupAndField.
+
+Module Type HacspecOvnGroupAndFieldExtra (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldParameter HOP).
+  Module GroupAndField := HacspecOvnGroupAndField HOP HOGaFP.
+  Include GroupAndField.
+  Export GroupAndField.
 
   (* Additional requirements and defintions *)
   Parameter pow_base : forall x, f_g_pow x ≈both f_pow f_g x. (* TODO: just have this as a definition *)
@@ -163,7 +193,7 @@ Module OVN_instantiation.
   (* A secure group is of prime order and has a generator *)
   Parameter v_G_prime_order : prime #[ is_pure f_g : v_G_is_group].
   Parameter v_G_g_gen : [set : v_G_is_group] = <[ is_pure f_g : v_G_is_group]>.
-End OVN_instantiation.
+End HacspecOvnGroupAndFieldExtra.
 
 Module Type FieldType.
   Parameter equivalent_field : fieldType.
@@ -171,13 +201,49 @@ End FieldType.
 
 (** * Field equality *)
 Module FieldEquality (SG : GroupParam) (FT : FieldType).
-  Include SG.
-  Export SG.
-
   (* order of g *)
-  Definition q : nat := #[g].
+  Definition q : nat := #[SG.g].
 
   (** Field equality *)
+  Parameter WitnessToField : {rmorphism 'Z_q -> FT.equivalent_field}.
+  Parameter FieldToWitness : {rmorphism FT.equivalent_field -> 'Z_q}.
+  Parameter WitnessToFieldCancel :
+    cancel FieldToWitness WitnessToField.
+  Parameter FieldToWitnessCancel :
+    cancel WitnessToField FieldToWitness.
+
+End FieldEquality.
+
+(** * Hacspec Group Param *)
+(* Make an instance of [GroupParam] such that we can use the Schnorr framework in SSProve *)
+Module HacspecGroupParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldParameter HOP) (HOGaFE : HacspecOvnGroupAndFieldExtra HOP HOGaFP) <: GroupParam.
+  (* The finite group type is the ovn group *)
+  Definition gT : finGroupType := HOGaFE.v_G_is_group.
+  Definition ζ : {set gT} := [set : gT].
+  Definition g :  gT := is_pure (f_g (t_Group := HOGaFE.v_G_t_Group)).
+
+  Definition g_gen : ζ = <[g]> := HOGaFE.v_G_g_gen.
+  Definition prime_order : prime #[g] := HOGaFE.v_G_prime_order.
+End HacspecGroupParam.
+
+(** * Assumptions *)
+(* Collection of all modules and assumptions to do the Σ Protocols *)
+Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldParameter HOP) (HOGaFE : HacspecOvnGroupAndFieldExtra HOP HOGaFP).
+  Include HOGaFE.
+  Export HOGaFE.
+
+  Module HacspecGroup := HacspecGroupParam HOP HOGaFP HOGaFE.
+  Include HacspecGroup.
+  Export HacspecGroup.
+
+  Module FT.
+    Definition equivalent_field : fieldType := v_Z_is_field.
+  End FT.
+  Module field_equality := FieldEquality HacspecGroup FT.
+
+  Include field_equality.
+  Export field_equality.
+
   (* the field is given by the Z/#[g]Z, so the OVN field should be equal to this *)
 
   Program Definition Z_to_F : {rmorphism 'Z_q -> 'F_q} := GRing.ssrfun_idfun__canonical__GRing_RMorphism _.
@@ -222,35 +288,7 @@ Module FieldEquality (SG : GroupParam) (FT : FieldType).
     reflexivity.
   Qed.
 
-  Parameter WitnessToField : {rmorphism 'Z_q -> FT.equivalent_field}.
-  Parameter FieldToWitness : {rmorphism FT.equivalent_field -> 'Z_q}.
-  Parameter WitnessToFieldCancel :
-    cancel FieldToWitness WitnessToField.
-  Parameter FieldToWitnessCancel :
-    cancel WitnessToField FieldToWitness.
-
-End FieldEquality.
-
-(** * Hacspec Group Param *)
-(* Make an instance of [GroupParam] such that we can use the Schnorr framework in SSProve *)
-Module HacspecGroupParam <: GroupParam.
-  Module OVN_instance := OVN_instantiation.
-  Include OVN_instance.
-  Export OVN_instance.
-  
-  (* The finite group type is the ovn group *)
-  Definition gT : finGroupType := v_G_is_group.
-  Definition ζ : {set gT} := [set : gT].
-  Definition g :  gT := is_pure f_g.
-
-  Definition g_gen : ζ = <[g]> := v_G_g_gen.
-  Definition prime_order : prime #[g] := v_G_prime_order.
-  
   (** Extra helper definitions *)
-  
-  (* order of g *)
-  Definition q : nat := #[g].
-
   (* pow spec, could be omitted by using iterated mul in hax code instead *)
   Theorem one_is_not_a_generator : generator ζ 1 -> False.
   Proof.
@@ -423,23 +461,6 @@ Module HacspecGroupParam <: GroupParam.
     now rewrite expg1.
   Qed.
 
-  (* Parameter pow_witness_to_field : *)
-  (*   forall (h : gT) (b : 'Z_q), *)
-  (*     (h ^ b = (setoid_lower2 f_pow) h (WitnessToField b))%g. *)
-End HacspecGroupParam.
-
-(** * Assumptions *)
-(* Collection of all modules and assumptions to do the Σ Protocols *)
-Module Type HacspecGroupParamAxiom.
-  Module HacspecGroup := HacspecGroupParam.
-  Module FT.
-    Definition equivalent_field : fieldType := HacspecGroup.v_Z_is_field.
-  End FT.
-  Module field_equality := FieldEquality HacspecGroup FT.
-
-  Include field_equality.
-  Export field_equality.
-
   Lemma div_cancel : forall (x : gT) (s : 'Z_q), s <> 0%R -> x ^+ nat_of_ord (s / s)%R = x.
   Proof.
     intros.
@@ -481,12 +502,18 @@ Module Type HacspecGroupParamAxiom.
     now apply Positive_prod.
   Defined.
   (* end details *)
+End HacspecGroupAndFieldParam.
+
+Module Type HacspecGroupParamAxiom (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldParameter HOP) (HOGaFE : HacspecOvnGroupAndFieldExtra HOP HOGaFP).
+  Module GaFP := HacspecGroupAndFieldParam HOP HOGaFP HOGaFE.
+  Include GaFP.
+  Export GaFP.
 
   (* pow spec, could be omitted by using iterated mul in hax code instead *)
   Parameter pow_witness_to_field :
     forall (h : gT) (b : 'Z_q),
       (h ^+ b = is_pure (f_pow (ret_both h) (ret_both (WitnessToField b)))).
-  
+
   Parameter conversion_is_true :
     forall (b : both f_Z),
     (g ^+ FieldToWitness (is_pure b)) = is_pure (f_g_pow b).
@@ -513,5 +540,4 @@ Module Type HacspecGroupParamAxiom.
                 (unsize
                    (box_new
                       (array_from_list l))))) ;; c1 x ⦃ post ⦄.
-
 End HacspecGroupParamAxiom.

@@ -434,8 +434,23 @@ Ltac pattern_rhs pat :=
 Ltac pattern_rhs_f f pat :=
   match goal with | |- context [ f ?lhs = f ?rhs ] => let H_rhs := fresh in set (H_rhs := rhs) ; pattern pat in H_rhs ; subst H_rhs end.
 
-Axiom hacspec_function_guarantees : forall {A B} (f : both A -> both B) (x : both A),
+Lemma hacspec_function_guarantees : forall {A B} (f : both A -> both B) (x : both A),
     is_pure (f x) = is_pure (f (ret_both (is_pure x))).
+Proof.
+  intros.
+
+  f_equal.
+  f_equal.
+  f_equal.
+
+  apply both_eq.
+  
+  destruct x as [[] [] ?].
+  now inversion is_valid_both ; subst.
+Qed.
+
+(* Axiom hacspec_function_guarantees : forall {A B} (f : both A -> both B) (x : both A), *)
+(*     is_pure (f x) = is_pure (f (ret_both (is_pure x))). *)
 
 Corollary hacspec_function_guarantees2 : forall {A B C} (f : both A -> both B -> both C) (x : both A) (y : both B),
     is_pure (f x y) = is_pure (f (ret_both (is_pure x)) (ret_both (is_pure y))).

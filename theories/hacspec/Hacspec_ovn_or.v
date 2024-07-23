@@ -78,10 +78,10 @@ Import PackageNotation.
 (** * OR protocol *)
 (* Setup and definitions for the OR protocol *)
 (* This allows us to instantiate the SigmaProtocol library *)
-Module OVN_or_proof_preconditions (HGPA : HacspecGroupParamAxiom).
+Module OVN_or_proof_preconditions (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldParameter HOP) (HOGaFE : HacspecOvnGroupAndFieldExtra HOP HOGaFP) (HGPA : HacspecGroupParamAxiom HOP HOGaFP HOGaFE).
   Include HGPA.
   Export HGPA.
-
+  
   Module MyParam <: SigmaProtocolParams.
 
     Definition Witness : finType := prod (prod (Finite.clone _ 'Z_q) (Finite.clone _ 'bool)) gT.
@@ -276,20 +276,16 @@ End OVN_or_proof_preconditions.
 (** * OR protocol proofs *)
 (* Shows equality between above code and Hax generated code.   *)
 (* Then proofs SHVZK and extractor correctness for OR protocol *)
-Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
-  Module proof_args := OVN_or_proof_preconditions HGPA.
-
-  Import HGPA.
-  Import proof_args.
+Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldParameter HOP) (HOGaFE : HacspecOvnGroupAndFieldExtra HOP HOGaFP) (HGPA : HacspecGroupParamAxiom HOP HOGaFP HOGaFE).
+  Module proof_args := OVN_or_proof_preconditions HOP HOGaFP HOGaFE HGPA.
+  Include proof_args.
+  Export proof_args.
 
   Import MyParam.
   Import MyAlg.
 
   Import Sigma.Oracle.
   Import Sigma.
-
-  Include proof_args.
-  Export proof_args.
 
   Transparent zkp_one_out_of_two.
 
@@ -642,8 +638,7 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
         rewrite mulg1 in H.
         rewrite mulVg in H.
 
-        fold g.
-        rewrite <- H.
+        setoid_rewrite <- H.
         reflexivity.
       }
 
@@ -744,8 +739,8 @@ Module OVN_or_proof (HGPA : HacspecGroupParamAxiom).
         unfold Sigma_locs in H0 ; rewrite <- fset1E in H0 ; rewrite in_fset1 in H0.
         now rewrite <- get_heap_set_heap.
     }
-    (* Qed. *)
-    (* Fail Timeout 5 *) Qed. (* Admitted. *) (* SLOW: 525.61 sec *)
+    Qed.
+    (* Fail Timeout 5 Qed. Admitted. (* SLOW: 525.61 sec *) *)
 
   (* The packaged version for running the hacspec code *)
   Program Definition hacspec_or_run :

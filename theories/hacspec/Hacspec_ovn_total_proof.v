@@ -76,14 +76,968 @@ From OVN Require Import Hacspec_ovn_sigma_setup.
 From OVN Require Import Hacspec_ovn_schnorr.
 From OVN Require Import Hacspec_ovn_or.
 
-Module OVN_proof (HGPA : HacspecGroupParamAxiom).
-  Module Schnorr_ZKP := OVN_schnorr_proof HGPA.
-  Module OR_ZKP := OVN_or_proof HGPA.
+Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldParameter HOP) (HOGaFE : HacspecOvnGroupAndFieldExtra HOP HOGaFP) (HGPA : HacspecGroupParamAxiom HOP HOGaFP HOGaFE).
+  (* Module Schnorr_ZKP := OVN_schnorr_proof HOP HOGaFP HOGaFE HGPA. *)
+  (* Module OR_ZKP := OVN_or_proof HOP HOGaFP HOGaFE HGPA. *)
 
-  Import Schnorr_ZKP.
-  Import OR_ZKP.
+  (* Import Schnorr_ZKP. *)
+  (* Import OR_ZKP. *)
 
   Include HGPA.
+
+  From OVN Require Import OVN.
+
+  Module OVN_GroupParam <: OVN.GroupParam.
+
+    Definition n : nat := 55.
+    Lemma n_pos : Positive n. Proof. easy. Qed.
+
+    Include HacspecGroup.
+  End OVN_GroupParam.
+
+  Module OVN_Param <: OVNParam.
+    Definition N : nat := 55.
+    Lemma N_pos : Positive N. Proof. easy. Qed.
+  End OVN_Param.
+
+  Module OVN_proofs := OVN OVN_GroupParam OVN_Param.
+
+  Module OVN_or <: OVN_proofs.CDSParams(* SigmaProtocolParams *).
+
+    Definition Witness : finType := OVN_proofs.Secret.
+    Definition Statement : finType := prod (prod OVN_proofs.Public OVN_proofs.Public) OVN_proofs.Public.
+    Definition Message : finType :=  prod (prod (prod gT gT) gT) gT.
+    Definition Challenge : finType := Finite.clone _ 'Z_q.
+    Definition Response : finType :=  (prod (prod (prod (Finite.clone _ 'Z_q) (Finite.clone _ 'Z_q)) (Finite.clone _ 'Z_q)) (Finite.clone _ 'Z_q)).
+
+    Definition w0 : Witness := 0%R.
+    Definition e0 : Challenge := 0%R.
+    Definition z0 : Response := 0%R.
+
+    (* * OR relation *)
+    Definition R : Statement -> Witness -> bool :=
+      (λ (h : Statement) (x : Witness),
+        let '(gx, gy, gyxv) := h in
+        (gy^+x * g^+0 == gyxv) || (gy^+x * g^+1 == gyxv))%g.
+
+    (* begin details : Sanity checks *)
+    Lemma relation_valid_left:
+      (∀ (x : OVN_proofs.Secret) (gy : OVN_proofs.Public),
+        R (g^+x, gy, gy^+x * g^+ 0) x)%g.
+    Proof.
+      intros x gy.
+      unfold R.
+      apply /orP ; left.
+      done.
+    Qed.
+
+    Lemma relation_valid_right:
+      (∀ (x : OVN_proofs.Secret) (gy : OVN_proofs.Public),
+          R (g^+x, gy, gy^+x * g^+ 1) x)%g.
+    Proof.
+      intros x y.
+      unfold R.
+      apply /orP ; right.
+      done.
+    Qed.
+    (* end details *)
+
+    (* begin details : size of protocol elements is positive *)
+    Instance Witness_pos : Positive #|Witness| := OVN_proofs.Secret_pos.
+    Definition Statement_pos : Positive #|Statement| := _.
+    Definition Message_pos : Positive #|Message| := _.
+    Definition Challenge_pos : Positive #|Challenge| := _.
+    Definition Response_pos : Positive #|Response| := _.
+    Definition Bool_pos : Positive #|'bool| := _.
+
+    Definition State : finType := 'unit.
+    Instance State_pos : Positive #|State| := eq_ind_r [eta Positive] (erefl : Positive 1) card_unit.
+    (* end details *)
+  End OVN_or.
+
+  Module OVN_or_alg <: SigmaProtocolAlgorithms OVN_or.
+
+    Import OVN_or.
+
+    (* begin details : define (choice) type from size of protocol elements *)
+    Definition choiceWitness : choice_type := 'fin #|Witness|.
+    Definition choiceStatement : choice_type := 'fin #|Statement|.
+    Definition choiceMessage : choice_type := 'fin #|Message|.
+    Definition choiceChallenge : choice_type := 'fin #|Challenge|.
+    Definition choiceResponse : choice_type := 'fin #|Response|.
+    Definition choiceTranscript : choice_type :=
+      chProd
+        (chProd (chProd choiceStatement choiceMessage) choiceChallenge)
+        choiceResponse.
+    Definition choiceBool := 'fin #|'bool|.
+
+    Definition i_witness := #|Finite.clone _ 'Z_q|.
+    (* end details *)
+
+    Definition HIDING : nat := 0.
+    Definition SOUNDNESS : nat := 1.
+
+    Definition commit_loc : Location := (('fin #|Finite.clone _ 'Z_q| × 'fin #|Finite.clone _ 'Z_q| × 'fin #|Finite.clone _ 'Z_q| : choice_type); 2%N).
+
+    Definition Sigma_locs : {fset Location} := fset [:: commit_loc].
+    Definition Simulator_locs : {fset Location} := fset0.
+
+    (** Actual code for protocol, validator, simulator and extractor and key gen *)
+    Definition Commit (hy : choiceStatement) (xv : choiceWitness):
+      code Sigma_locs [interface] choiceMessage :=
+      {code
+         w ← sample uniform i_witness ;;
+       d ← sample uniform i_witness ;;
+       r ← sample uniform i_witness ;;
+       #put commit_loc := (w, r, d) ;;
+                          let '(x, h, y) := (otf hy) in
+                          let m (* '(m, v, _) *) := (otf xv) in
+                          if (y == h^+m * g)
+                          then
+                            (
+                              let r1 := r in
+                              let d1 := d in
+
+                              let a1 := (g ^+ (otf r1 : 'Z_q) * x ^+ (otf d1 : 'Z_q))%g in
+                              let b1 := (h ^+ (otf r1 : 'Z_q) * y ^+ (otf d1 : 'Z_q))%g in
+
+                              let a2 := (g ^+ (otf w : 'Z_q))%g in
+                              let b2 := (h ^+ (otf w : 'Z_q))%g in
+                              ret (fto (a1, b1, a2, b2)))
+                          else
+                            (let r2 := r in
+                             let d2 := d in
+
+                             let a1 := (g ^+ (otf w : 'Z_q))%g in
+                             let b1 := (h ^+ (otf w : 'Z_q))%g in
+
+                             let a2 := (g ^+ (otf r2 : 'Z_q) * x ^+ (otf d2 : 'Z_q))%g in
+                             let b2 := (h ^+ (otf r2 : 'Z_q) * (y * g^-1) ^+ (otf d2 : 'Z_q))%g in
+                             ret (fto (a1, b1, a2, b2)))
+      }%g.
+
+    Definition Verify (xhy : choiceStatement) (a : choiceMessage)
+      (c : choiceChallenge) (z : choiceResponse) : choiceBool :=
+      let '(x, h, y) := otf xhy in
+      let '(a1, b1, a2, b2) := (otf a) in
+      let '(r1, d1, r2, d2) := (otf z) in
+      fto ((otf c == d1 + d2)%R &&
+             (a1 == (g ^+ r1) * (x ^+ d1)) &&
+             (b1 == (h ^+ r1) * (y ^+ d1)) &&
+             (a2 == (g ^+ r2) * (x ^+ d2)) &&
+             (b2 == (h ^+ r2) * ((y * (g ^-1)) ^+ d2)))%g.
+
+
+    Definition Response (xhy : choiceStatement) (xv : choiceWitness) (_ : choiceMessage) (c : choiceChallenge) :
+      code Sigma_locs [interface] choiceResponse :=
+      {code
+         '(w, r, d) ← get commit_loc ;;
+       let '(x, h, y) := (otf xhy) in
+       let m (* '(m, v, _) *) := (otf xv) in
+       if (* v *) y == h ^+ m * g
+       then
+         (let d2 := (otf c - otf d) in
+          let r2 := (otf w - (m * d2)) in
+          ret (fto (otf r, otf d, r2, d2)))%R
+       else
+         (let d1 := (otf c - otf d) in
+          let r1 := (otf w - (m * d1)) in
+          ret (fto (r1, d1, otf r, otf d)))%R
+      }%g.
+
+    Definition Simulate (xhy : choiceStatement) (c : choiceChallenge) :
+      code Simulator_locs [interface] choiceTranscript :=
+      {code
+         d ← sample uniform i_witness ;;
+       r ← sample uniform i_witness ;;
+       r_other ← sample uniform i_witness ;;
+       let '(x, h, y) := otf xhy in
+       let d2 := otf d in
+       let r2 := otf r in
+       let r1 := otf r_other in
+       let d1 := (otf c - d2)%R in
+       let a1 := (g ^+ r1 * x ^+ d1)%g in
+       let b1 := (h ^+ r1 * y ^+ d1)%g in
+       let a2 := (g ^+ r2 * x ^+ d2)%g in
+       let b2 := (h ^+ r2 * (y * invg g) ^+ d2)%g in
+       ret (xhy , fto (a1,b1,a2,b2), c , fto (r1,d1,r2,d2))
+      }.
+
+    Definition Extractor (xhy : choiceStatement) (a : choiceMessage)
+      (c : choiceChallenge) (c' : choiceChallenge)
+      (z : choiceResponse)  (z' : choiceResponse) : 'option choiceWitness :=
+      let '(
+              (x, h, y),
+              (a1, b1, a2, b2),
+              (r1,d1,r2,d2),
+              (r1',d1',r2',d2')
+            ) :=
+        (otf xhy, otf a, otf z, otf z') in
+
+      let m := if (d1 - d1' != 0)%R
+               then ((r1' - r1) / (d1 - d1'))%R
+               else ((r2' - r2) / ((d2 - d2')))%R in
+      (* let v := ~~ (d1 - d1' != 0)%R (* y == h ^+ m * g *) in *)
+      Some (fto (m(* , v, h *))).
+    Fail Next Obligation.
+
+    Definition KeyGen (xv : choiceWitness) :=
+      let '(m(* , v, h *)) := otf xv in
+      fto (g, g, g).
+      (* fto (g ^+ m, h ^+ m, h ^+ m * g ^+ v)%g. *)
+
+  End OVN_or_alg.
+
+  Module OVN_old_proofs := OVN_proofs.OVN OVN_or OVN_or_alg.
+
+  Check OVN_old_proofs.Exec_i_realised_code_runnable.
+  
+
+  Notation " 'chInpOvn' " :=
+    ('bool)
+    (in custom pack_type at level 2).
+
+  Notation " 'chOut' " :=
+    ((OVN_proofs.public))
+    (in custom pack_type at level 2).
+
+  Definition MAXIMUM_BALLOT_SECRECY : nat := 12.
+        (* ('bool, OVN_proofs.public) *)
+
+  Program Definition maximum_ballot_secrecy_ovn (cvp_i : int32) (cvp_xi : f_Z) (cvp_vote : 'bool) (state : both t_OvnContractState) :
+    package
+      (fset [::])
+      [interface]
+      [interface #val #[ (15 + (unsigned cvp_i))%nat ] : chInpOvn → chOut ]
+    :=
+    [package
+       #def #[ (15 + (unsigned cvp_i))%nat ] (_ : chInpOvn) : chOut
+      {
+        (* Setup and inputs for algorithm *)
+        cvp_zkp_random_w ← sample (uniform #|'Z_q|) ;;
+        cvp_zkp_random_d ← sample (uniform #|'Z_q|) ;;
+        cvp_zkp_random_r ← sample (uniform #|'Z_q|) ;;
+
+        let ctx := prod_b (
+                       ret_both cvp_i,
+                       ret_both cvp_xi,
+                       ret_both (WitnessToField (otf cvp_zkp_random_w : 'Z_q)),
+                       ret_both (WitnessToField (otf cvp_zkp_random_r : 'Z_q)),
+                       ret_both (WitnessToField (otf cvp_zkp_random_d : 'Z_q)),
+                       ret_both (cvp_vote : 'bool)
+                     ) : both t_CastVoteParam in
+
+        temp ← is_state (cast_vote (ctx) (state : both t_OvnContractState)) ;;
+        ret (fto (is_pure f_group_one : gT))
+        (* match temp : t_Result (v_A × t_OvnContractState) _ with *)
+        (* | Result_Ok_case (_, s) => ret None *)
+        (*     (* temp ← is_state ((f_g_pow_xis s).a[ret_both cvp_i]) ;; *) *)
+        (*     (* ret (Some temp) *) *)
+        (* | Result_Err_case _ => ret None *)
+        (* end *)
+    }].
+  Next Obligation.
+    intros.
+    eapply (valid_package_cons _ _ _ _ _ _ [] []).
+    - apply valid_empty_package.
+    - intros ?.
+      simpl.
+      rewrite <- !fset0E.
+      ssprove_valid'_2.
+      all: try apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
+      all: repeat (apply valid_sampler ; intros).
+      all: repeat (rewrite !otf_fto ; ssprove_valid'_2).
+      all: ssprove_valid'_2.
+      all: try (apply (valid_injectMap (I1 := fset0)) ; [ apply fsub0set | rewrite <- fset0E ]).
+      all: try apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
+      all: repeat (apply valid_sampler ; intros).
+      all: try rewrite <- !fset0E.
+    - unfold "\notin".
+      rewrite <- !fset0E.
+      rewrite imfset0.
+      rewrite in_fset0.
+      easy.
+  Qed.
+  Fail Next Obligation.
+
+  Program Definition hacspec_args_old_ovn_pkg (cvp_i : int32) (cvp_xi : f_Z) (cvp_vote : 'bool) (state : both t_OvnContractState) (j : OVN_proofs.pid) (schnorr_r : v_G) : package _ [interface] _ :=
+    (OVN_old_proofs.Exec_i_realised cvp_vote
+         (mkfmapf
+            (fun n =>
+               let ni := ret_both (Hacspec_Lib_Pre.repr U32 (nat_of_ord (otf n)) : uint_size) in
+               (fto (is_pure ((f_g_pow_xis state).a[ ni ]) : v_G_type),
+                 let '(r1, r2, r3) := (is_pure ((f_zkp_xis state).a[ ni ]) : t_SchnorrZKPCommit) in
+                 (fto (schnorr_r : v_G_type),
+                   fto (r1 : v_G_type) ,
+                   fto (FieldToWitness r2) ,
+                   fto (FieldToWitness r3)))
+            )
+            (seq.map (fun n => fto (inZp n)) (iota 0 (55))))
+         (fto (inZp (unsigned cvp_i)))
+         j).
+  Solve All Obligations with now intros ; destruct from_uint_size.
+  Fail Next Obligation.
+
+  Lemma maximum_ballot_secrecy_old : forall (cvp_i : int32) (cvp_xi : f_Z) (cvp_vote : 'bool) (state : both t_OvnContractState) (j : OVN_proofs.pid) (schnorr_r : v_G) (H_cvp_i : (unsigned cvp_i < 55)%N),
+    ∀ (LA : {fset Location}) A,
+      ValidPackage LA [interface #val #[(15 + unsigned cvp_i)%N] : chInpOvn → chOut ] A_export A →
+      fdisjoint LA (OVN_old_proofs.P_i_locs (unsigned cvp_i) :|: OVN_old_proofs.combined_locations) →
+      AdvantageE
+        (maximum_ballot_secrecy_ovn cvp_i cvp_xi cvp_vote state)
+      (hacspec_args_old_ovn_pkg cvp_i cvp_xi cvp_vote state j schnorr_r)
+      A = 0%R.
+  Proof.
+    intros ? ? ? ? ? ? ?.
+
+    epose (@fto (fintype_ordinal__canonical__fintype_Finite 55) (@inZp 54 (unsigned cvp_i))).
+    epose (unsigned cvp_i).
+
+    assert (fto_inZp : (nat_of_ord (fto (inZp (p' := 54) (unsigned cvp_i)))
+            = uint_size_to_nat (Z_to_int (unsigned cvp_i)))%N).
+    {
+      unfold fto.
+      rewrite enum_rank_ord.
+      now setoid_rewrite modn_small.
+    }
+
+    intros.
+    apply: eq_rel_perf_ind_eq.
+    all: fold chElement.
+    1: apply (maximum_ballot_secrecy_ovn cvp_i cvp_xi cvp_vote).
+    1: rewrite <- fto_inZp ; apply (hacspec_args_old_ovn_pkg cvp_i cvp_xi cvp_vote state j schnorr_r).
+    2: apply H.
+    2: rewrite <- fset0E ; apply fdisjoints0.
+    2: rewrite fto_inZp ; apply H0.
+
+    {
+      clear H0 H.
+      unfold eq_up_to_inv.
+
+      intros.
+      unfold get_op_default.
+
+      rewrite <- fset1E in H.
+      apply (ssrbool.elimT (fset1P _ _)) in H.
+      inversion H. subst. clear H.
+
+      unfold lookup_op.
+      set (getm (pack (maximum_ballot_secrecy_ovn _ _ _ _)) _).
+      simpl in o0.
+      subst o0.
+      rewrite setmE.
+      rewrite eqxx.
+      unfold mkdef.
+
+      set (getm (pack (hacspec_args_old_ovn_pkg _ _ _ _ _ _)) _).
+      simpl in o0.
+
+      unfold mkdef in o0.
+      simpl in o0.
+      subst o0.
+      rewrite mapmE.
+      rewrite setmE.
+
+      rewrite fto_inZp.
+      rewrite eqxx.
+
+      unfold omap, obind, oapp.
+
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      clear e e0.
+
+      unfold code_link.
+
+      unfold lookup_op at 1.
+      unfold mkopsig.
+
+      set (getm _ _).
+      simpl in o0.
+      unfold par in o0.
+      unfold unionm in o0.
+      unfold OVN_old_proofs.INIT in o0.
+      unfold foldr in o0.
+      simpl in o0.
+      subst o0.
+      rewrite setmE.
+      rewrite eqxx.
+
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      clear e e0.
+
+      (* sampler *)
+      eapply r_uniform_bij with (f := (λ x0 : Arit (uniform #|'Z_q|), _)).
+      Unshelve. 3:{ apply x0. } 1: now apply inv_bij.
+      intros cvp_zkp_random_w.
+      fold @bind.
+
+      (* put *)
+      apply better_r_put_rhs.
+
+      (* match *)
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      clear e e0.
+
+      (* assert *)
+      replace (OVN_old_proofs.Sigma1.MyParam.R _ _) with true.
+      2:{
+        symmetry.
+        rewrite otf_fto.
+        unfold OVN_old_proofs.Sigma1.MyParam.R.
+        rewrite eqxx.
+        reflexivity.
+      }
+      unfold assertD at 1.
+
+      (* sampler *)
+      eapply r_uniform_bij with (f := (λ x0 : Arit (uniform #|'Z_q|), _)).
+      Unshelve. 3:{ apply x0. } 1: now apply inv_bij.
+      intros cvp_zkp_random_d.
+      fold @bind.
+      
+      (* put *)
+      apply better_r_put_rhs.
+
+      (* unfold lookup *)
+      unfold lookup_op at 1.
+
+      set (getm _ _).
+      simpl in o0.
+      subst o0.
+      rewrite setmE.
+
+      rewrite eqxx.
+
+      (* match *)
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+
+      (* unfold lookup *)
+      unfold lookup_op at 1.
+
+      set (getm _ _).
+      simpl in o0.
+      subst o0.
+      rewrite setmE.
+
+      replace (_ == _) with false by reflexivity.
+
+      rewrite setmE.
+      rewrite eqxx.
+
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      clear e e0 e1.
+
+      (* put *)
+      apply better_r_put_rhs.
+      fold @bind.
+      
+      (* get *)
+      apply better_r.
+      apply r_get_remind_rhs with (v := emptym).
+      {
+        unfold Remembers_rhs.
+        intros.
+        unfold set_rhs in H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+
+        unfold rem_rhs.
+        subst.
+
+        rewrite get_set_heap_eq.
+        reflexivity.
+      }
+      fold @bind.
+      apply better_r.
+
+      rewrite emptymE.
+
+      (* sampler *)
+      eapply r_uniform_bij with (f := (λ x0 : Arit (uniform #|'Z_q|), _)).
+      Unshelve. 3:{ apply x0. } 1: now apply inv_bij.
+      intros cvp_zkp_random_r.
+      fold @bind.
+      
+      (* put *)
+      apply better_r_put_rhs.
+      fold @bind.
+
+      (* get *)
+      apply better_r.
+      eapply r_get_remind_rhs with (v := cvp_zkp_random_d).
+      {
+        unfold Remembers_rhs.
+        intros.
+        unfold set_rhs in H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+
+        unfold rem_rhs.
+        subst.
+
+        rewrite get_set_heap_neq ; [ | reflexivity ].
+        rewrite get_set_heap_neq ; [ | reflexivity ].
+        rewrite get_set_heap_eq.
+        reflexivity.
+      }
+      fold @bind.
+      apply better_r.
+
+      (* sample *)
+      apply r_const_sample_R ; [ apply LosslessOp_uniform | intros ].
+
+      (* unfold lookup *)
+      unfold lookup_op at 1.
+
+      set (getm _ _).
+      simpl in o0.
+      unfold par in o0.
+      unfold unionm in o0.
+      unfold OVN_old_proofs.INIT in o0.
+      unfold foldr in o0.
+      simpl in o0.
+      subst o0.
+      rewrite setmE.
+      replace (_ == _) with false by reflexivity.
+
+      rewrite setmE.
+      replace (_ == _) with false by reflexivity.
+      rewrite setmE.
+      replace (_ == _) with false by reflexivity.
+
+      rewrite mapmE.
+      rewrite setmE.
+      
+      replace (_ == _) with false by reflexivity.
+      unfold omap, obind, oapp.
+
+      rewrite setmE.
+      rewrite eqxx.
+
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      clear e e0.
+
+      (* assert *)
+      replace (OVN_old_proofs.Sigma1.MyParam.R _ _) with true.
+      2:{
+        symmetry.
+        rewrite otf_fto.
+        unfold OVN_old_proofs.Sigma1.MyParam.R.
+        rewrite eqxx.
+        reflexivity.
+      }
+      unfold assertD at 1.
+
+      (* sample *)
+      apply r_const_sample_R ; [ apply LosslessOp_uniform | intros ].
+      fold @bind.
+
+      (* put *)
+      apply better_r_put_rhs.
+      fold @bind.
+
+      (* unfold lookup *)
+      unfold lookup_op at 1.
+
+      set (getm _ _).
+      simpl in o0.
+      subst o0.
+      rewrite setmE.
+      rewrite eqxx.
+
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      clear e.
+
+      (* put *)
+      apply better_r_put_rhs.
+      fold @bind.
+
+      (* unfold lookup *)
+      unfold lookup_op at 1.
+
+      set (getm _ _).
+      simpl in o0.
+      subst o0.
+      rewrite setmE.
+      replace (_ == _) with false by reflexivity.
+      rewrite setmE.
+      rewrite eqxx.
+
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      clear e e0.
+
+      (* get *)
+      apply better_r.
+      apply r_get_remind_rhs with (v := emptym).
+      {
+        unfold Remembers_rhs.
+        intros.
+        unfold set_rhs in H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+
+        unfold rem_rhs.
+        subst.
+
+        rewrite get_set_heap_eq.
+        reflexivity.
+      }
+      fold @bind.
+      apply better_r.
+
+      rewrite emptymE.
+
+      (* sample *)
+      apply r_const_sample_R ; [ apply LosslessOp_uniform | intros ].
+      fold @bind.
+
+      (* put *)
+      apply better_r_put_rhs.
+      fold @bind.
+
+      (* unfold lookup *)
+      unfold lookup_op at 1.
+
+      set (getm _ _).
+      simpl in o0.
+      subst o0.
+      rewrite setmE.
+      replace (_ == _) with false by reflexivity.
+      rewrite setmE.
+      replace (_ == _) with false by reflexivity.
+      rewrite setmE.
+      rewrite eqxx.
+
+      unfold ".2" at 1.
+      unfold ".2" at 1.
+      
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      clear e e0.
+
+      (* get *)
+      apply better_r.
+      eapply r_get_remind_rhs (* with (v := emptym) *).
+      {
+        unfold Remembers_rhs.
+        intros.
+        unfold set_rhs in H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+
+        unfold rem_rhs.
+        subst.
+
+        repeat (rewrite get_set_heap_neq ; [ | reflexivity ]).
+        rewrite get_set_heap_eq.
+        reflexivity.
+      }
+      fold @bind.
+      apply better_r.
+
+      (* assert *)
+      replace (_ == _) with true.
+      2:{
+        clear -fto_inZp.
+        symmetry.
+        (* simpl. *)
+
+        rewrite domm_set.
+        rewrite domm_set.
+        rewrite domm_mkfmapf.
+
+        set (l := ([:: _, _ & _])).
+        rewrite <- (map_id l).
+        change ([seq x | x <- l]) with ([seq (fto (inZp (p' := 54) x)) | x <- iota 0 55]).
+        subst l.
+
+        assert (forall (v : 'I_#|'I_55|), (v \in fset [seq fto (inZp x) | x <- iota 0 55])).
+        {
+          intros v.
+          assert (exists n0, v = fto (inZp n0)).
+          1:{
+            rewrite <- (fto_otf v).
+            destruct (otf v).
+            exists m.
+            f_equal.
+            apply ord_ext.
+            now rewrite modn_small.
+          }
+          destruct H as [n0 ?].
+          subst.
+          
+          rewrite in_fset.
+
+          set 54%nat in * |- *.
+          generalize dependent n1.
+          intros.
+          
+          assert (forall n0 n1, exists k r, (r < n1.+1) /\ n0 = k * n1.+1 + r)%nat.
+          {
+            clear.
+            intros n0 n1.
+            now induction n0 as [ | ? [k [r []]] ] ;
+              [ exists 0%nat , 0%nat |
+                destruct (r.+1 == n1.+1) eqn:overflow ;
+                [ exists k.+1, 0%nat | exists k, r.+1 ]
+              ].
+          }
+          specialize (H n0 n1).
+          destruct H as [k [r []]].
+          rewrite H0.
+
+          replace (inZp (k * n1.+1 + r)) with (inZp (p' := n1) r).
+          2:{
+            unfold inZp.
+            apply ord_ext.
+            rewrite <- modnDm.
+            rewrite modnMl.
+            rewrite add0n.
+            rewrite modn_mod.
+            reflexivity.
+          }
+
+          clear H0.
+
+
+          set (fto _). pattern (r) in o. subst o.
+          rewrite map_f ; [ reflexivity | ].
+          rewrite mem_iota.
+          easy.
+        }
+
+        rewrite sizesU1.
+        replace (_ \notin _) with false.
+        2:{
+          unfold "\notin".
+          rewrite in_fset.
+          rewrite in_cons.
+          rewrite H.
+          now rewrite Bool.orb_true_r.
+        }
+
+        rewrite sizesU1.
+        replace (_ \notin _) with false.
+        2:{
+          unfold "\notin".
+          now rewrite H.
+        }
+
+        rewrite !add0n.
+
+        eassert (forall f a n, (forall x y, ((a <= x < a + n) /\ (a <= y < a + n))%nat -> f x = f y -> x = y) ->
+                          size (fset [seq (f x) | x <- iota a n]) == n).
+        {
+          intros.
+          induction n0.
+          {
+            cbn.
+            rewrite <- fset0E.
+            simpl.
+            reflexivity.
+          }
+          rewrite <- addn1.
+          rewrite iotaD.
+          rewrite map_cat.
+          rewrite fset_cat.
+          rewrite sizesU.
+
+          2:{
+            apply /fdisjointP.
+            intros.
+            simpl.
+            rewrite <- fset1E.
+            apply /fset1P.
+            red ; intros.
+            subst.
+            erewrite in_fset in H1.
+            epose (ssrbool.elimT mapP H1).
+            destruct e.
+            rewrite mem_iota in H2.
+            apply H0 in H3.
+            2:{
+              split ; [ easy | ].
+              easy.
+            }
+            easy.
+          }
+
+          apply (ssrbool.elimT eqP) in IHn0.
+          2: intros ; apply H0 ; easy.
+
+          rewrite IHn0.
+          
+          cbn.
+          rewrite <- fset1E.
+          now apply /eqP.
+        }
+        rewrite H0.
+        1: reflexivity.
+        intros.
+
+        Set Printing Coercions.
+
+        (* clear -H1 H2. *)
+
+        apply (enum_rank_inj) in H2.
+        inversion H2.
+        
+        rewrite <- !Zp_nat in H2.
+
+        rewrite !add0n in H1.
+        destruct H1.
+        
+        rewrite !modn_small in H4.
+        2,3: easy.
+        assumption.
+      }
+      unfold assertD at 1.
+
+      (* put *)
+      apply better_r_put_rhs.
+      fold @bind.
+
+      (* unfold lookup *)
+      unfold lookup_op at 1.
+
+      set (getm _ _).
+      simpl in o0.
+      subst o0.
+      rewrite setmE.
+      replace (_ == _) with false by reflexivity.
+      rewrite setmE.
+      rewrite eqxx.
+
+      unfold ".2" at 1.
+      unfold ".2" at 1.
+      
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
+      clear e e0.
+
+      (* get *)
+      apply better_r.
+      eapply r_get_remind_rhs (* with (v := emptym) *).
+      {
+        unfold Remembers_rhs.
+        intros.
+        unfold set_rhs in H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+
+        unfold rem_rhs.
+        subst.
+
+        repeat (rewrite get_set_heap_neq ; [ | reflexivity ]).
+        rewrite get_set_heap_neq. 2: admit.
+        repeat (rewrite get_set_heap_neq ; [ | reflexivity ]).
+        rewrite get_set_heap_neq. 2: admit.
+        repeat (rewrite get_set_heap_neq ; [ | reflexivity ]).
+        rewrite get_set_heap_neq. 2: admit.
+        repeat (rewrite get_set_heap_neq ; [ | reflexivity ]).
+        rewrite get_set_heap_eq.
+        reflexivity.
+      }
+      fold @bind.
+      apply better_r.
+
+      (* get *)
+      apply better_r.
+      eapply r_get_remind_rhs (* with (v := emptym) *).
+      {
+        unfold Remembers_rhs.
+        intros.
+        unfold set_rhs in H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+
+        unfold rem_rhs.
+        subst.
+
+        repeat (rewrite get_set_heap_neq ; [ | reflexivity ]).
+        rewrite get_set_heap_eq. 
+        reflexivity.
+      }
+      fold @bind.
+      apply better_r.
+
+      simpl.
+
+      destruct cvp_vote.
+      1:{
+        
+  Qed.
+
+  Solve All Obligations with now intros ; destruct from_uint_size.
+  Qed.
+
+  Check OVN_old_proofs.vote_hiding.
+  Check OVN_old_proofs.vote_hiding_bij.
 
   (* begin details : helper defintions *)
 
@@ -100,7 +1054,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     apply rpre_hypothesis_rule ; intros ? ? [] ; eapply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ subst ; apply H0 | now simpl ; intros ? ? [] ].
   Qed.
 
-  (* TODO: This is not true in general! *)
   Lemma somewhat_let_substitution :
              forall {A C : choice_type} {B : choiceType} (f : C -> raw_code B) (c : raw_code B) (y : both A) (r : both A -> both C),
                ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ b_temp ← is_state y ;; temp ← is_state (r (ret_both b_temp)) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄ ->
@@ -221,10 +1174,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     (t_OvnContractState × (int32 × f_Z × 'bool))
     (in custom pack_type at level 2).
 
-  Notation " 'chOut' " :=
-    (chOption (t_OvnContractState))
-    (in custom pack_type at level 2).
-
   Notation " 'chAuxInp' " :=
     (OR_ZKP.MyAlg.choiceStatement × OR_ZKP.MyAlg.choiceWitness)
     (in custom pack_type at level 2).
@@ -235,18 +1184,15 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
   Definition MAXIMUM_BALLOT_SECRECY_SETUP : nat := 10.
   Definition MAXIMUM_BALLOT_SECRECY_RETURN : nat := 11.
-  Definition MAXIMUM_BALLOT_SECRECY : nat := 12.
-
-  Definition setup_loc : Location := (OR_ZKP.MyAlg.choiceStatement ; 20%nat).
-
+  
   Program Definition maximum_ballot_secrecy_real_setup :
-    package (fset [setup_loc])
+    package (fset [::])
       [interface]
       [interface
-         #val #[ MAXIMUM_BALLOT_SECRECY_SETUP ] : chInp → 'unit (* chAuxInp *)
+         #val #[ MAXIMUM_BALLOT_SECRECY_SETUP ] : chInp → chAuxInp
       ] :=
     [package
-      #def #[ MAXIMUM_BALLOT_SECRECY_SETUP ] ('(state_inp, (cvp_i, cvp_xi, cvp_vote)) : chInp) : 'unit
+      #def #[ MAXIMUM_BALLOT_SECRECY_SETUP ] ('(state_inp, (cvp_i, cvp_xi, cvp_vote)) : chInp) : chAuxInp
       {
         let state := ret_both (state_inp :
                          t_OvnContractState) in
@@ -265,8 +1211,8 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
                 is_pure (ret_both (cvp_vote : 'bool)),
                   g_pow_yi) : OR_ZKP.MyParam.Witness) in (* xi, vi, h *)
 
-        #put setup_loc := cStmt ;; ret (Datatypes.tt : 'unit)
-        (* ret (cStmt, cWitn) *)
+        (* #put setup_loc := cStmt ;; ret (Datatypes.tt : 'unit) *)
+        ret (cStmt, cWitn)
     }].
   Next Obligation.
     eapply (valid_package_cons _ _ _ _ _ _ [] []).
@@ -340,11 +1286,11 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
   Fail Next Obligation.
 
   Program Definition maximum_ballot_secrecy :
-    package (fset [setup_loc])
+    package (fset [::])
       [interface
          #val #[ Sigma.RUN ] : chAuxInp → chAuxOut ;
          #val #[ MAXIMUM_BALLOT_SECRECY_RETURN ] : chMidInp → chOut ;
-         #val #[ MAXIMUM_BALLOT_SECRECY_SETUP ] : chInp → 'unit
+         #val #[ MAXIMUM_BALLOT_SECRECY_SETUP ] : chInp → chAuxInp
       ]
       [interface
          #val #[ MAXIMUM_BALLOT_SECRECY ] : chInp → chOut
@@ -352,17 +1298,17 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     [package
       #def #[ MAXIMUM_BALLOT_SECRECY ] ('(state_inp, (cvp_i, cvp_xi, cvp_vote)) : chInp) : chOut
       {
-        #import {sig #[ MAXIMUM_BALLOT_SECRECY_SETUP ] : chInp → 'unit } as SETUP ;;
+        #import {sig #[ MAXIMUM_BALLOT_SECRECY_SETUP ] : chInp → chAuxInp } as SETUP ;;
         #import {sig #[ Sigma.RUN ] : chAuxInp → chAuxOut } as RUN ;;
         #import {sig #[ MAXIMUM_BALLOT_SECRECY_RETURN ] : chMidInp → chOut } as OUTPUT ;;
 
-        _ ← SETUP (state_inp, (cvp_i, cvp_xi, cvp_vote)) ;;
-        cStmt ← get setup_loc ;;
-        let cWitn : OR_ZKP.MyAlg.choiceWitness :=
-          fto ((
-                FieldToWitness (is_pure (ret_both cvp_xi)) : 'Z_q,
-                is_pure (ret_both (cvp_vote : 'bool)),
-                  (otf cStmt).1.2) : OR_ZKP.MyParam.Witness) in
+        '(cStmt, cWitn) ← SETUP (state_inp, (cvp_i, cvp_xi, cvp_vote)) ;;
+        (* cStmt ← get setup_loc ;; *)
+        (* let cWitn : OR_ZKP.MyAlg.choiceWitness := *)
+        (*   fto (( *)
+        (*         FieldToWitness (is_pure (ret_both cvp_xi)) : 'Z_q, *)
+        (*         is_pure (ret_both (cvp_vote : 'bool)), *)
+        (*           (otf cStmt).1.2) : OR_ZKP.MyParam.Witness) in *)
         transcript ← RUN (cStmt, cWitn) ;;
         res ← OUTPUT (state_inp, (cvp_i, cvp_xi, cvp_vote), transcript) ;;
         ret res
@@ -398,24 +1344,27 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       (in custom pack_type at level 2).
 
   Program Definition maximum_ballot_secrecy_ideal_setup:
-    package (fset [setup_loc])
+    package fset0 (* (fset [setup_loc]) *)
       [interface]
-      [interface #val #[ MAXIMUM_BALLOT_SECRECY_SETUP ] : chInp → 'unit] :=
+      [interface #val #[ MAXIMUM_BALLOT_SECRECY_SETUP ] : chInp → chAuxInp] :=
     [package
-      #def #[ MAXIMUM_BALLOT_SECRECY_SETUP ] ('(state, (cvp_i, cvp_xi, cvp_vote)) : chInp) : 'unit
+      #def #[ MAXIMUM_BALLOT_SECRECY_SETUP ] ('(state, (cvp_i, cvp_xi, cvp_vote)) : chInp) : chAuxInp
       {
         let state := ret_both (state : t_OvnContractState) in
         let p_i := ret_both cvp_i : both int32 in
         h ← is_state (compute_g_pow_yi (cast_int (WS2 := U32) p_i) (f_g_pow_xis state)) ;;
 
-        z_i ← sample uniform #|'Z_q| ;;
-        let y := ((g : gT) ^+ otf z_i)%g in
+        (* z_i ← sample uniform #|'Z_q| ;; *)
+        (* let y := ((g : gT) ^+ otf z_i)%g in *)
 
-        m_i ← sample uniform #|'Z_q| ;;
-        let x := ((g : gT) ^+ otf m_i)%g in
+        (* m_i ← sample uniform #|'Z_q| ;; *)
+        (* let x := ((g : gT) ^+ otf m_i)%g in *)
 
-        #put setup_loc := fto (x, h : gT, y) ;; ret (Datatypes.tt : 'unit)
-        (* ret (fto (x, h : gT, y), fto ( FieldToWitness cvp_xi, cvp_vote, h : gT )) *)
+        let y := ((h : gT) ^+ (FieldToWitness cvp_xi) * g ^+ (if cvp_vote then 1 else 0)%R)%g in
+        let x := g ^+ (FieldToWitness cvp_xi) in
+        
+        (* (* #put setup_loc := fto (x, h : gT, y) ;; *) ret (Datatypes.tt : 'unit) *)
+        ret (fto (x, h : gT, y), fto ( FieldToWitness cvp_xi, cvp_vote, h : gT ))
       }].
   Next Obligation.
     eapply (valid_package_cons _ _ _ _ _ _ [] []).
@@ -547,81 +1496,29 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     easy.
   Qed.
 
-  Program Definition maximum_ballot_secrecy_ovn :
-    package
-      (fset [::])
-      [interface]
-      [interface #val #[MAXIMUM_BALLOT_SECRECY] : chInp → chOut ]
-    :=
-    [package
-       #def #[ MAXIMUM_BALLOT_SECRECY ] ('(state, (cvp_i, cvp_xi, cvp_vote)) : chInp) : chOut
-      {
-        (* Setup and inputs for algorithm *)
-        cvp_zkp_random_w ← sample (uniform #|'Z_q|) ;;
-        cvp_zkp_random_d ← sample (uniform #|'Z_q|) ;;
-        cvp_zkp_random_r ← sample (uniform #|'Z_q|) ;;
-
-        let ctx := prod_b (
-                       ret_both cvp_i,
-                       ret_both cvp_xi,
-                       ret_both (WitnessToField (otf cvp_zkp_random_w : 'Z_q)),
-                       ret_both (WitnessToField (otf cvp_zkp_random_r : 'Z_q)),
-                       ret_both (WitnessToField (otf cvp_zkp_random_d : 'Z_q)),
-                       ret_both (cvp_vote : 'bool)
-                     ) : both t_CastVoteParam in
-
-        temp ← is_state (cast_vote (ctx) (ret_both (state : t_OvnContractState))) ;;
-        match temp : t_Result (HacspecGroup.v_A × t_OvnContractState) _ with
-        | Result_Ok_case (_, s) => ret (Some s)
-        | Result_Err_case _ => ret None
-        end
-    }].
-  Next Obligation.
-    fold chElement.
-    eapply (valid_package_cons _ _ _ _ _ _ [] []).
-    - apply valid_empty_package.
-    - intros [? [[]]].
-      simpl.
-      rewrite <- !fset0E.
-      ssprove_valid'_2.
-      all: try apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
-      all: repeat (apply valid_sampler ; intros).
-      all: repeat (rewrite !otf_fto ; ssprove_valid'_2).
-      all: ssprove_valid'_2.
-      all: try (apply (valid_injectMap (I1 := fset0)) ; [ apply fsub0set | rewrite <- fset0E ]).
-      all: try apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
-      all: repeat (apply valid_sampler ; intros).
-      all: try rewrite <- !fset0E.
-    - unfold "\notin".
-      rewrite <- !fset0E.
-      rewrite imfset0.
-      rewrite in_fset0.
-      easy.
-  Qed.
-  Fail Next Obligation.
-
   Program Definition maximum_ballot_secrecy_real :
     package
-      (fset [:: setup_loc] :|: MyAlg.Sigma_locs)
+      (MyAlg.Sigma_locs)
       [interface]
       [interface #val #[MAXIMUM_BALLOT_SECRECY] : chInp → chOut ]
     :=
     mkpackage (maximum_ballot_secrecy ∘ (par (par hacspec_or_run maximum_ballot_secrecy_real_return) maximum_ballot_secrecy_real_setup)) _.
   Next Obligation.
-    rewrite <- fset0U. rewrite fset0U.
-    setoid_rewrite <- (fsetUid (fset [:: setup_loc])).
-    rewrite <- fsetUA.
-    eapply valid_link.
+    (* rewrite <- fset0U. rewrite fset0U. *)
+    (* setoid_rewrite <- (fsetUid (fset [::])). *)
+    eapply valid_link_upto.
     1: apply maximum_ballot_secrecy.
-    eapply (valid_par_upto
+    1: eapply (valid_par_upto
              _ _ _ _ _ _ _ _ _ _ _
              maximum_ballot_secrecy_real_parable
            ).
     1: apply maximum_ballot_secrecy_real_par0.
     1: apply maximum_ballot_secrecy_real_setup.
-    1: rewrite fsetUC ; apply fsubsetxx.
+    1: rewrite <- fset0E ; rewrite fsetU0 ; (* rewrite fsetUC ; *) apply fsubsetxx.
     1: rewrite <- !fset0E, fsetU0 ; apply fsub0set.
-    1: rewrite <- !fset_cat. simpl. apply fsubsetxx.
+    1: rewrite <- !fset_cat ; simpl ; apply fsubsetxx.
+    1: rewrite <- fset0E ; apply fsub0set.
+    1: apply fsubsetxx.
   Qed.
   Fail Next Obligation.
 
@@ -689,25 +1586,29 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
   Program Definition maximum_ballot_secrecy_ideal :
     package
-      (fset [setup_loc] :|: MyAlg.Simulator_locs)
+      (MyAlg.Simulator_locs)
       [interface ]
       [interface #val #[MAXIMUM_BALLOT_SECRECY] : chInp → chOut ] :=
     mkpackage (maximum_ballot_secrecy ∘ par (par (SHVZK_ideal_aux ∘ Sigma.SHVZK_ideal) maximum_ballot_secrecy_ideal_return) maximum_ballot_secrecy_ideal_setup) _.
   Next Obligation.
     rewrite <- fset0U. rewrite fset0U.
-    setoid_rewrite <- (fsetUid (fset [:: setup_loc])).
-    rewrite <- fsetUA.
-    eapply valid_link.
+    setoid_rewrite <- (fsetUid (fset [::])).
+    rewrite <- fsetU0.
+    eapply valid_link_upto.
     1: apply maximum_ballot_secrecy.
-    eapply (valid_par_upto
+    1: {
+      eapply (valid_par_upto
              _ _ _ _ _ _ _ _ _ _ _
              maximum_ballot_secrecy_ideal_parable
-           ).
-    1: apply maximum_ballot_secrecy_ideal_par0.
-    1: apply maximum_ballot_secrecy_ideal_setup.
-    1: rewrite fsetUC ; apply fsubsetxx.
+        ).
+      1: apply maximum_ballot_secrecy_ideal_par0.
+      1: apply maximum_ballot_secrecy_ideal_setup.
+      1: apply fsubsetxx.
+      1: apply fsubsetxx.
+      1: rewrite <- !fset_cat ; apply fsubsetxx.
+    }
     1: rewrite <- !fset0E, fsetU0 ; apply fsub0set.
-    1: rewrite <- !fset_cat ; apply fsubsetxx.
+    1: apply fsubsetxx.
   Qed.
   Fail Next Obligation.
 
@@ -892,7 +1793,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     now intros ? ? ? ; subst.
   Qed.
 
-  Time Lemma maximum_ballot_secrecy_success_ovn_bind :
+  Lemma maximum_ballot_secrecy_success_ovn_bind :
     forall P,
     forall     (xi : v_Z)
          (vote : 'bool)
@@ -957,7 +1858,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       ValidPackage (LA) [interface
                          #val #[ MAXIMUM_BALLOT_SECRECY ] : chInp → chOut
         ] A_export A →
-      fdisjoint LA (fset [:: setup_loc] :|: MyAlg.Sigma_locs) →
+      fdisjoint LA (MyAlg.Sigma_locs) →
       ɛ_maximum_ballot_secrecy_OVN A = 0%R.
   Proof.
     intros.
@@ -967,8 +1868,8 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     (**********)
     (* { *)
 
-      apply: (eq_rel_perf_ind_ignore (fset [setup_loc])).
-      1: rewrite <- fset0E ; rewrite fset0U ; apply fsubsetUl.
+      apply: (eq_rel_perf_ind_eq).
+      (* 1: rewrite <- fset0E ; rewrite fset0U ; apply fsubsetUl. *)
       2: rewrite <- fset0E ; apply fdisjoints0.
       2: apply H0.
       rename H0 into H_disj.
@@ -1033,7 +1934,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       eapply r_transR.
       1:{
         apply r_bind_feq ; [ apply rreflexivity_rule | intros ].
-        apply better_r_put_get_rhs.
+        (* apply better_r_put_get_rhs. *)
         rewrite !otf_fto.
         replace (MyParam.R _ _) with (true).
         2:{
@@ -1062,57 +1963,57 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       }
       hnf.
 
-      eapply r_transR ; [ | ].
-      {
-        apply r_nice_swap_rule ; [ easy | easy | ].
-        apply r_bind_feq ; [ apply rreflexivity_rule | intros ].
+      (* eapply r_transR ; [ | ]. *)
+      (* { *)
+      (*   apply r_nice_swap_rule ; [ easy | easy | ]. *)
+      (*   apply r_bind_feq ; [ apply rreflexivity_rule | intros ]. *)
 
-        unfold bind ; fold @bind.
-        apply (bobble_sample_uniform_putr (ℓ := setup_loc) #|'Z_q|).
-        1: {
-          intros.
-          all: repeat (apply valid_sampler ; intros).
-          all: apply valid_bind ; intros.
-          all: apply valid_bind ; intros.
-          all: try apply valid_bind ; intros.
-          all: try apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
-          all: try (apply valid_scheme ; apply valid_ret).
-          set (let_both _ _).
-          apply (ChoiceEquality.is_valid_code (both_prog_valid b)).
-        }
-        eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros w ].
+      (*   unfold bind ; fold @bind. *)
+      (*   (* apply (bobble_sample_uniform_putr (ℓ := setup_loc) #|'Z_q|). *) *)
+      (*   (* 1: { *) *)
+      (*   (*   intros. *) *)
+      (*   (*   all: repeat (apply valid_sampler ; intros). *) *)
+      (*   (*   all: apply valid_bind ; intros. *) *)
+      (*   (*   all: apply valid_bind ; intros. *) *)
+      (*   (*   all: try apply valid_bind ; intros. *) *)
+      (*   (*   all: try apply (ChoiceEquality.is_valid_code (both_prog_valid _)). *) *)
+      (*   (*   all: try (apply valid_scheme ; apply valid_ret). *) *)
+      (*   (*   set (let_both _ _). *) *)
+      (*   (*   apply (ChoiceEquality.is_valid_code (both_prog_valid b)). *) *)
+      (*   (* } *) *)
+      (*   (* eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros w ]. *) *)
 
-        apply (bobble_sample_uniform_putr (ℓ := setup_loc) #|'Z_q|).
-        1: {
-          intros.
-          all: repeat (apply valid_sampler ; intros).
-          all: apply valid_bind ; intros.
-          all: apply valid_bind ; intros.
-          all: try apply valid_bind ; intros.
-          all: try apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
-          all: try (apply valid_scheme ; apply valid_ret).
-          set (let_both _ _).
-          apply (ChoiceEquality.is_valid_code (both_prog_valid b)).
-        }
-        eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros d ].
+      (*   apply (bobble_sample_uniform_putr (ℓ := setup_loc) #|'Z_q|). *)
+      (*   1: { *)
+      (*     intros. *)
+      (*     all: repeat (apply valid_sampler ; intros). *)
+      (*     all: apply valid_bind ; intros. *)
+      (*     all: apply valid_bind ; intros. *)
+      (*     all: try apply valid_bind ; intros. *)
+      (*     all: try apply (ChoiceEquality.is_valid_code (both_prog_valid _)). *)
+      (*     all: try (apply valid_scheme ; apply valid_ret). *)
+      (*     set (let_both _ _). *)
+      (*     apply (ChoiceEquality.is_valid_code (both_prog_valid b)). *)
+      (*   } *)
+      (*   eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros d ]. *)
 
-        apply (bobble_sample_uniform_putr (ℓ := setup_loc) #|'Z_q|).
-        1: {
-          intros.
-          all: repeat (apply valid_sampler ; intros).
-          all: apply valid_bind ; intros.
-          all: apply valid_bind ; intros.
-          all: try apply valid_bind ; intros.
-          all: try apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
-          all: try (apply valid_scheme ; apply valid_ret).
-          set (let_both _ _).
-          apply (ChoiceEquality.is_valid_code (both_prog_valid b)).
-        }
-        eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros r ].
+      (*   apply (bobble_sample_uniform_putr (ℓ := setup_loc) #|'Z_q|). *)
+      (*   1: { *)
+      (*     intros. *)
+      (*     all: repeat (apply valid_sampler ; intros). *)
+      (*     all: apply valid_bind ; intros. *)
+      (*     all: apply valid_bind ; intros. *)
+      (*     all: try apply valid_bind ; intros. *)
+      (*     all: try apply (ChoiceEquality.is_valid_code (both_prog_valid _)). *)
+      (*     all: try (apply valid_scheme ; apply valid_ret). *)
+      (*     set (let_both _ _). *)
+      (*     apply (ChoiceEquality.is_valid_code (both_prog_valid b)). *)
+      (*   } *)
+      (*   eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros r ]. *)
 
-        apply rreflexivity_rule.
-      }
-      hnf.
+      (*   apply rreflexivity_rule. *)
+      (* } *)
+      (* hnf. *)
       
       eapply r_transR ; [ | ].
       {
@@ -1231,7 +2132,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     }
     apply r_bind_to_post ; [ apply r_refl_alt | intros ].
     
-    apply better_r_put_rhs.
+    (* apply better_r_put_rhs. *)
 
     rewrite !WitnessToFieldCancel.
 
@@ -1284,7 +2185,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     }
 
     set (m0 := is_state _) ;
-      set (P := set_rhs _ _ _).
+      match goal with | |- context [ ⊢ ⦃ ?pre ⦄ ?lhs ≈ ?rhs ⦃ ?post ⦄ ] => set (P := pre) end.
     eapply r_bind ; [apply (maximum_ballot_secrecy_success_ovn_bind P xi vote w d r a₀) | ].
     intros [[[[[[[[[[]]]]]]]]]] [[[[[[[[[[]]]]]]]]]].
     apply rpre_hypothesis_rule ; intros ? ? [? []].
@@ -1308,16 +2209,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     2:{
       intros [].
       apply r_ret.
-      simpl ; intros ? ? [? []] ; subst.
-      split ; [ done | ].
-      unfold heap_ignore.
-      intros.
-      rewrite get_set_heap_neq.
-      1: now rewrite H0.
-      apply /eqP.
-      apply /fset1P.
-      rewrite fset1E.
-      assumption.
+      now simpl ; intros ? ? [] ; subst.
     }
     simpl.
     rewrite !otf_fto.
@@ -1326,7 +2218,7 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       Misc.pattern_rhs_approx ;
     assert (H0 = H1) ; [ subst H0 H1 | rewrite H2 ].
     2:{
-      set (P := set_rhs _ _ _).
+      match goal with | |- context [ ⊢ ⦃ ?pre ⦄ ?lhs ≈ ?rhs ⦃ ?post ⦄ ] => set (P := pre) end.
       subst H1.
       set (let_both _ _).
       apply (r_refl_alt b0 P).
@@ -1474,32 +2366,22 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
   Lemma maximum_ballot_secrecy_setup_success:
     ∀ LA A,
-      ValidPackage (fset [:: setup_loc] :|: LA) [interface #val #[ MAXIMUM_BALLOT_SECRECY_SETUP ] : chInp → 'unit
+      ValidPackage LA [interface #val #[ MAXIMUM_BALLOT_SECRECY_SETUP ] : chInp → chAuxInp
         ] A_export A →
-      fdisjoint LA (fset [:: setup_loc]) →
+      fdisjoint LA (fset [::]) →
     AdvantageE (maximum_ballot_secrecy_real_setup) (maximum_ballot_secrecy_ideal_setup) A = 0%R
     (* maximum_ballot_secrecy_real_setup ≈₀ maximum_ballot_secrecy_ideal_setup *).
   Proof.
-    intros.
-    unfold ɛ_maximum_ballot_secrecy.
+    intros ? ? H_valid_package H_disj.
 
-    eapply (eq_upto_inv_perf_ind
-              (L_pub₀ := fset [:: setup_loc])
-              (L₀ := fset0)
-              (L_pub₁ := fset [:: setup_loc])
-              (L₁ := fset0)
-              maximum_ballot_secrecy_real_setup
-              maximum_ballot_secrecy_ideal_setup
-              (fun '(s0, s1) => s0 = s1)). (* (heap_ignore (fset [:: setup_loc])) *)
-    1: rewrite fsetU0 ; apply (pack_valid maximum_ballot_secrecy_real_setup).
-    1: rewrite fsetU0 ; apply (pack_valid maximum_ballot_secrecy_ideal_setup).
-    1: rewrite fsetUid ; apply H.
-    1: now constructor.
-    1: reflexivity.
-    1,2: apply fdisjoints0.
+    eapply (eq_rel_perf_ind_eq).
+    1: apply maximum_ballot_secrecy_real_setup.
+    1: apply maximum_ballot_secrecy_ideal_setup.
+    2: apply H_valid_package.
+    2,3: now try rewrite fset0E.
     1:{
       unfold eq_up_to_inv.
-      intros.
+      intros ? ? ? ? H_id.
       unfold get_op_default.
 
       Opaque MyAlg.Simulate.
@@ -1507,10 +2389,10 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
       unfold lookup_op.
 
       rewrite !setmE.
-      rewrite <- fset1E in H.
-      rewrite in_fset1 in H.
-      apply (ssrbool.elimT eqP) in H.
-      inversion H ; subst.
+      rewrite <- fset1E in H_id.
+      rewrite in_fset1 in H_id.
+      apply (ssrbool.elimT eqP) in H_id.
+      inversion H_id ; subst.
 
       rewrite eqxx.
       unfold ".2".
@@ -1528,34 +2410,28 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
       eapply r_bind_to_post ; [ apply r_refl_alt | intros ].
 
-      apply r_const_sample_R ; [ apply LosslessOp_uniform | intros ].
-      apply r_const_sample_R ; [ apply LosslessOp_uniform | intros ].
+      (* apply r_const_sample_R ; [ apply LosslessOp_uniform | intros ]. *)
+      (* apply r_const_sample_R ; [ apply LosslessOp_uniform | intros ]. *)
 
-      apply r_put_vs_put.
+      (* apply better_r_put_lhs. *)
+      (* apply better_r_put_rhs. *)
 
       apply r_ret.
-      intros ? ? [? [[? []] ?]]. subst.
-      split ; [ reflexivity | ].
+      intros ? ? ?. subst.
 
-      unfold heap_ignore.
-      intros.
-      rewrite get_set_heap_neq.
-      1: rewrite H0.
-      1:{
-        rewrite get_set_heap_neq.
-        1:{ reflexivity. }
-        apply /eqP.
-        apply /fset1P.
-        rewrite fset1E.
-        assumption.
-      }
-      1:{
-        assumption.
-      }
-      apply /eqP.
-      apply /fset1P.
-      rewrite fset1E.
-      assumption.
+      split ; [ | reflexivity ].
+      f_equal.
+      f_equal.
+      repeat (rewrite pair_equal_spec ; split).
+      - rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+        rewrite pow_witness_to_field.
+        rewrite WitnessToFieldCancel.
+        unfold g.
+        now Misc.push_down_sides.
+      - reflexivity.
+      - rewrite pow_witness_to_field.
+        rewrite WitnessToFieldCancel.
+        destruct cvp_vote ; [ rewrite expg1 | rewrite expg0 ] ; now Misc.push_down_sides.
     }
   Qed.
 
@@ -1640,10 +2516,10 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
 
   Lemma maximum_ballot_secrecy_success:
     ∀ LA A,
-      ValidPackage (fset [:: setup_loc] :|: LA) [interface
+      ValidPackage (LA) [interface
                          #val #[ MAXIMUM_BALLOT_SECRECY ] : chInp → chOut
         ] A_export A →
-      fdisjoint LA (fset [:: setup_loc] :|: MyAlg.Sigma_locs) →
+      fdisjoint LA (MyAlg.Sigma_locs) →
       ɛ_maximum_ballot_secrecy A = 0%R.
   Proof.
     intros.
@@ -1665,88 +2541,50 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     2, 3, 4: repeat (apply trimmed_empty_package || apply trimmed_package_cons).
     subst AdE.
 
-    epose maximum_ballot_secrecy_setup_success.
-    unfold " _ ≈₀ _" in a.
+    epose (maximum_ballot_secrecy_setup_success (fset [::]) A).
 
-    rewrite (maximum_ballot_secrecy_setup_success (LA) (* ((LA :|: fset [::]) :|: (MyAlg.Sigma_locs :|: fset [::])) *) _ _ _ ) ; [ rewrite add0r | .. ].
-    3:{
-      (* rewrite <- fset0E ; rewrite fsetU0. *)
-      (* rewrite fsetU0. *)
-      (* rewrite !fdisjointUl. *)
-      rewrite fdisjointUr in H0.
-      apply (ssrbool.elimT andP) in H0.
-      easy.
-      
-      (* apply /andP. *)
-      (* admit. *)
-      (* split ; [ easy | ]. *)
-      (* unfold MyAlg.Sigma_locs. *)
-      (* rewrite <- !fset1E. *)
-      (* rewrite fdisjoints1. *)
-      (* easy. *)
-    }
-    3:{
-            rewrite fdisjointUr in H0.
-      apply (ssrbool.elimT andP) in H0.
-      easy.
-
-
-      (* rewrite <- fset0E ; rewrite fsetU0. *)
-      (* rewrite fsetU0. *)
-      (* rewrite !fdisjointUl. *)
-      (* rewrite fdisjointUr in H0. *)
-      (* apply (ssrbool.elimT andP) in H0. *)
-      (* apply /andP. *)
-      (* admit. *)
-      (* split ; [ easy | ]. *)
-      (* unfold MyAlg.Sigma_locs. *)
-      (* rewrite <- !fset1E. *)
-      (* rewrite fdisjoints1. *)
-      (* easy. *)
-    }
+    rewrite (maximum_ballot_secrecy_setup_success (LA :|: MyAlg.Sigma_locs) (* ((LA :|: fset [::]) :|: (MyAlg.Sigma_locs :|: fset [::])) *) _ _ _ ) ; [ rewrite add0r | .. ].
     2:{
       eapply valid_link_upto.
-      (* eapply valid_link. *)
       1:{
         eapply valid_link_upto.
         1: apply H.
         1: apply maximum_ballot_secrecy.
         1: apply fsubsetxx.
-        1: apply fsubsetUl.
+        1: rewrite <- fset0E ; apply fsub0set.
       }
+      2: apply fsubsetUl.
+      2: apply fsubsetUr.
       1:{
-        
-      eapply valid_par_upto.
-      {
-        unfold Parable.
-        rewrite <- !fset1E.
-        rewrite !domm_set ; unfold ".1".
-        rewrite domm0.
-        rewrite !fsetU0.
-        rewrite fdisjointUl.
-        rewrite !fdisjoint1s.
-        reflexivity.
-      }
-      {
-        apply maximum_ballot_secrecy_real_par0.
-      }
-      {
-        apply valid_ID.
-        apply (flat_valid_package _ _ _ _ (pack_valid maximum_ballot_secrecy_real_setup)).
-      }
-      {
-        apply fsubsetxx.
-      }
-      {
-        rewrite <- fset0E.
-        rewrite fset0U.
-        apply fsubsetxx.
-      }
-      {
-        rewrite <- fset_cat.
-        apply fsubsetxx.
+        eapply valid_par_upto.
+        {
+          unfold Parable.
+          rewrite <- !fset1E.
+          rewrite !domm_set ; unfold ".1".
+          rewrite domm0.
+          rewrite !fsetU0.
+          rewrite fdisjointUl.
+          rewrite !fdisjoint1s.
+          reflexivity.
+        }
+        1: apply maximum_ballot_secrecy_real_par0.
+        {
+          apply (valid_ID (fset [::])).
+          apply (flat_valid_package _ _ _ _ (pack_valid maximum_ballot_secrecy_real_setup)).
+        }
+        2:{
+          rewrite <- fset0E.
+          rewrite fset0U.
+          apply fsubsetxx.
+        }
+        2:{
+          rewrite <- fset_cat.
+          apply fsubsetxx.
+        }
+        1: rewrite <- fset0E, fsetU0 ; apply fsubsetxx.
       }
     }
+    2:rewrite <- fset0E ; apply fdisjoints0.
 
     do 2 rewrite <- (par_commut maximum_ballot_secrecy_ideal_setup _ _).
     rewrite (Advantage_par maximum_ballot_secrecy_ideal_setup maximum_ballot_secrecy_real_par0 maximum_ballot_secrecy_ideal_par0).
@@ -2149,5 +2987,6 @@ Module OVN_proof (HGPA : HacspecGroupParamAxiom).
     easy.
     Unshelve. all: assumption.
   Qed.
-
+  
 End OVN_proof.
+

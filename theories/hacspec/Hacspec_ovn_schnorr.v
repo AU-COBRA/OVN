@@ -77,8 +77,8 @@ Import PackageNotation.
 
 (** * Instantiate Schnorr proof *)
 
-Module OVN_schnorr_proof (HGPA : HacspecGroupParamAxiom).
-  Module Schnorr := Schnorr HGPA.HacspecGroup.
+Module OVN_schnorr_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldParameter HOP) (HOGaFE : HacspecOvnGroupAndFieldExtra HOP HOGaFP) (HGPA : HacspecGroupParamAxiom HOP HOGaFP HOGaFE).
+  Module Schnorr := Schnorr HGPA.GaFP.HacspecGroup.
 
   Import Schnorr.MyParam.
   Import Schnorr.MyAlg.

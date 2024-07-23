@@ -415,8 +415,11 @@ HB.mixin Record is_setoid_field_properties (V : Type) of field_op V & eqR V :=
 
     (* One is not zero *)
     sf_one_not_zero : ¬ (@eq_relation V sf_one sf_zero) ;
+    (* sf_zero_is_zero : U  *)
 
     sf_mulV : forall x, ¬ (@eq_relation V x sf_zero)  -> @eq_relation V (sf_mul (sf_inv x) x) sf_one ;
+
+    (* zero_to_zero : forall x, (@eq_relation V x sf_zero) -> F x = F sf_zero *)
   }.
 
 (* Given setoid lower relation and a setoid with field-like structure, we can lower to a field *)
@@ -485,9 +488,6 @@ HB.instance Definition _  (SG : lowerToField) :=
   GRing.Nmodule_isZmodule.Build  (T (s := SG)) (setoid_lower_left_inverse sf_addN).
 
 (* begin details : we lower mul inverse *)
-(* Property of equality for fields ! *)
-Parameter zero_to_zero : forall (SG : lowerToField), forall x, (@eq_relation _ (U (s := SG) x) sf_zero) -> x = setoid_lower0 sf_zero.
-
 (* field has mul inverse *)
 Lemma setoid_lower_mulVr :
   forall {G : lowerToField},
@@ -502,7 +502,8 @@ Proof.
   apply (H (U x)).
   red ; intros.
   apply (ssrbool.elimN eqP Hneq) ; clear Hneq.
-  now apply zero_to_zero.
+  rewrite <- F_U_cancel.
+  now apply lower_to_eq.
 Qed.
 
 Definition f_lower_mulVr_subproof {G : lowerToField} : _ :=

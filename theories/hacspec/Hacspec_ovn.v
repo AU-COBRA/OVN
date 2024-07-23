@@ -56,35 +56,40 @@ Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
 
 From OVN Require Import Hacspec_ovn_Ovn_traits.
 Export Hacspec_ovn_Ovn_traits.
-Module HacspecOVN.
-(** Move arguments to context *)
-Parameter (v_G : choice_type).
 
-(* TODO: Cannot find instance in hacspec lib? *)
-#[global] Instance v_G_t_copy : t_Copy v_G := copy.
-#[global] Instance v_G_t_partial_eq : t_PartialEq v_G v_G := partial_eq.
-#[global] Instance v_G_t_eq : t_Eq v_G := is_eq.
-#[global] Instance v_G_t_clone : t_Clone v_G := clone.
-#[global] Instance v_G_t_serialize : t_Serialize v_G := serialize.
+Module Type HacspecOvnParameter.
+  (** Move arguments to context *)
+  Parameter (v_G : choice_type).
 
-Parameter (v_G_t_Group : t_Group v_G).
-Instance v_G_t_Group_temp : t_Group v_G := v_G_t_Group.
+  Parameter (v_G_t_Group : t_Group v_G).
 
-Parameter (v_A : choice_type).
-Parameter (v_A_t_Sized : t_Sized v_A).
-Instance v_A_t_Sized_temp : t_Sized v_A := v_A_t_Sized.
+  Parameter (v_A : choice_type).
+  Parameter (v_A_t_Sized : t_Sized v_A).
 
-Parameter (v_A_t_HasActions : t_HasActions v_A).
-Instance v_A_t_HasActions_temp : t_HasActions v_A := v_A_t_HasActions.
+  Parameter (v_A_t_HasActions : t_HasActions v_A).
 
-Parameter (n : both uint_size).
+  Parameter (n : both uint_size).
 
-(* Extra from code *)
-Parameter (v_G_t_Sized : t_Sized v_G).
-Instance v_G_t_Sized_temp : t_Sized v_G := v_G_t_Sized.
+  (* Extra from code *)
+  Parameter (v_G_t_Sized : t_Sized v_G).
 
-Notation "'v_Z'" := f_Z : hacspec_scope.
+  Notation "'v_Z'" := f_Z : hacspec_scope.
+End HacspecOvnParameter.
 
+Module HacspecOvn (HOP : HacspecOvnParameter).
+  Include HOP.
+
+  Instance v_G_t_Group_temp : t_Group v_G := v_G_t_Group.
+  Instance v_A_t_Sized_temp : t_Sized v_A := v_A_t_Sized.
+  Instance v_A_t_HasActions_temp : t_HasActions v_A := v_A_t_HasActions.
+  Instance v_G_t_Sized_temp : t_Sized v_G := v_G_t_Sized.
+
+  (* TODO: Cannot find instance in hacspec lib? *)
+  #[global] Instance v_G_t_copy : t_Copy v_G := copy.
+  #[global] Instance v_G_t_partial_eq : t_PartialEq v_G v_G := partial_eq.
+  #[global] Instance v_G_t_eq : t_Eq v_G := is_eq.
+  #[global] Instance v_G_t_clone : t_Clone v_G := clone.
+  #[global] Instance v_G_t_serialize : t_Serialize v_G := serialize.
 (** * Generated code *)
 
 Equations sub (x : both v_Z) (y : both v_Z) : both v_Z :=
@@ -654,4 +659,4 @@ Fail Next Obligation.
 
 Definition contract_OVN  : @Contract _ (state_OVN) (Msg_OVN) (state_OVN) (t_ParseError) state_OVN_Serializable Msg_OVN_Serializable state_OVN_Serializable _ :=
   build_contract init_OVN receive_OVN.
-End HacspecOVN.
+End HacspecOvn.

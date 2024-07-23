@@ -55,10 +55,10 @@ Equations Build_t_z_89_ {f_z_val : both int8} : both (t_z_89_) :=
 Fail Next Obligation.
 Notation "'Build_t_z_89_' '[' x ']' '(' 'f_z_val' ':=' y ')'" := (Build_t_z_89_ (f_z_val := y)).
 
-Instance t_z_89_t_Copy : t_Copy t_z_89_. Admitted.
-Instance t_z_89_t_PartialEq : t_PartialEq t_z_89_ t_z_89_. Admitted.
-Instance t_z_89_t_Clone : t_Clone t_z_89_. Admitted.
-Instance t_z_89_t_Serialize : t_Serialize t_z_89_. Admitted.
+Instance t_z_89_t_Copy : t_Copy t_z_89_ := _.
+Instance t_z_89_t_PartialEq : t_PartialEq t_z_89_ t_z_89_ := _.
+Instance t_z_89_t_Clone : t_Clone t_z_89_ := _.
+Instance t_z_89_t_Serialize : t_Serialize t_z_89_ := _.
 
 #[global] Program Instance t_z_89__t_Field : t_Field t_z_89_ :=
   let f_q := solve_lift (Build_t_z_89_ (f_z_val := ret_both (89 : int8))) : both t_z_89_ in
@@ -72,7 +72,6 @@ Instance t_z_89_t_Serialize : t_Serialize t_z_89_. Admitted.
   let f_opp := fun  (x : both t_z_89_) => letb q___ := (f_z_val f_q) .- (ret_both (1 : int8)) in
   letb x___ := (f_z_val x) .% q___ in
   solve_lift (Build_t_z_89_ (f_z_val := q___ .- x___)) : both t_z_89_ in
-  let f_sub := fun  (x : both t_z_89_) (y : both t_z_89_) => solve_lift (f_add x (f_opp y)) : both t_z_89_ in
   let f_mul := fun  (x : both t_z_89_) (y : both t_z_89_) => letb q___ := (f_z_val f_q) .- (ret_both (1 : int8)) in
   letb (x___ : both int16) := cast_int (WS2 := _) ((f_z_val x) .% q___) in
   letb (y___ : both int16) := cast_int (WS2 := _) ((f_z_val y) .% q___) in
@@ -83,7 +82,6 @@ Instance t_z_89_t_Serialize : t_Serialize t_z_89_. Admitted.
   f_field_one := (@f_field_one);
   f_add := (@f_add);
   f_opp := (@f_opp);
-  f_sub := (@f_sub);
   f_mul := (@f_mul)|}.
 Fail Next Obligation.
 Hint Unfold t_z_89__t_Field.
@@ -119,7 +117,6 @@ Hint Unfold t_z_89__t_Field.
   (* else ret_both (tt : 'unit) in *)
   letm[choice_typeMonad.result_bind_code t_g_z_89_] hoist30 := v_Break x in
   ControlFlow_Continue (never_to_any hoist30))) : both t_g_z_89_ in
-  let f_div := fun  (x : both t_g_z_89_) (y : both t_g_z_89_) => solve_lift (f_prod x (f_group_inv y)) : both t_g_z_89_ in
   {| f_Z := (@f_Z);
   f_g := (@f_g);
   f_hash := (@f_hash);
@@ -127,7 +124,6 @@ Hint Unfold t_z_89__t_Field.
   f_pow := (@f_pow);
   f_group_one := (@f_group_one);
   f_prod := (@f_prod);
-  f_group_inv := (@f_group_inv);
-  f_div := (@f_div)|}.
+  f_group_inv := (@f_group_inv)|}.
 Fail Next Obligation.
 Hint Unfold t_g_z_89__t_Group.
