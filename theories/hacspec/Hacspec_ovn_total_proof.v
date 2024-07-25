@@ -328,7 +328,10 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
                      ) : both t_CastVoteParam in
 
         temp ← is_state (cast_vote (ctx) (state : both t_OvnContractState)) ;;
-        ret (fto (is_pure f_group_one : gT))
+        ret_val ← is_state ((f_g_pow_xi_yi_vis state).a[ ret_both cvp_i ]) ;;
+        ret (fto (ret_val : gT))
+            (* ret (fto (is_pure f_group_one : gT)) *)
+            
         (* match temp : t_Result (v_A × t_OvnContractState) _ with *)
         (* | Result_Ok_case (_, s) => ret None *)
         (*     (* temp ← is_state ((f_g_pow_xis s).a[ret_both cvp_i]) ;; *) *)
@@ -336,6 +339,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         (* | Result_Err_case _ => ret None *)
         (* end *)
     }].
+  Solve All Obligations with now intros ; destruct from_uint_size.
   Next Obligation.
     intros.
     eapply (valid_package_cons _ _ _ _ _ _ [] []).
@@ -359,6 +363,47 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       easy.
   Qed.
   Fail Next Obligation.
+
+  (* Lemma code_pkg_equiv m i j (vote : 'bool) : *)
+  (*   ⊢ *)
+  (*   ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄ *)
+  (*   get_op_default (OVN_old_proofs.Exec_i_realised true m i j) ((OVN_old_proofs.Exec (nat_of_ord i)), ('bool, OVN_proofs.public)) vote *)
+  (*   ≈ *)
+  (*   OVN_old_proofs.Exec_i_realised_code m i j vote *)
+  (*   ⦃ Logic.eq ⦄. *)
+  (* Proof. *)
+  (*   unfold OVN_old_proofs.Exec_i_realised. *)
+  (*   rewrite get_op_default_link. *)
+  (*   erewrite get_op_default_spec. *)
+  (*   2: { *)
+  (*     cbn. *)
+  (*     rewrite eqnE eq_refl. *)
+  (*     done. *)
+  (*   } *)
+  (*   ssprove_code_simpl. *)
+  (*   simpl. *)
+  (*   repeat choice_type_eqP_handle. *)
+  (*   rewrite !cast_fun_K. *)
+  (*   ssprove_code_simpl. *)
+  (*   simpl. *)
+  (*   ssprove_code_simpl. *)
+  (*   ssprove_code_simpl_more. *)
+  (*   simpl. *)
+  (*   ssprove_sync_eq=>x. *)
+  (*   simpl. *)
+  (*   ssprove_code_simpl_more. *)
+  (*   ssprove_sync_eq. *)
+  (*   ssprove_sync_eq=>rel1. *)
+  (*   ssprove_sync_eq=>r1. *)
+  (*   ssprove_sync_eq. *)
+
+  (*   (* ssprove_sync_eq=>queries. *)
+  (*   destruct (queries (Sigma1.Sigma.prod_assoc (fto (g ^+ otf x), fto (g ^+ otf r1)))) eqn:e. *)
+  (*   all: rewrite e. *)
+  (*   - simpl. *)
+  (*     ssprove_code_simpl. *)
+  (*     ssprove_sync_eq=>?. *) *)
+  (* Admitted. *)
 
   Program Definition hacspec_args_old_ovn_pkg (cvp_i : int32) (cvp_xi : f_Z) (cvp_vote : 'bool) (state : both t_OvnContractState) (j : OVN_proofs.pid) (schnorr_r : v_G) : package _ [interface] _ :=
     (OVN_old_proofs.Exec_i_realised cvp_vote
@@ -401,10 +446,11 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     }
 
     intros.
-    apply: eq_rel_perf_ind_eq.
+    apply: eq_rel_perf_ind_ignore.
     all: fold chElement.
     1: apply (maximum_ballot_secrecy_ovn cvp_i cvp_xi cvp_vote).
     1: rewrite <- fto_inZp ; apply (hacspec_args_old_ovn_pkg cvp_i cvp_xi cvp_vote state j schnorr_r).
+    1: rewrite <- fset0E ; rewrite fset0U ; apply fsubsetxx.
     2: apply H.
     2: rewrite <- fset0E ; apply fdisjoints0.
     2: rewrite fto_inZp ; apply H0.
@@ -413,58 +459,28 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       clear H0 H.
       unfold eq_up_to_inv.
 
-      intros.
-      unfold get_op_default.
+      simplify_eq_rel vote.
 
-      rewrite <- fset1E in H.
-      apply (ssrbool.elimT (fset1P _ _)) in H.
-      inversion H. subst. clear H.
-
-      unfold lookup_op.
-      set (getm (pack (maximum_ballot_secrecy_ovn _ _ _ _)) _).
-      simpl in o0.
-      subst o0.
+      (* lhs *)
       rewrite setmE.
       rewrite eqxx.
       unfold mkdef.
 
-      set (getm (pack (hacspec_args_old_ovn_pkg _ _ _ _ _ _)) _).
-      simpl in o0.
+      simplify_linking.
+      rewrite !cast_fun_K.
 
-      unfold mkdef in o0.
-      simpl in o0.
-      subst o0.
-      rewrite mapmE.
+      (* rhs *)
       rewrite setmE.
-
       rewrite fto_inZp.
       rewrite eqxx.
 
-      unfold omap, obind, oapp.
+      simplify_linking.
+      simplify_linking.
+      rewrite !cast_fun_K.
 
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      clear e e0.
-
-      unfold code_link.
-
-      unfold lookup_op at 1.
-      unfold mkopsig.
-
-      set (getm _ _).
-      simpl in o0.
-      unfold par in o0.
-      unfold unionm in o0.
-      unfold OVN_old_proofs.INIT in o0.
-      unfold foldr in o0.
-      simpl in o0.
-      subst o0.
-      rewrite setmE.
-      rewrite eqxx.
-
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      clear e e0.
+      (******************)
+      (* Equality proof *)
+      (******************)
 
       (* sampler *)
       eapply r_uniform_bij with (f := (λ x0 : Arit (uniform #|'Z_q|), _)).
@@ -474,11 +490,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
       (* put *)
       apply better_r_put_rhs.
-
-      (* match *)
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      clear e e0.
 
       (* assert *)
       replace (OVN_old_proofs.Sigma1.MyParam.R _ _) with true.
@@ -496,68 +507,19 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       Unshelve. 3:{ apply x0. } 1: now apply inv_bij.
       intros cvp_zkp_random_d.
       fold @bind.
-      
+
       (* put *)
       apply better_r_put_rhs.
 
       (* unfold lookup *)
-      unfold lookup_op at 1.
-
-      set (getm _ _).
-      simpl in o0.
-      subst o0.
-      rewrite setmE.
-
-      rewrite eqxx.
-
-      (* match *)
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-
-      (* unfold lookup *)
-      unfold lookup_op at 1.
-
-      set (getm _ _).
-      simpl in o0.
-      subst o0.
-      rewrite setmE.
-
-      replace (_ == _) with false by reflexivity.
-
-      rewrite setmE.
-      rewrite eqxx.
-
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      clear e e0 e1.
+      lookup_op_squeeze.
+      simpl.
+      simplify_linking.
 
       (* put *)
+      apply better_r_put_get_rhs.
       apply better_r_put_rhs.
       fold @bind.
-      
-      (* get *)
-      apply better_r.
-      apply r_get_remind_rhs with (v := emptym).
-      {
-        unfold Remembers_rhs.
-        intros.
-        unfold set_rhs in H.
-        destruct H.
-        destruct H.
-        destruct H.
-        destruct H.
-        destruct H.
-        destruct H.
-
-        unfold rem_rhs.
-        subst.
-
-        rewrite get_set_heap_eq.
-        reflexivity.
-      }
-      fold @bind.
-      apply better_r.
-
-      rewrite emptymE.
 
       (* sampler *)
       eapply r_uniform_bij with (f := (λ x0 : Arit (uniform #|'Z_q|), _)).
@@ -599,38 +561,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       (* sample *)
       apply r_const_sample_R ; [ apply LosslessOp_uniform | intros ].
 
-      (* unfold lookup *)
-      unfold lookup_op at 1.
-
-      set (getm _ _).
-      simpl in o0.
-      unfold par in o0.
-      unfold unionm in o0.
-      unfold OVN_old_proofs.INIT in o0.
-      unfold foldr in o0.
-      simpl in o0.
-      subst o0.
-      rewrite setmE.
-      replace (_ == _) with false by reflexivity.
-
-      rewrite setmE.
-      replace (_ == _) with false by reflexivity.
-      rewrite setmE.
-      replace (_ == _) with false by reflexivity.
-
-      rewrite mapmE.
-      rewrite setmE.
-      
-      replace (_ == _) with false by reflexivity.
-      unfold omap, obind, oapp.
-
-      rewrite setmE.
-      rewrite eqxx.
-
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      clear e e0.
-
       (* assert *)
       replace (OVN_old_proofs.Sigma1.MyParam.R _ _) with true.
       2:{
@@ -651,66 +581,14 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       fold @bind.
 
       (* unfold lookup *)
-      unfold lookup_op at 1.
-
-      set (getm _ _).
-      simpl in o0.
-      subst o0.
-      rewrite setmE.
-      rewrite eqxx.
-
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      clear e.
+      lookup_op_squeeze.
+      simpl.
+      simplify_linking.
 
       (* put *)
+      apply better_r_put_get_rhs.
       apply better_r_put_rhs.
       fold @bind.
-
-      (* unfold lookup *)
-      unfold lookup_op at 1.
-
-      set (getm _ _).
-      simpl in o0.
-      subst o0.
-      rewrite setmE.
-      replace (_ == _) with false by reflexivity.
-      rewrite setmE.
-      rewrite eqxx.
-
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      clear e e0.
-
-      (* get *)
-      apply better_r.
-      apply r_get_remind_rhs with (v := emptym).
-      {
-        unfold Remembers_rhs.
-        intros.
-        unfold set_rhs in H.
-        destruct H.
-        destruct H.
-        destruct H.
-        destruct H.
-        destruct H.
-        destruct H.
-        destruct H.
-        destruct H.
-        destruct H.
-        destruct H.
-        destruct H.
-        destruct H.
-
-        unfold rem_rhs.
-        subst.
-
-        rewrite get_set_heap_eq.
-        reflexivity.
-      }
-      fold @bind.
-      apply better_r.
-
-      rewrite emptymE.
 
       (* sample *)
       apply r_const_sample_R ; [ apply LosslessOp_uniform | intros ].
@@ -719,26 +597,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       (* put *)
       apply better_r_put_rhs.
       fold @bind.
-
-      (* unfold lookup *)
-      unfold lookup_op at 1.
-
-      set (getm _ _).
-      simpl in o0.
-      subst o0.
-      rewrite setmE.
-      replace (_ == _) with false by reflexivity.
-      rewrite setmE.
-      replace (_ == _) with false by reflexivity.
-      rewrite setmE.
-      rewrite eqxx.
-
-      unfold ".2" at 1.
-      unfold ".2" at 1.
-      
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      clear e e0.
 
       (* get *)
       apply better_r.
@@ -934,24 +792,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       apply better_r_put_rhs.
       fold @bind.
 
-      (* unfold lookup *)
-      unfold lookup_op at 1.
-
-      set (getm _ _).
-      simpl in o0.
-      subst o0.
-      rewrite setmE.
-      replace (_ == _) with false by reflexivity.
-      rewrite setmE.
-      rewrite eqxx.
-
-      unfold ".2" at 1.
-      unfold ".2" at 1.
-      
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      destruct choice_type_eqP ; [ | subst ; contradiction ] ; try rewrite !cast_fun_K.
-      clear e e0.
-
       (* get *)
       apply better_r.
       eapply r_get_remind_rhs (* with (v := emptym) *).
@@ -1028,9 +868,147 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
       simpl.
 
+      ssprove_code_simpl.
+      ssprove_code_simpl_more.
+      
+      apply rpre_weaken_rule with (pre := heap_ignore
+                                            (OVN_old_proofs.P_i_locs (uint_size_to_nat (Z_to_int (unsigned cvp_i)))
+                                               :|: OVN_old_proofs.combined_locations)).
+      2:{
+        intros ? ? ?.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        destruct H.
+        subst.
+
+        unfold heap_ignore.
+        intros.
+
+        specialize (H ℓ H0).
+        rewrite H.
+        
+        rewrite get_set_heap_neq.
+        2: admit.
+        rewrite get_set_heap_neq.
+        2: admit.
+        rewrite get_set_heap_neq.
+        2: admit.
+        rewrite get_set_heap_neq.
+        2: admit.
+        rewrite get_set_heap_neq.
+        2: admit.
+        rewrite get_set_heap_neq.
+        2: admit.
+        rewrite get_set_heap_neq.
+        2: admit.
+        rewrite get_set_heap_neq.
+        2: admit.
+        reflexivity.
+      }
+
       destruct cvp_vote.
       1:{
+        rewrite bind_rewrite.
+
+        assert (somewhat_substitution :
+                 forall {A : choice_type} {B : choiceType}
+                   (b : both A) (f : A -> raw_code B) (c : raw_code B) (P : precond),
+                   ⊢ ⦃ λ '(s₀, s₁), P (s₀, s₁) ⦄ temp ← ret (is_pure b) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ P (s₀, s₁) ⦄ ->
+                   ⊢ ⦃ λ '(s₀, s₁), P (s₀, s₁) ⦄ temp ← is_state b ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ P (s₀, s₁)⦄).
+        {
+          clear ; intros.
+          eapply r_transL.
+          2: apply H.
+          eapply r_bind.
+
+          - apply r_nice_swap_rule ; [ easy | | apply p_eq ] ; now intros [] [] ; cbn.
+          - intros.
+            simpl.
+            apply Misc.rpre_hypothesis_rule'.
+            intros ? ? [[]].
+            eapply rpre_weaken_rule.
+            1: subst ; apply rreflexivity_rule.
+            intros ? ? [].
+            now subst.
+        }
+
+        set (heap_ignore _).
+        set (lhs := fun _ => _) at 2.
         
+        apply (somewhat_substitution _ _ (cast_vote _ _) lhs _ p).
+        subst lhs.
+        rewrite bind_rewrite.
+
+        apply (somewhat_substitution _ _ _ _ _ p).
+        rewrite bind_rewrite.
+        apply r_ret.
+        intros ; split ; [ | easy ].
+        rewrite otf_fto.
+        f_equal.
+
+        rewrite hacspec_function_guarantees2.
+        simpl.
+
+        set (OVN_old_proofs.compute_key _ _).
+        unfold lift2_both at 1.
+        simpl.
+
+        unfold n_seq_array_or_seq.
+        simpl.
+        unfold as_nseq.
+        simpl.
+        unfold both_prog.
+
+        unfold nseq_.
+        cbn.
+        
+        destruct (nseq_ v_G (Z.to_nat _)).
+
+        set (Z.to_nat _).
+        destruct n0.
+        {
+          simpl.
+        
+        unfold as_nseq.
+        unfold Hacspec_Lib_Pre.array_index at 1.
+        rewrite hacspec_function_guarantees.
+
+        unfold f_g_pow_xi_yi_vis at 1.
+        Misc.push_down_sides.
+        rewrite hacspec_function_guarantees.
+        
+
+        unfold OVN_old_proofs.compute_key.
+
+        cbn.
+        (* *)
+
+        unfold array_index at 1.
+        unfold lift2_both at 1.
+        simpl
+        unfold as_nseq.
+        simpl.
+
+        
+        unfold array_index.
+        
+        reflexivity. (* TODO *)
+        
+      }
+    }
   Qed.
 
   Solve All Obligations with now intros ; destruct from_uint_size.

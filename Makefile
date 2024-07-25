@@ -65,7 +65,7 @@ html-ssprove:
 html: all html-hacspec html-ssprove
 	rm -rf docs
 	mkdir docs
-	coqdoc --html --interpolate --parse-comments \
+	coqdoc --html --interpolate --raw-comments \
 		--with-header extra/header.html --with-footer extra/footer.html \
 		--toc \
 		--external ConCert https://au-cobra.github.io/ConCert/ \
