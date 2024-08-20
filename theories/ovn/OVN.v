@@ -101,7 +101,8 @@ Proof.
 Qed.
 
 Definition Pid : finType := Finite.clone _ 'I_n. 
-Definition Secret : finType := FinRing_ComRing__to__fintype_Finite (fintype_ordinal__canonical__FinRing_ComRing (Zp_trunc #[g])). (* Zp_finComRingType (Zp_trunc #[g]). *)
+Definition Secret : finType :=
+  FinRing_ComRing__to__fintype_Finite (fintype_ordinal__canonical__FinRing_ComRing (Zp_trunc #[g])). (* Zp_finComRingType (Zp_trunc #[g]). *)
 Definition Public : finType := gT.
 Definition s0 : Secret := 0.
 
@@ -140,10 +141,17 @@ Definition i_secret := #|Secret|.
 Definition i_public := #|Public|.
 
 Module Type CDSParams <: SigmaProtocolParams.
-  Definition Witness : finType := Secret.
+  Definition Witness : finType := prod (prod Secret 'bool) Public.
   Definition Statement : finType := prod (prod Public Public) Public.
 
-  Definition Witness_pos : Positive #|Witness| := Secret_pos.
+  Definition Witness_pos : Positive #|Witness|.
+  Proof.
+    rewrite !card_prod.
+    repeat apply Positive_prod.
+    - apply Secret_pos.
+    - rewrite card_bool. done.
+    - apply Public_pos.
+  Qed.
   Definition Statement_pos : Positive #|Statement|.
   Proof.
     unfold Statement.
@@ -153,28 +161,32 @@ Module Type CDSParams <: SigmaProtocolParams.
   Qed.
 
   Definition R : Statement -> Witness -> bool :=
-    λ (h : Statement) (x : Witness),
-      let '(gx, gy, gyxv) := h in
-      (gy^+x * g^+0 == gyxv) || (gy^+x * g^+1 == gyxv).
+      (λ (xhy : Statement) (mv : Witness),
+        let '(x,h,y) := xhy in
+        let '(m,v,h2) := mv in
+        (x == g ^+ m)%g
+        && (h == h2)%g
+        && ((y == h^+m * g ^+ v))%g
+      ).
 
   Lemma relation_valid_left:
-    ∀ (x : Secret) (gy : Public),
-      R (g^+x, gy, gy^+x * g^+ 0) x.
+    ∀ (x : Secret) (h : Public),
+      R (g^+x, h, h^+x * g)%g (x, 1%R, h)%g.
   Proof.
-    intros x gy.
+    intros x yi.
     unfold R.
-    apply /orP ; left.
-    done.
+    now rewrite !eqxx.
   Qed.
 
   Lemma relation_valid_right:
-    ∀ (x : Secret) (gy : Public),
-      R (g^+x, gy, gy^+x * g^+ 1) x.
+    ∀ (x : Secret) (h : Public),
+      R (g ^+ x, h, h ^+x) (x, 0%R, h).
   Proof.
-    intros x y.
+    intros x yi.
     unfold R.
-    apply /orP ; right.
-    done.
+    rewrite expg0.
+    rewrite mulg1.
+    now rewrite !eqxx.
   Qed.
 
   Parameter Message Challenge Response State : finType.

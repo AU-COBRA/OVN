@@ -79,9 +79,13 @@ Import PackageNotation.
 (* Setup and definitions for the OR protocol *)
 (* This allows us to instantiate the SigmaProtocol library *)
 Module OVN_or_proof_preconditions (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldParameter HOP) (HOGaFE : HacspecOvnGroupAndFieldExtra HOP HOGaFP) (HGPA : HacspecGroupParamAxiom HOP HOGaFP HOGaFE).
-  Include HGPA.
-  Export HGPA.
-  
+  (* Include HGPA. *)
+  (* Export HGPA. *)
+
+  Import HOGaFE.GroupAndField.OVN.
+  Import HGPA.GaFP.
+  Import HacspecGroup.
+
   Module MyParam <: SigmaProtocolParams.
 
     Definition Witness : finType := prod (prod (Finite.clone _ 'Z_q) (Finite.clone _ 'bool)) gT.
@@ -278,19 +282,23 @@ End OVN_or_proof_preconditions.
 (* Then proofs SHVZK and extractor correctness for OR protocol *)
 Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldParameter HOP) (HOGaFE : HacspecOvnGroupAndFieldExtra HOP HOGaFP) (HGPA : HacspecGroupParamAxiom HOP HOGaFP HOGaFE).
   Module proof_args := OVN_or_proof_preconditions HOP HOGaFP HOGaFE HGPA.
-  Include proof_args.
-  Export proof_args.
+  (* Include proof_args. *)
+  (* Export proof_args. *)
 
-  Import MyParam.
-  Import MyAlg.
+  Import HOGaFE.GroupAndField.OVN.
+  Import HGPA.GaFP.
+  Import HacspecGroup.
 
-  Import Sigma.Oracle.
-  Import Sigma.
+  Import proof_args.Sigma.Oracle.
+  Import proof_args.Sigma.
+
+  Import proof_args.MyParam.
+  Import proof_args.MyAlg.
 
   Transparent zkp_one_out_of_two.
 
   (* Mapping between d2, r2 and w, d for sampled randomness *)
-  Definition f_d2r2_to_wd : 'Z_q -> 'I_MyAlg.i_witness -> Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)) → Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)) :=
+  Definition f_d2r2_to_wd : 'Z_q -> 'I_i_witness -> Arit (uniform (i_witness * i_witness)) → Arit (uniform (i_witness * i_witness)) :=
     fun m c dr =>
       let '(d2, r2) := (ch2prod dr) in
       prod2ch (fto ((otf r2) + (m * (otf d2))), fto (otf c - otf d2))%R.
@@ -334,7 +342,7 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
   Qed.
 
   (* Mapping between d1, r1 and w, d for sampled randomness *)
-  Definition f_d1r1_to_wd : 'Z_q -> 'I_MyAlg.i_witness -> Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)) → Arit (uniform (MyAlg.i_witness * MyAlg.i_witness)) :=
+  Definition f_d1r1_to_wd : 'Z_q -> 'I_i_witness -> Arit (uniform (i_witness * i_witness)) → Arit (uniform (i_witness * i_witness)) :=
     fun m c dr =>
       let '(d2, r1) := ch2prod dr in
       prod2ch (fto ((otf r1) + (m * (otf c - otf d2))), fto (otf d2))%R.
@@ -480,20 +488,12 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
     (* Unfold lhs *)
     simpl fst ; simpl snd.
 
-    epose (lookup_op_valid _ _ _ _ (RUN, (choiceStatement × choiceWitness, choiceTranscript)) (pack_valid RUN_interactive) (* TODO: *) ltac:(rewrite fset_cons (in_fsetU) ; solve_in_mem) ).
-    destruct e as [c [H _]]. rewrite H.
-
-    simpl in H.
-    destruct choice_type_eqP as [ e | ] ; [ | discriminate ].
-    destruct choice_type_eqP as [ e1 | ] ; [ | discriminate ].
-    rewrite cast_fun_K in H.
-    clear e e1.
-    inversion_clear H.
+    lookup_op_squeeze.
 
     (* Unfold rhs *)
     unfold zkp_one_out_of_two.
 
-    rewrite !otf_fto ; unfold R.
+    rewrite !otf_fto.
     apply r_assertD ; [ reflexivity | ].
     intros _ ?.
     simpl in e₁.
@@ -525,7 +525,7 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
       eapply (Misc.r_transR_both (B := t_OrZKPCommit)) ; [ set (H_hash := f_hash _); Misc.pattern_lhs_both_pat H_hash ; now rewrite <- (bind_both_eta _ H_hash) |  hnf ; unfold bind_both at 1, bind_raw_both, both_prog at 1, is_state at 1; set (f_or := fun _ => is_state (bind_both _ _)) ].
 
       (* replace f_hash with random sampling *)
-      eapply (hash_is_psudorandom _ _ (fun x => WitnessToField (otf x)) _ _ _ _ [:: _; _; _; _; _; _]).
+      eapply (HGPA.hash_is_psudorandom _ _ (fun x => WitnessToField (otf x)) _ _ _ _ [:: _; _; _; _; _; _]).
       intros x3.
 
       (* get value from memory *)
@@ -559,18 +559,15 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
 
           (* TODO: some group tactic here ? *)
           - unfold g.
-            rewrite pow_witness_to_field.
-            rewrite pow_witness_to_field.
-            rewrite pow_witness_to_field.
-            rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+            rewrite !HGPA.pow_witness_to_field.
+            rewrite !(proj1 both_equivalence_is_pure_eq (HOGaFE.pow_base _)).
             now Misc.push_down_sides.
-          - rewrite pow_witness_to_field.
-            rewrite !pow_witness_to_field.
+          - rewrite !HGPA.pow_witness_to_field.
             now Misc.push_down_sides.
-          - rewrite pow_witness_to_field.
-            rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+          - rewrite HGPA.pow_witness_to_field.
+            rewrite !(proj1 both_equivalence_is_pure_eq (HOGaFE.pow_base _)).
             now Misc.push_down_sides.
-          - now rewrite pow_witness_to_field.
+          - now rewrite HGPA.pow_witness_to_field.
         }
         (* Challenges *)
         {
@@ -653,7 +650,7 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
       eapply (Misc.r_transR_both (B := t_OrZKPCommit)) ; [ set (H_hash := f_hash _); Misc.pattern_lhs_both_pat H_hash ; now rewrite <- (bind_both_eta _ H_hash) |  hnf ; unfold bind_both at 1, bind_raw_both, both_prog at 1, is_state at 1; set (f_or := fun _ => is_state (bind_both _ _)) ].
 
       (* replace f_hash with random sampling *)
-      eapply (hash_is_psudorandom _ _ (fun x => WitnessToField (otf x)) _ _ _ _ [:: _; _; _; _; _; _]).
+      eapply (HGPA.hash_is_psudorandom _ _ (fun x => WitnessToField (otf x)) _ _ _ _ [:: _; _; _; _; _; _]).
       intros x3.
 
       (* get value from memory *)
@@ -681,23 +678,23 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
           all: clear ; simpl; Misc.push_down_sides.
           all: repeat setoid_rewrite <- expgnE.
 
-          + rewrite pow_witness_to_field.
-            rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
+          + rewrite HGPA.pow_witness_to_field.
+            rewrite !(proj1 both_equivalence_is_pure_eq (HOGaFE.pow_base _)).
             now Misc.push_down_sides.
-          + now rewrite pow_witness_to_field.
-          + rewrite pow_witness_to_field.
-            rewrite pow_witness_to_field.
+          + now rewrite HGPA.pow_witness_to_field.
+          + rewrite HGPA.pow_witness_to_field.
+            rewrite HGPA.pow_witness_to_field.
             unfold g.
-            rewrite !(proj1 both_equivalence_is_pure_eq (pow_base _)).
-            rewrite pow_witness_to_field.
+            rewrite !(proj1 both_equivalence_is_pure_eq (HOGaFE.pow_base _)).
+            rewrite HGPA.pow_witness_to_field.
             now Misc.push_down_sides.
           + rewrite expg0.
             rewrite mulg1.
-            rewrite pow_witness_to_field.
-            rewrite pow_witness_to_field.
+            rewrite HGPA.pow_witness_to_field.
+            rewrite HGPA.pow_witness_to_field.
             Transparent div.
             unfold div.
-            rewrite pow_witness_to_field.
+            rewrite HGPA.pow_witness_to_field.
             now Misc.push_down_sides.
         }
         (* Challenges *)
@@ -1200,7 +1197,7 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
 
       repeat (rewrite (proj2 (boolp.propeqP _ _) (pair_equal_spec _ _ _ _))).
       rewrite !(proj2 (boolp.propeqP _ _) (H9 (Message) _ _)).
-      rewrite !(proj2 (boolp.propeqP _ _) (H9 (MyParam.Response) _ _)).
+      rewrite !(proj2 (boolp.propeqP _ _) (H9 (proof_args.MyParam.Response) _ _)).
       repeat (rewrite (proj2 (boolp.propeqP _ _) (pair_equal_spec _ _ _ _))).
 
       rewrite <- (mulgA (h^+m)).
@@ -1218,7 +1215,7 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
   Lemma extractor_success:
     ∀ LA A,
       ValidPackage LA [interface
-                         #val #[ SOUNDNESS ] : chSoundness → 'bool
+                         #val #[ proof_args.Sigma.SOUNDNESS ] : chSoundness → 'bool
         ] A_export A →
       ɛ_soundness A = 0%R.
   Proof.

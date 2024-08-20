@@ -86,8 +86,11 @@ Module OVN_schnorr_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAn
   Import Schnorr.Sigma.Oracle.
   Import Schnorr.Sigma.
 
-  Include HGPA.
-  Export HGPA.
+  (* Include HGPA. *)
+  (* Export HGPA. *)
+
+  Import HOGaFE.GroupAndField.OVN.
+  Import HGPA.GaFP.
 
   Transparent schnorr_zkp.
 
@@ -167,7 +170,7 @@ Module OVN_schnorr_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAn
     simpl.
 
     (* Equate hash with random oracle (Fiat-Shamir heuristic) *)
-    eapply (hash_is_psudorandom i_random _ (fun x => WitnessToField (otf x)) _ _ _ _ [:: _; _; _]).
+    eapply (HGPA.hash_is_psudorandom i_random _ (fun x => WitnessToField (otf x)) _ _ _ _ [:: _; _; _]).
     intros.
 
     (* Read location *)
@@ -184,7 +187,7 @@ Module OVN_schnorr_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAn
     intros ; repeat split.
     * rewrite! otf_fto.
       (* Field isomorphism property *)
-      rewrite <- conversion_is_true.
+      rewrite <- HGPA.conversion_is_true.
       rewrite FieldToWitnessCancel.
       reflexivity.
     * rewrite! otf_fto.

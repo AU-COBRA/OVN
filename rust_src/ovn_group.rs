@@ -400,6 +400,9 @@ pub fn tally_votes<G: Group, const n: usize, A: HasActions>(
         vote_result = G::prod(vote_result, g_pow_vote);
     }
 
+    // TODO: more efficient "brute force":
+    // - https://en.wikipedia.org/wiki/Baby-step_giant-step
+    // - https://en.wikipedia.org/wiki/Discrete_logarithm#Algorithms
     let mut tally = 0;
     let mut curr = G::Z::field_zero();
     for i in 0..n as u32 {

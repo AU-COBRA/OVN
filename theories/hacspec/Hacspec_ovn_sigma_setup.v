@@ -96,15 +96,20 @@ Import PackageNotation.
 Module HacspecOvnGroupAndFieldPre (HOP : HacspecOvnParameter).
   Module OVN := HacspecOvn HOP.
 
-  Include OVN.
-  Export OVN.
+  (* Include OVN. *)
+  (* Export OVN. *)
 
   (** Group instantiation *)
-  Definition both_v_G : Type := both v_G.
-  Definition v_G_type : Type := v_G.
+  Definition both_v_G : Type := both OVN.v_G.
+  Definition v_G_type : Type := OVN.v_G.
 
   HB.instance Definition _ : is_eq_rel both_v_G :=
     is_eq_rel.Build (both_v_G) both_equivalence _ _ _.
+
+  #[local] Existing Instance OVN.v_G_t_Group_temp.
+  #[local] Existing Instance OVN.v_A_t_Sized_temp.
+  #[local] Existing Instance OVN.v_A_t_HasActions_temp.
+  #[local] Existing Instance OVN.v_G_t_Sized_temp.
 
   HB.instance Definition _ : is_group_op both_v_G :=
     is_group_op.Build (both_v_G)
@@ -133,66 +138,72 @@ End HacspecOvnGroupAndFieldPre.
 
 Module Type HacspecOvnGroupAndFieldParameter (HOP : HacspecOvnParameter).
   Module GroupAndFieldPre := HacspecOvnGroupAndFieldPre HOP.
-  Include GroupAndFieldPre.
-  Export GroupAndFieldPre.
+  (* Include GroupAndFieldPre. *)
+  (* Export GroupAndFieldPre. *)
 
   (* A proof of the group laws *)
   Parameter both_group_properties :
     is_setoid_group_properties.axioms_
-      (both_v_G)
-      (group_op.class HacspecOvnGroupAndFieldPre_both_v_G__canonical__Hacspec_ovn_group_and_field_group_op)
-      (eqR.class HacspecOvnGroupAndFieldPre_both_v_G__canonical__Hacspec_ovn_group_and_field_eqR).
+      (GroupAndFieldPre.both_v_G)
+      (group_op.class GroupAndFieldPre.HacspecOvnGroupAndFieldPre_both_v_G__canonical__Hacspec_ovn_group_and_field_group_op)
+      (eqR.class GroupAndFieldPre.HacspecOvnGroupAndFieldPre_both_v_G__canonical__Hacspec_ovn_group_and_field_eqR).
 
   (* A proof of the field laws *)
   Parameter both_field_properties :
     is_setoid_field_properties.axioms_
-      (both_Z)
-      (field_op.class HacspecOvnGroupAndFieldPre_both_Z__canonical__Hacspec_ovn_group_and_field_field_op)
-      (eqR.class HacspecOvnGroupAndFieldPre_both_Z__canonical__Hacspec_ovn_group_and_field_eqR).
+      (GroupAndFieldPre.both_Z)
+      (field_op.class GroupAndFieldPre.HacspecOvnGroupAndFieldPre_both_Z__canonical__Hacspec_ovn_group_and_field_field_op)
+      (eqR.class GroupAndFieldPre.HacspecOvnGroupAndFieldPre_both_Z__canonical__Hacspec_ovn_group_and_field_eqR).
 End HacspecOvnGroupAndFieldParameter.
 
 Module HacspecOvnGroupAndField (HOP : HacspecOvnParameter) (HOGP : HacspecOvnGroupAndFieldParameter HOP).
-  Include HOGP.
-  Export HOGP.
+  (* Include HOGP. *)
+  (* Export HOGP. *)
+  Include HOGP.GroupAndFieldPre.
 
-  HB.instance Definition _ := both_group_properties.
+  HB.instance Definition _ : is_setoid_group_properties.axioms_ _ _ _ := HOGP.both_group_properties.
 
   (* Any both type has a setoid lowering structure, as we have pointwise equality on [is_pure] *)
-  HB.instance Definition _ : is_setoid_lower both_v_G :=
-    is_setoid_lower.Build both_v_G v_G_type (fun x => is_pure x) ret_both ret_both_is_pure_cancel (fun x => erefl)  (fun x y H => proj1 both_equivalence_is_pure_eq H)  (fun x y H => both_eq_fun_ext _ _ _).
+  HB.instance Definition _ : is_setoid_lower HOGP.GroupAndFieldPre.both_v_G :=
+    is_setoid_lower.Build HOGP.GroupAndFieldPre.both_v_G HOGP.GroupAndFieldPre.v_G_type (fun x => is_pure x) ret_both ret_both_is_pure_cancel (fun x => erefl)  (fun x y H => proj1 both_equivalence_is_pure_eq H)  (fun x y H => both_eq_fun_ext _ _ _).
 
   (* We can thus define the group on [v_G] *)
   HB.instance Definition _ : fingroup.FinGroup v_G_type := fingroup.FinGroup.class (Hacspec_ovn_group_and_field_T__canonical__fingroup_FinGroup GroupAndFieldPre_both_v_G__canonical__Hacspec_ovn_group_and_field_setoid_lower_to_group).
 
   (* and add a notation for it *)
-  Notation v_G_is_group := GroupAndFieldPre_v_G_type__canonical__fingroup_FinGroup.
+  Notation v_G_is_group := HacspecOvnGroupAndField_v_G_type__canonical__fingroup_FinGroup.
   Check v_G_is_group : finGroupType.
 
   (* Field *)
-  HB.instance Definition _ := both_field_properties.
+  HB.instance Definition _ := HOGP.both_field_properties.
 
   (* Same lowering structure as for groups, but for [Z] instead of [v_G] *)
   HB.instance Definition _ : is_setoid_lower both_Z :=
     is_setoid_lower.Build both_Z Z_type (fun x => is_pure x) ret_both ret_both_is_pure_cancel (fun x => erefl)  (fun x y H => proj1 both_equivalence_is_pure_eq H)  (fun x y H => both_eq_fun_ext _ _ _).
 
-  HB.instance Definition _ : GRing.Field Z_type := GRing.Field.class (Hacspec_ovn_group_and_field_T__canonical__FinRing_Field GroupAndFieldPre_both_Z__canonical__Hacspec_ovn_group_and_field_setoid_lower_to_field).
+  HB.instance Definition _ : GRing.Field Z_type := GRing.Field.class (Hacspec_ovn_group_and_field_T__canonical__FinRing_Field HacspecOvnGroupAndField_both_Z__canonical__Hacspec_ovn_group_and_field_setoid_lower_to_field).
 
-  Notation v_Z_is_field := GroupAndFieldPre_Z_type__canonical__GRing_Field.
+  Notation v_Z_is_field := HacspecOvnGroupAndField_Z_type__canonical__GRing_Field.
   Check v_Z_is_field : fieldType.
 End HacspecOvnGroupAndField.
 
 Module Type HacspecOvnGroupAndFieldExtra (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldParameter HOP).
   Module GroupAndField := HacspecOvnGroupAndField HOP HOGaFP.
-  Include GroupAndField.
-  Export GroupAndField.
+  (* Include GroupAndField. *)
+  (* Export GroupAndField. *)
+
+  #[local] Existing Instance GroupAndField.OVN.v_G_t_Group_temp.
+  #[local] Existing Instance GroupAndField.OVN.v_A_t_Sized_temp.
+  #[local] Existing Instance GroupAndField.OVN.v_A_t_HasActions_temp.
+  #[local] Existing Instance GroupAndField.OVN.v_G_t_Sized_temp.
 
   (* Additional requirements and defintions *)
   Parameter pow_base : forall x, f_g_pow x ≈both f_pow f_g x. (* TODO: just have this as a definition *)
   (* Instance f_Z_t_Field' : t_Field f_Z := _. *)
 
   (* A secure group is of prime order and has a generator *)
-  Parameter v_G_prime_order : prime #[ is_pure f_g : v_G_is_group].
-  Parameter v_G_g_gen : [set : v_G_is_group] = <[ is_pure f_g : v_G_is_group]>.
+  Parameter v_G_prime_order : prime #[ is_pure f_g : GroupAndField.v_G_is_group].
+  Parameter v_G_g_gen : [set : GroupAndField.v_G_is_group] = <[ is_pure f_g : GroupAndField.v_G_is_group]>.
 End HacspecOvnGroupAndFieldExtra.
 
 Module Type FieldType.
@@ -217,10 +228,16 @@ End FieldEquality.
 (** * Hacspec Group Param *)
 (* Make an instance of [GroupParam] such that we can use the Schnorr framework in SSProve *)
 Module HacspecGroupParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldParameter HOP) (HOGaFE : HacspecOvnGroupAndFieldExtra HOP HOGaFP) <: GroupParam.
+  
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Group_temp.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_Sized_temp.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_HasActions_temp.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Sized_temp.
+
   (* The finite group type is the ovn group *)
-  Definition gT : finGroupType := HOGaFE.v_G_is_group.
+  Definition gT : finGroupType := HOGaFE.GroupAndField.v_G_is_group.
   Definition ζ : {set gT} := [set : gT].
-  Definition g :  gT := is_pure (f_g (t_Group := HOGaFE.v_G_t_Group)).
+  Definition g :  gT := is_pure (f_g (t_Group := HOGaFE.GroupAndField.OVN.v_G_t_Group)).
 
   Definition g_gen : ζ = <[g]> := HOGaFE.v_G_g_gen.
   Definition prime_order : prime #[g] := HOGaFE.v_G_prime_order.
@@ -229,15 +246,15 @@ End HacspecGroupParam.
 (** * Assumptions *)
 (* Collection of all modules and assumptions to do the Σ Protocols *)
 Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldParameter HOP) (HOGaFE : HacspecOvnGroupAndFieldExtra HOP HOGaFP).
-  Include HOGaFE.
-  Export HOGaFE.
+  (* Include HOGaFE. *)
+  (* Export HOGaFE. *)
 
   Module HacspecGroup := HacspecGroupParam HOP HOGaFP HOGaFE.
-  Include HacspecGroup.
-  Export HacspecGroup.
+  (* Include HacspecGroup. *)
+  (* Export HacspecGroup. *)
 
   Module FT.
-    Definition equivalent_field : fieldType := v_Z_is_field.
+    Definition equivalent_field : fieldType := HOGaFE.GroupAndField.v_Z_is_field.
   End FT.
   Module field_equality := FieldEquality HacspecGroup FT.
 
@@ -249,7 +266,7 @@ Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOv
   Program Definition Z_to_F : {rmorphism 'Z_q -> 'F_q} := GRing.ssrfun_idfun__canonical__GRing_RMorphism _.
   (* begin hide *)
   Next Obligation.
-    now rewrite (@pdiv_id q prime_order).
+    now rewrite (@pdiv_id q HacspecGroup.prime_order).
   Defined.
   Fail Next Obligation.
   (* end hide *)
@@ -257,7 +274,7 @@ Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOv
   Program Definition F_to_Z : {rmorphism 'F_q -> 'Z_q} := GRing.ssrfun_idfun__canonical__GRing_RMorphism _.
   (* begin hide *)
   Next Obligation.
-    now rewrite (@pdiv_id q prime_order).
+    now rewrite (@pdiv_id q HacspecGroup.prime_order).
   Defined.
   Fail Next Obligation.
   (* end hide *)
@@ -271,7 +288,7 @@ Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOv
     unfold Z_to_F_obligation_1, F_to_Z_obligation_1.
     unfold eq_ind_r.
     unfold eq_ind.
-    destruct (Logic.eq_sym (pdiv_id (p:=q) prime_order)).
+    destruct (Logic.eq_sym (pdiv_id (p:=q) HacspecGroup.prime_order)).
     reflexivity.
   Qed.
 
@@ -284,22 +301,22 @@ Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOv
     unfold Z_to_F_obligation_1, F_to_Z_obligation_1.
     unfold eq_ind_r.
     unfold eq_ind.
-    destruct (Logic.eq_sym (pdiv_id (p:=q) prime_order)).
+    destruct (Logic.eq_sym (pdiv_id (p:=q) HacspecGroup.prime_order)).
     reflexivity.
   Qed.
 
   (** Extra helper definitions *)
   (* pow spec, could be omitted by using iterated mul in hax code instead *)
-  Theorem one_is_not_a_generator : generator ζ 1 -> False.
+  Theorem one_is_not_a_generator : generator HacspecGroup.ζ 1 -> False.
   Proof.
     intros.
-    assert (generator ζ g) by now unfold generator ; rewrite g_gen.
-    pose (generator_coprime (gT := gT) g 0).
-    rewrite <- g_gen in e.
+    assert (generator HacspecGroup.ζ HacspecGroup.g) by now unfold generator ; rewrite HacspecGroup.g_gen.
+    pose (generator_coprime (gT := HacspecGroup.gT) HacspecGroup.g 0).
+    rewrite <- HacspecGroup.g_gen in e.
     rewrite expg0 in e.
     rewrite e in H.
     simpl in H.
-    epose (prime_coprime 0 prime_order).
+    epose (prime_coprime 0 HacspecGroup.prime_order).
     rewrite e0 in H.
     unfold "_ %| _"%N in H.
     simpl in H.
@@ -309,56 +326,61 @@ Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOv
     reflexivity.
   Qed.
 
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Group_temp.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_Sized_temp.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_HasActions_temp.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Sized_temp.
+
   Theorem generator_is_not_one : f_group_one ≈both f_g -> False.
   Proof.
     intros.
     apply one_is_not_a_generator.
     setoid_rewrite (proj1 H).
-    now unfold generator ; rewrite g_gen.
+    now unfold generator ; rewrite HacspecGroup.g_gen.
   Qed.
 
   (** * Helper properties *)
 
   Lemma order_ge1 : succn (succn (Zp_trunc q)) = q.
   Proof.
-    rewrite <- (@pdiv_id q prime_order) at 1.
-    apply Fp_cast, prime_order.
+    rewrite <- (@pdiv_id q HacspecGroup.prime_order) at 1.
+    apply Fp_cast, HacspecGroup.prime_order.
   Qed.
 
-  Lemma trunc_pow : forall (h : gT) x, h ^+ (x %% (Zp_trunc q).+2) = h ^+ x.
+  Lemma trunc_pow : forall (h : HacspecGroup.gT) x, h ^+ (x %% (Zp_trunc q).+2) = h ^+ x.
     intros.
-    destruct (ssrbool.elimT (cycleP g h)) ; [ | subst ].
-    - unfold g.
-      setoid_rewrite <- v_G_g_gen.
+    destruct (ssrbool.elimT (cycleP HacspecGroup.g h)) ; [ | subst ].
+    - unfold HacspecGroup.g.
+      setoid_rewrite <- HOGaFE.v_G_g_gen.
       simpl.
       apply in_setT.
     - rewrite expgAC.
       rewrite (expgAC _ x0).
       f_equal.
-      epose (@expg_mod_order gT g x).
+      epose (@expg_mod_order HacspecGroup.gT HacspecGroup.g x).
       fold q in e.
       rewrite <- order_ge1 in e.
       intros.
       apply e ; clear e.
   Qed.
 
-  Lemma invg_id : (forall (x : gT), x ^-1 = x ^- 1%R).
+  Lemma invg_id : (forall (x : HacspecGroup.gT), x ^-1 = x ^- 1%R).
   Proof. reflexivity. Qed.
 
-  Lemma trunc_extra : forall (h : gT), h ^+ (Zp_trunc q).+2 = 1%g.
+  Lemma trunc_extra : forall (h : HacspecGroup.gT), h ^+ (Zp_trunc q).+2 = 1%g.
     intros.
     rewrite <- trunc_pow.
     now rewrite modnn.
   Qed.
 
-  Lemma reverse_opp : (forall (x : gT) (n : 'Z_q), x ^+ ((Zp_trunc (pdiv q)).+2 - n) = x ^+ GRing.opp n).
+  Lemma reverse_opp : (forall (x : HacspecGroup.gT) (n : 'Z_q), x ^+ ((Zp_trunc (pdiv q)).+2 - n) = x ^+ GRing.opp n).
   Proof.
     intros.
-    rewrite (@pdiv_id q prime_order).
+    rewrite (@pdiv_id q HacspecGroup.prime_order).
     now rewrite trunc_pow.
   Qed.
 
-  Lemma neg_is_opp : (forall (x : gT) (n : 'Z_q), x ^- n = x ^+ GRing.opp n).
+  Lemma neg_is_opp : (forall (x : HacspecGroup.gT) (n : 'Z_q), x ^- n = x ^+ GRing.opp n).
   Proof.
     intros x n.
     rewrite trunc_pow.
@@ -387,7 +409,7 @@ Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOv
       now rewrite (Nat.lt_succ_pred 0 n0).
   Qed.
 
-  Lemma mulg_cancel : forall (x : gT) (y : 'Z_q),
+  Lemma mulg_cancel : forall (x : HacspecGroup.gT) (y : 'Z_q),
       (cancel (mulg^~ (x ^+ y))  (mulg^~ (x ^- y))
       /\ cancel (mulg^~ (x ^- y))  (mulg^~ (x ^+ y)))
       /\ (cancel (mulg (x ^+ y))  (mulg (x ^- y))
@@ -402,7 +424,7 @@ Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOv
   Qed.
 
   Lemma prod_swap_iff :
-    forall a b (x : gT) (y : 'Z_q),
+    forall a b (x : HacspecGroup.gT) (y : 'Z_q),
       (a * x ^- y = b <-> a = b * x ^+ y)%g
       /\ (x ^- y * a = b <-> a = x ^+ y * b)%g.
   Proof.
@@ -413,7 +435,7 @@ Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOv
       | eapply (canLR) ] ; apply (mulg_cancel x y).
   Qed.
 
-  Lemma mulg_invg_sub : (forall (x : gT) (y z : 'Z_q), x ^+ y * x ^- z = x ^+ nat_of_ord (y - z)%R)%g.
+  Lemma mulg_invg_sub : (forall (x : HacspecGroup.gT) (y z : 'Z_q), x ^+ y * x ^- z = x ^+ nat_of_ord (y - z)%R)%g.
   Proof.
     intros.
     rewrite neg_is_opp.
@@ -421,7 +443,7 @@ Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOv
     now rewrite trunc_pow.
   Qed.
 
-  Lemma mulg_invg_left_sub : (forall (x : gT) (y z : 'Z_q), x ^- y * x ^+ z = x ^+ nat_of_ord (z - y)%R)%g.
+  Lemma mulg_invg_left_sub : (forall (x : HacspecGroup.gT) (y z : 'Z_q), x ^- y * x ^+ z = x ^+ nat_of_ord (z - y)%R)%g.
   Proof.
     intros.
     rewrite neg_is_opp.
@@ -429,22 +451,22 @@ Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOv
     now rewrite trunc_pow.
   Qed.
 
-  Lemma cyclic_always_commute : forall (x y : gT), commute x y.
+  Lemma cyclic_always_commute : forall (x y : HacspecGroup.gT), commute x y.
   Proof.
     intros.
-    destruct (ssrbool.elimT (cycleP g x)) ; [ | subst ].
+    destruct (ssrbool.elimT (cycleP HacspecGroup.g x)) ; [ | subst ].
     {
-      unfold gT in x.
-      unfold g.
-      setoid_rewrite <- v_G_g_gen.
+      unfold HacspecGroup.gT in x.
+      unfold HacspecGroup.g.
+      setoid_rewrite <- HOGaFE.v_G_g_gen.
       simpl.
       apply in_setT.
     }
 
-    destruct (ssrbool.elimT (cycleP g y)) ; [ | subst ].
+    destruct (ssrbool.elimT (cycleP HacspecGroup.g y)) ; [ | subst ].
     {
-      unfold g.
-      setoid_rewrite <- v_G_g_gen.
+      unfold HacspecGroup.g.
+      setoid_rewrite <- HOGaFE.v_G_g_gen.
       simpl.
       apply in_setT.
     }
@@ -453,7 +475,7 @@ Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOv
     apply commute_refl.
   Qed.
 
-  Lemma div_cancel_Fq : forall (x : gT) (s : 'F_q), s <> 0%R -> x ^+ nat_of_ord (s / s)%R = x.
+  Lemma div_cancel_Fq : forall (x : HacspecGroup.gT) (s : 'F_q), s <> 0%R -> x ^+ nat_of_ord (s / s)%R = x.
   Proof.
     intros.
     rewrite mulrV.
@@ -461,7 +483,7 @@ Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOv
     now rewrite expg1.
   Qed.
 
-  Lemma div_cancel : forall (x : gT) (s : 'Z_q), s <> 0%R -> x ^+ nat_of_ord (s / s)%R = x.
+  Lemma div_cancel : forall (x : HacspecGroup.gT) (s : 'Z_q), s <> 0%R -> x ^+ nat_of_ord (s / s)%R = x.
   Proof.
     intros.
     rewrite mulrV.
@@ -480,9 +502,9 @@ Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOv
   Qed.
 
   (* begin details : Positivity checks *)
-  #[export] Instance positive_gT : Positive #|gT|.
+  #[export] Instance positive_gT : Positive #|HacspecGroup.gT|.
   Proof.
-    apply /card_gt0P. exists g. auto.
+    apply /card_gt0P. exists HacspecGroup.g. auto.
   Qed.
 
   #[export] Instance Bool_pos : Positive #|'bool|.
@@ -506,26 +528,37 @@ End HacspecGroupAndFieldParam.
 
 Module Type HacspecGroupParamAxiom (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldParameter HOP) (HOGaFE : HacspecOvnGroupAndFieldExtra HOP HOGaFP).
   Module GaFP := HacspecGroupAndFieldParam HOP HOGaFP HOGaFE.
-  Include GaFP.
-  Export GaFP.
+  (* Include GaFP. *)
+  (* Export GaFP. *)
+
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Group_temp.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_Sized_temp.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_HasActions_temp.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Sized_temp.
+
+  (* Parameter pow_witness_to_field : *)
+  
+  (* Lemma pow_witness_to_field : *)
+  (*   forall (h : GaFP.HacspecGroup.gT) (b : 'Z_GaFP.q), *)
+  (*     (h ^+ b = is_pure (f_pow (ret_both h) (ret_both (GaFP.WitnessToField b)))). *)
+  (* Proof. *)
+  (*   intros. *)
+  (*   destruct b. *)
+  (*   induction m. *)
+  (*   - simpl. *)
+  (*     rewrite expg0. *)
+
+  (*     replace (Ordinal _) with (ord0 (n' := (Zp_trunc GaFP.q).+1)) by now apply ord_ext. *)
+  (*     rewrite rmorph0. *)
 
   (* pow spec, could be omitted by using iterated mul in hax code instead *)
   Parameter pow_witness_to_field :
-    forall (h : gT) (b : 'Z_q),
-      (h ^+ b = is_pure (f_pow (ret_both h) (ret_both (WitnessToField b)))).
+    forall (h : GaFP.HacspecGroup.gT) (b : 'Z_GaFP.q),
+      (h ^+ b = is_pure (f_pow (ret_both h) (ret_both (GaFP.WitnessToField b)))).
 
   Parameter conversion_is_true :
     forall (b : both f_Z),
-    (g ^+ FieldToWitness (is_pure b)) = is_pure (f_g_pow b).
-
-    (* We have a bijection between f_random_field_elem and random sampling *)
-    Parameter randomness_sample_is_bijective :
-      bijective
-        (λ x : 'I_(2 ^ 32),
-            fto
-              (FieldToWitness
-                 (is_pure
-                    (f_random_field_elem (ret_both (Hacspec_Lib_Pre.repr _ (Z.of_nat (nat_of_ord x)))))))).
+    (GaFP.HacspecGroup.g ^+ GaFP.FieldToWitness (is_pure b)) = is_pure (f_g_pow b).
 
     (* Taking the hash should be equal to sampling! *)
     Parameter hash_is_psudorandom :
@@ -535,7 +568,7 @@ Module Type HacspecGroupParamAxiom (HOP : HacspecOvnParameter) (HOGaFP : Hacspec
           e ← sample uniform i ;;
         c0 e ≈
           x ← is_state
-          (f_hash (t_Group := v_G_t_Group)
+          (f_hash (t_Group := HOGaFE.GroupAndField.OVN.v_G_t_Group)
              (impl__into_vec
                 (unsize
                    (box_new
