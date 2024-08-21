@@ -195,6 +195,32 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   Qed.
   Fail Next Obligation.
 
+  Import OVN_old_proofs. (* 'public_key *)
+  Program Definition round1_by_old (i : nat) (xi : f_Z) (state : both t_OvnContractState) :
+    package fset0
+      [interface #val #[ INIT ] : 'unit → 'public_key]
+      [interface #val #[ ROUND1 ] : 'unit → chRound1output]
+    :=
+    [package
+        #def #[ ROUND1 ] (_ : 'unit) : chRound1output
+        {
+          #import {sig #[ INIT ] : 'unit → 'public_key } as init ;;
+          '(y,(s,m,c,r)) ← init Datatypes.tt ;;
+          ret ((otf m : v_G, WitnessToField (otf c) : f_Z, WitnessToField (otf r) : f_Z) (* z, c, u *),otf y : v_G)
+        }
+    ].
+  Solve All Obligations with now intros ; destruct from_uint_size.
+  Next Obligation.
+    fold chElement.
+    intros.
+    ssprove_valid_package.
+    ssprove_valid.
+    destruct x0 as [].
+    destruct s0 as [[[]]].
+    ssprove_valid.
+  Qed.
+  Fail Next Obligation.
+
   Notation " 'chRound2output' " :=
     (f_Z)
     (in custom pack_type at level 2).
@@ -279,43 +305,62 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   Fail Next Obligation.
 
   Import DDH.
-  Module DDHParams <: DDHParams.
+  Module DDHParams <: DDH.DDHParams.
     Definition Space := 'Z_q : finType.
     Definition Space_pos : Positive #|Space|.
     Proof.
       apply /card_gt0P. exists 0%R. auto.
     Qed.
   End DDHParams.
-  Module DDH := DDH DDHParams HGPA.GaFP.HacspecGroup.
+  Module DDH := DDH.DDH DDHParams HGPA.GaFP.HacspecGroup.
 
-  Import DDH.
+  (* Definition i nseq v_G (is_pure (n)) *)
 
   Program Definition round3 (i : nat) (xi : f_Z) (vi : bool) (state : both t_OvnContractState) :
     package fset0
-      [interface #val #[ OR_ZKP.proof_args.Sigma.RUN ] : chRelation → chTranscript]
+      [interface
+         #val #[ OR_ZKP.proof_args.Sigma.RUN ] : chRelation → chTranscript
+       (* ; #val #[ DDH.SAMPLE ] : 'unit → 'group × 'group × 'group *)
+      ]
       [interface #val #[ ROUND3 ] : chRound3input → chRound3output]
     :=
     [package
         #def #[ ROUND3 ] ('(w,r,d) : chRound3input) : chRound3output
         {
           #import {sig #[ OR_ZKP.proof_args.Sigma.RUN ] : chRelation → chTranscript } as RUN_OR ;;
+          (* #import {sig #[ DDH.SAMPLE ] : 'unit → 'group × 'group × 'group } as DDH_keygen ;; *)
 
-          (* TODO: use DDH here.. *)
-          let compute_group_element_for_vote := (fun (xi : both f_Z) (vote : both 'bool) (g_pow_yi : both v_G) =>
-                                                   solve_lift (f_prod (f_pow g_pow_yi xi) (f_g_pow (ifb vote
-                                                                                                    then f_field_one
-                                                                                                    else f_field_zero))) : both v_G) in
-    
-          let cast_vote := fun (params : both t_CastVoteParam) (state : both (t_OvnContractState)) => 
-                             g_pow_yi ← is_state (compute_g_pow_yi (cast_int (WS2 := U32) (f_cvp_i params)) (f_g_pow_xis state)) ;;
-    zkp_vi ← RUN_OR (fto (g ^+ FieldToWitness xi, g_pow_yi : gT, (g_pow_yi : gT)), fto ( FieldToWitness xi , vi , (g_pow_yi : gT) )) ;;
-    let zkp_vi := OR_ZKP.or_sigma_ret_to_hacspec_ret zkp_vi in
-    (* zkp_vi ← is_state (zkp_one_out_of_two (f_cvp_zkp_random_w params) (f_cvp_zkp_random_r params) (f_cvp_zkp_random_d params) (ret_both g_pow_yi) (f_cvp_xi params) (f_cvp_vote params)) ;; *)
-    is_state (letb g_pow_xi_yi_vi := compute_group_element_for_vote (f_cvp_xi params) (f_cvp_vote params) (ret_both g_pow_yi) in
-    letb cast_vote_state_ret := f_clone state in
-    letb cast_vote_state_ret := Build_t_OvnContractState[cast_vote_state_ret] (f_g_pow_xi_yi_vis := update_at_usize (f_g_pow_xi_yi_vis cast_vote_state_ret) (cast_int (WS2 := U32) (f_cvp_i params)) g_pow_xi_yi_vi) in
-    letb cast_vote_state_ret := Build_t_OvnContractState[cast_vote_state_ret] (f_zkp_vis := update_at_usize (f_zkp_vis cast_vote_state_ret) (cast_int (WS2 := U32) (f_cvp_i params)) (ret_both zkp_vi)) in
-    Result_Ok (prod_b (f_accept,cast_vote_state_ret)) : both (t_Result (v_A × t_OvnContractState) t_ParseError)) in
+          (* (* (* (* TODO: use DDH here.. *) *) *) *)
+          (* let compute_group_element_for_vote := *)
+          (*   (fun (xi : both f_Z) (vote : both 'bool) (g_pow_yi : both v_G) => *)
+          (*      solve_lift (f_prod (f_pow g_pow_yi xi) (f_g_pow (ifb vote *)
+          (*                                                       then f_field_one *)
+          (*                                                       else f_field_zero)))) *)
+          (* in *)
+
+          let cast_vote :=
+            fun (params : both t_CastVoteParam) (state : both (t_OvnContractState)) =>
+              g_pow_yi ← is_state (compute_g_pow_yi (cast_int (WS2 := U32) (f_cvp_i params)) (f_g_pow_xis state)) ;;
+
+              (* '(ya, (yb, c)) ← DDH_keygen Datatypes.tt ;; *)
+              (* a ← get secret_loc1 ;; *)
+              (* b ← get secret_loc2 ;; *)
+
+              let g_pow_yixi := (g_pow_yi : gT) ^+ (FieldToWitness xi) in
+              (* let temp := (g_pow_yi : gT) ^+ (otf b ^- 1)%R in *)
+
+              zkp_vi ← RUN_OR
+                (fto (g ^+ FieldToWitness xi,
+                     (g_pow_yi : gT), (* g_pow_yi = h *)
+                     g_pow_yixi * g ^+ vi),
+                  fto ( FieldToWitness xi , vi , (g_pow_yi : gT) ))%g ;;
+              let zkp_vi := OR_ZKP.or_sigma_ret_to_hacspec_ret zkp_vi in
+              (* zkp_vi ← is_state (zkp_one_out_of_two (f_cvp_zkp_random_w params) (f_cvp_zkp_random_r params) (f_cvp_zkp_random_d params) (ret_both g_pow_yi) (f_cvp_xi params) (f_cvp_vote params)) ;; *)
+              is_state (letb g_pow_xi_yi_vi := compute_group_element_for_vote (f_cvp_xi params) (f_cvp_vote params) (ret_both g_pow_yi) in
+                          letb cast_vote_state_ret := f_clone state in
+                          letb cast_vote_state_ret := Build_t_OvnContractState[cast_vote_state_ret] (f_g_pow_xi_yi_vis := update_at_usize (f_g_pow_xi_yi_vis cast_vote_state_ret) (cast_int (WS2 := U32) (f_cvp_i params)) g_pow_xi_yi_vi) in
+                          letb cast_vote_state_ret := Build_t_OvnContractState[cast_vote_state_ret] (f_zkp_vis := update_at_usize (f_zkp_vis cast_vote_state_ret) (cast_int (WS2 := U32) (f_cvp_i params)) (ret_both zkp_vi)) in
+                          Result_Ok (prod_b (f_accept,cast_vote_state_ret)) : both (t_Result (v_A × t_OvnContractState) t_ParseError)) in
 
 
           temp ← (cast_vote (ret_both ((i, xi, w, r, d, vi) : t_CastVoteParam)) state) ;;
@@ -358,18 +403,21 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     [package
         #def #[ PROTOCOL ] (_ : 'unit) : chProtocolOutput
         {
-#import {sig #[ ROUND1 ] : 'unit → chRound1output } as R1 ;;
+          #import {sig #[ ROUND1 ] : 'unit → chRound1output } as R1 ;;
           #import {sig #[ ROUND2 ] : chRound2input → chRound2output } as R2 ;;
           #import {sig #[ ROUND3 ] : chRound3input → chRound3output } as R3 ;;
 
           (* xi ← sample (uniform #|'Z_q|) ;; let xi := WitnessToField (otf xi) in *)
           round_1 ← R1 Datatypes.tt ;;
+          (* TODO: allow modification of state *)
 
           w ← sample (uniform #|'Z_q|) ;;
           r ← sample (uniform #|'Z_q|) ;;
           d ← sample (uniform #|'Z_q|) ;;
           round_2 ← R2 (WitnessToField (otf w), WitnessToField (otf r), WitnessToField (otf d)) ;;
+          (* TODO: allow modification of state *)
           round_3 ← R3 (WitnessToField (otf w), WitnessToField (otf r), WitnessToField (otf d)) ;;
+          (* TODO: allow modification of state *)
 
           ret ((round_1, round_2), round_3)
         }
@@ -915,6 +963,225 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       assumption.
   Qed.
 
+  Notation " 'MBS_ass_output' " :=
+    (v_G)
+    (in custom pack_type at level 2).
+
+  Definition ASS := 101%nat.
+
+  Program Definition maximum_ballot_secrecy_assumption_pkg (g_pow_yi : gT) (vi : bool) :
+    package (fset [::])
+      [interface]
+      [interface #val #[ ASS ] : 'unit → MBS_ass_output ]
+    :=
+    [package
+        #def #[ ASS ] (_ : 'unit) : MBS_ass_output
+        {
+          xi ← sample (uniform #|'Z_q|) ;;
+          is_state (solve_lift f_prod (f_pow (ret_both g_pow_yi) (ret_both (WitnessToField (otf xi)))) (f_g_pow (if vi then f_field_one else f_field_zero)))
+        }
+    ].
+  Next Obligation.
+    intros.
+    ssprove_valid.
+    1: apply valid_scheme ; rewrite <- fset0E ; apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
+  Qed.
+  Fail Next Obligation.
+
+  Lemma maximum_ballot_secrecy_assumption :
+    (* forall (i : nat) (xi : f_Z) state, *)
+    forall g_pow_yi,
+      g_pow_yi <> g ^+ (0%R : 'Z_q) ->
+    ∀ (LA : {fset Location}) (A : raw_package),
+     ValidPackage LA [interface #val #[ ASS ] : 'unit → MBS_ass_output ] A_export A →
+     (* fdisjoint LA OR_ZKP.proof_args.MyAlg.Sigma_locs → *)
+     (* let prot := fun vi => (protocol ∘ (par (round1 i xi state) (par (round2 i xi vi state) (round3 i xi vi state ∘ OR_ZKP.hacspec_or_run)))) in *)
+      AdvantageE
+        (maximum_ballot_secrecy_assumption_pkg g_pow_yi true)
+        (maximum_ballot_secrecy_assumption_pkg g_pow_yi false)
+        A = 0%R.
+  Proof.
+    intros.
+
+    apply: eq_rel_perf_ind_ignore.
+    1: apply fsubsetxx.
+    2,3: rewrite <- fset0E ; apply fdisjoints0.
+
+    simplify_eq_rel inp.
+    clear hin.
+
+    eassert (g_pow_split : exists (yi : v_Z), g_pow_yi = g ^+ FieldToWitness yi /\ (FieldToWitness yi <> (0%R : 'Z_q))%R).
+    {
+      epose cycleP.
+      destruct (ssrbool.elimT (cycleP HacspecGroup.g g_pow_yi)) ; [ | subst ].
+      {
+        unfold gT in g_pow_yi.
+        unfold HacspecGroup.g.
+        setoid_rewrite <- HOGaFE.v_G_g_gen.
+        simpl.
+        apply in_setT.
+      }
+
+      exists (WitnessToField (inord (x %% (Zp_trunc q).+2))).
+      rewrite FieldToWitnessCancel.
+
+      split.
+      2: red ; intros ; apply H ; setoid_rewrite <- H1.
+      all: rewrite inordK ; [ | easy].
+      all: rewrite !trunc_pow.
+      all: done.
+    }
+    
+    destruct g_pow_split as [yi [? ?]] ; subst.
+
+    assert (yi_is_unit : FieldToWitness yi \is a GRing.unit).
+    {
+      clear -H2.
+      apply rmorph_unit. rewrite unitfE. apply /eqP.
+
+      red ; intros.
+      apply H2.
+      rewrite H.
+      now rewrite rmorph0.
+    }
+
+    eapply (r_uniform_bij) with (f := _) ; [ | intros xi ].
+    1: shelve.
+
+    epose (OVN_old_proofs.vote_hiding_bij ((fto (FieldToWitness yi * (otf xi))%R) : OVN_proofs.secret) true).
+
+    eapply f_equal with (f := otf) in e.
+    rewrite !OVN_old_proofs.Hord in e.
+    rewrite !otf_fto in e.
+
+    rewrite <- bind_ret at 1.
+    rewrite <- bind_ret.
+
+    apply somewhat_substitution.
+    apply somewhat_substitutionR.
+
+    apply r_ret.
+    intros.
+    split ; [ clear H | easy ].
+
+    Misc.push_down_sides.
+    rewrite !(proj1 both_equivalence_is_pure_eq (HOGaFE.pow_base _)).
+
+    rewrite <- pow_witness_to_field.
+    rewrite <- expgM.
+    
+    rewrite <- (WitnessToFieldCancel (is_pure f_field_one)).
+    rewrite <- (WitnessToFieldCancel (is_pure f_field_zero)).
+    Misc.push_down_sides.
+    rewrite <- !pow_witness_to_field.
+
+    rewrite rmorph1. rewrite rmorph0.
+
+    unfold "*"%g in e.
+    simpl in e.
+    unfold setoid_lower2, F, U, sg_prod in e ; simpl in e.
+    rewrite !trunc_pow in e.
+
+    setoid_rewrite e.
+
+    f_equal.
+    f_equal.
+    f_equal.
+    f_equal.
+
+    rewrite expgD.
+    rewrite !trunc_pow.
+    rewrite <- expgD.
+    rewrite <- expgM.
+
+    replace (g ^+ (FieldToWitness yi * otf xi + 1)%N) with (g ^+ (nat_of_ord (FieldToWitness yi * otf xi + 1)%R)).
+    2:{
+      simpl.
+      rewrite !trunc_pow.
+      rewrite !expgD.
+      rewrite !trunc_pow.
+      rewrite !expgM.
+      reflexivity.
+    }
+
+    Unshelve.
+    3:{
+      intros x.
+      apply (fto).
+      cbn.
+
+      refine ((FieldToWitness yi * otf x + 1%R) / (FieldToWitness yi))%R.
+    }
+    2:{
+      eapply (Bijective (g := fun x => fto ((FieldToWitness yi * otf x - 1) / FieldToWitness yi)%R)).
+      1:{
+        intros xi.
+        rewrite otf_fto.
+
+        rewrite (mulrC (FieldToWitness yi * otf xi + 1)%R).
+        rewrite mulrA.
+        rewrite mulrV.
+        2: apply yi_is_unit.
+        rewrite mul1r.
+        rewrite <- addrA.
+        rewrite addrN.
+        rewrite addr0.
+        rewrite (mulrC _ (otf xi)).
+        rewrite <- mulrA.
+        rewrite mulrV.
+        2: apply yi_is_unit.
+        rewrite mulr1.
+        rewrite fto_otf.
+        reflexivity.
+      }
+      {
+        intros xi.
+        rewrite otf_fto.
+
+        rewrite (mulrC (FieldToWitness yi * otf xi - 1)%R).
+        rewrite mulrA.
+        rewrite mulrV.
+        2: apply yi_is_unit.
+        rewrite mul1r.
+        rewrite <- addrA.
+        rewrite addNr.
+        rewrite addr0.
+        rewrite (mulrC _ (otf xi)).
+        rewrite <- mulrA.
+        rewrite mulrV.
+        2: apply yi_is_unit.
+        rewrite mulr1.
+        rewrite fto_otf.
+        reflexivity.
+      }
+    }
+
+    hnf.
+    rewrite otf_fto.
+
+    replace (g ^+ (FieldToWitness yi * ((FieldToWitness yi * otf xi + 1) / FieldToWitness yi)%R)) with
+      (g ^+ (FieldToWitness yi * ((FieldToWitness yi * otf xi + 1) / FieldToWitness yi))%R).
+    2:{
+      simpl.
+      rewrite !trunc_pow.
+      reflexivity.
+    }
+
+    f_equal.
+    Set Printing Coercions.
+    f_equal.
+
+    From mathcomp Require Import ring.
+    Fail field.
+
+    rewrite (mulrC (FieldToWitness yi * otf xi + 1)%R).
+    rewrite mulrA.
+    rewrite mulrV.
+    2: apply yi_is_unit.
+    rewrite mul1r.
+    reflexivity.
+  Qed.
+
   Lemma maximum_ballot_secrecy :
     forall (i : nat) (xi : f_Z) state,
     ∀ (LA : {fset Location}) (A : raw_package),
@@ -1066,7 +1333,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         apply (ssrbool.elimT eqP) in H.
         inversion H ; subst.
         clear H.
-        
+
         simpl.
 
         choice_type_eqP_handle.
@@ -1127,6 +1394,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         eapply r_bind with (mid := pre_to_post pre).
         {
           unfold commit_to at 1 2.
+
           admit. (* DDH assumption / commit hiding *)
         }
         intros.
@@ -1145,29 +1413,20 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         inversion H ; subst.
         clear H.
 
-        simpl.
-
-        choice_type_eqP_handle.
-        choice_type_eqP_handle.
-
         destruct x as [[w r] d].
 
-        
-        unfold cast_fun.
         simpl.
 
-        unfold eq_rect_r.
-        simpl.
-        fold chElement.
-
+        choice_type_eqP_handle.
+        choice_type_eqP_handle.
         simpl.
 
-        ssprove_code_simpl.
-        
+        erewrite !cast_fun_K.
+
+        erewrite !code_link_bind.
         setoid_rewrite bind_assoc.
-        ssprove_code_simpl.
-        ssprove_code_simpl_more.
-        setoid_rewrite (code_link_scheme _ _ (is_state _)).
+
+        erewrite !(code_link_scheme _ _ (is_state (compute_g_pow_yi _ _))).
         2, 3: ssprove_valid_code.
 
         do 2 replace (f_cvp_i _) with (ret_both (i : int32)) by now apply both_eq.
@@ -1178,32 +1437,28 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
         ssprove_same_head g_pow_yi.
 
-        apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros a ].
-        unfold cast_fun.
+        simpl.
+        choice_type_eqP_handle.
+        choice_type_eqP_handle.
+        erewrite !cast_fun_K.
+        choice_type_eqP_handle.
+        erewrite !cast_fun_K.
         simpl.
 
-        unfold eq_rect_r.
-        simpl.
-        fold chElement.
+        apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ri ].
 
         unfold assertD.
         rewrite !otf_fto.
-        
-        replace (OR_ZKP.proof_args.MyParam.R _ _) with true.
-        2:{
-          symmetry.
-          unfold OR_ZKP.proof_args.MyParam.R.
-          rewrite !eqxx.
-          
 
-        replace (OR_ZKP.proof_args.MyParam.R _ _) with true by admit.
+        replace (OR_ZKP.proof_args.MyParam.R _ _) with true by now unfold OR_ZKP.proof_args.MyParam.R ; rewrite !eqxx.
+        replace (OR_ZKP.proof_args.MyParam.R _ _) with true by now unfold OR_ZKP.proof_args.MyParam.R ; rewrite !eqxx.
 
         simpl.
         apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros w0 ].
         apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros r0 ].
         apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros d0 ].
 
-        ssprove_same_head x0.
+        (* ssprove_same_head x0. *)
         simpl.
         ssprove_code_simpl.
         ssprove_code_simpl_more.
@@ -1217,8 +1472,11 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           rewrite <- bind_ret at 1.
           rewrite <- bind_ret.
 
-          set (lift_both (f_prod _ _)).
-          set (lift_both (f_prod _ _)).
+          set (compute_group_element_for_vote _ _ _).
+          set (compute_group_element_for_vote _ _ _).
+
+          (* set (lift_both (f_prod _ _)). *)
+          (* set (lift_both (f_prod _ _)). *)
 
           apply (somewhat_let_substitution  _ _ b _ pre).
           Misc.pattern_lhs_approx.
@@ -1230,8 +1488,153 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
           eapply r_bind with (mid := pre_to_post pre).
           {
+            unfold compute_group_element_for_vote at 1 2.
+
             (* DDH assumption, g^xi yi + vi hides xi and vi, for known g^yi *)
+            replace (ifb _ then _ else _) with (f_field_one) by now apply both_eq ; destruct f_field_one as [[]].
+            replace (ifb _ then _ else _) with (f_field_zero) by now apply both_eq ; destruct f_field_zero as [[]].
+
+            eassert (DDH : 'unit → 'public × 'public × 'public) by admit.
+            
+
+            pose OVN_proofs.pid.
+            unfold OVN_proofs.pid in c.
+            unfold OVN_proofs.Pid in c.
+            cbn in c.
+            epose (OVN_old_proofs.vote_hiding (fto (inord i)) _ _ _ _ _ _ _ _ _ _ _ _).
+            unfold Exec_i_realised in i0.
+            unfold Exec_i in i0.
+            simpl in i0.
+            unfold Exec in i0.
+            simpl in i0.
+            
+
+            (* eassert (exists (yi : v_Z), g ^+ FieldToWitness yi = g_pow_yi) by admit. (* TODO *) *)
+            (* destruct H as [yi H]. *)
+            (* rewrite <- H. *)
+
+            (* pose OVN_proofs.secret. *)
+            (* unfold OVN_proofs.secret in c. *)
+
+            (* epose (OVN_old_proofs.vote_hiding_bij ((fto (FieldToWitness yi * FieldToWitness xi)%R) : OVN_proofs.secret) true). *)
+
+            (* eapply f_equal with (f := otf) in e. *)
+            (* rewrite !OVN_old_proofs.Hord in e. *)
+            (* rewrite !otf_fto in e. *)
+
+            (* rewrite <- bind_ret at 1. *)
+            (* rewrite <- bind_ret. *)
+
+            (* apply somewhat_substitution. *)
+            (* apply somewhat_substitutionR. *)
+
+            (* apply r_ret. *)
+            (* intros. *)
+            (* split ; [ clear H | easy ]. *)
+
+            (* Misc.push_down_sides. *)
+            (* rewrite !(proj1 both_equivalence_is_pure_eq (HOGaFE.pow_base _)). *)
+
+            (* rewrite <- (WitnessToFieldCancel xi). *)
+            (* rewrite <- pow_witness_to_field. *)
+            (* rewrite <- expgM. *)
+            
+            (* rewrite <- (WitnessToFieldCancel (is_pure f_field_one)). *)
+            (* rewrite <- (WitnessToFieldCancel (is_pure f_field_zero)). *)
+            (* Misc.push_down_sides. *)
+            (* rewrite <- !pow_witness_to_field. *)
+
+            (* rewrite rmorph1. rewrite rmorph0. *)
+
+            (* unfold "*"%g in e. *)
+            (* simpl in e. *)
+            (* unfold setoid_lower2, F, U, sg_prod in e ; simpl in e. *)
+            (* rewrite !trunc_pow in e. *)
+
+            (* rewrite <- (WitnessToFieldCancel xi). *)
+            (* rewrite <- pow_witness_to_field. *)
+            (* rewrite <- expgM. *)
+            
+            (* rewrite <- (WitnessToFieldCancel (is_pure f_field_one)). *)
+            (* rewrite <- (WitnessToFieldCancel (is_pure f_field_zero)). *)
+            (* Misc.push_down_sides. *)
+            (* rewrite <- !pow_witness_to_field. *)
+
+            (* unfold OVN_GroupParam.g in e. *)
+            (* unfold g. *)
+            (* rewrite rmorph1. rewrite rmorph0. *)
+
+            (* setoid_rewrite e. *)
+
+            (* f_equal. *)
+            (* f_equal. *)
+            (* f_equal. *)
+            (* f_equal. *)
+
+            (* rewrite expgD. *)
+            (* rewrite !trunc_pow. *)
+            (* rewrite <- expgD. *)
+            
+
+            
+
+            (* (* FieldToWitness (is_pure (f_mul (ret_both yi) (ret_both xi))) *) *)
+            (* (* c := yixi *) *)
+                   
+
+            (* rewrite f_prod. *)
+            
+            (* (if v then fto (Zp_add (otf c) Zp1) else fto (Zp_add (otf c) (Zp_opp Zp1))) *)
+            (* replace (g_) *)
+            (* (* OVN/vote_hiding_bij *) *)
+            
             admit.
+          }
+          intros.
+          apply rpre_hypothesis_rule
+          ; intros ? ? []
+          ; apply rpre_weaken_rule with (pre := pre) ; [ | now intros ? ? [] ; subst ]
+          ; subst ; clear H1 ; subst pre.
+
+
+          Misc.pattern_lhs_approx.
+          unfold let_both at 1.
+          subst H.
+
+          apply (somewhat_let_substitution).
+          apply (somewhat_let_substitutionR).
+          ssprove_same_head b_temp0.
+
+          apply (somewhat_let_substitution).
+          apply (somewhat_let_substitutionR).
+          ssprove_same_head b_temp1.
+
+          apply (somewhat_let_substitution).
+          apply (somewhat_let_substitutionR).
+
+          rewrite !otf_fto.
+
+          set (pre := fun _ => _).
+          eapply r_bind with (mid := pre_to_post pre).
+          {
+            (* DDH assumption, g^xi yi + vi hides xi and vi, for known g^yi *)
+
+            apply (somewhat_substitution).
+            apply (somewhat_substitutionR).
+            simpl.
+
+            ssprove_same_head tal.
+            eapply r_bind with (mid := pre_to_post pre).
+            {
+              admit.
+            }
+            intros.
+            apply rpre_hypothesis_rule
+            ; intros ? ? []
+            ; apply rpre_weaken_rule with (pre := pre) ; [ | now intros ? ? [] ; subst ]
+            ; subst ; clear H1 ; subst pre.
+
+            ssprove_refl.
           }
           intros.
           apply rpre_hypothesis_rule
@@ -1251,5 +1654,5 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       }
     }
   Qed.
-  
+
 End OVN_proof.

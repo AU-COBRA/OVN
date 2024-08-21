@@ -1428,7 +1428,7 @@ Module OVN (π2 : CDSParams) (Alg2 : SigmaProtocolAlgorithms π2).
   Qed.
 
   Lemma vote_hiding_bij (c : secret) (v : bool):
-    fto (otf (fto (g ^+ c)) * g ^+ v) =
+    fto (otf (fto (g ^+ fto c)) * g ^+ v) =
       fto
         (otf (fto (g ^+ (if v then fto (Zp_add (otf c) Zp1) else fto (Zp_add (otf c) (Zp_opp Zp1))))) *
            g ^+ (~~ v)).
