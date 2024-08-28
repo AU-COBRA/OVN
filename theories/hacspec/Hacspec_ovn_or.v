@@ -472,8 +472,8 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
           ≈
           #assert R (b.1) (b.2) ;;
         wr ← sample uniform #|'Z_q| ;;
-        dr ← sample uniform #|'Z_q| ;;
         rr ← sample uniform #|'Z_q| ;;
+        dr ← sample uniform #|'Z_q| ;;
         is_state (zkp_one_out_of_two
                     (ret_both (WitnessToField (otf wr : 'Z_q)))
                     (ret_both (WitnessToField (otf rr : 'Z_q)))
@@ -502,9 +502,16 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
     subst.
 
     (* Align random sampling *)
-    eapply rsymmetry ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros x0 ] ; apply rsymmetry ; apply better_r.
-    eapply rsymmetry ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros x1 ] ; apply rsymmetry ; apply better_r.
-    eapply rsymmetry ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros x2] ; apply rsymmetry ; apply better_r.
+    eapply rsymmetry ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros w ] ; apply rsymmetry ; apply better_r.
+
+    eapply r_transL.
+    {
+      apply swap_samples.
+    }
+    hnf.
+
+    eapply rsymmetry ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros r ] ; apply rsymmetry ; apply better_r.
+    eapply rsymmetry ; eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros d] ; apply rsymmetry ; apply better_r.
 
     (* Save value in memory *)
     apply better_r_put_lhs.
@@ -736,8 +743,8 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
         unfold Sigma_locs in H0 ; rewrite <- fset1E in H0 ; rewrite in_fset1 in H0.
         now rewrite <- get_heap_set_heap.
     }
-    Qed.
-    (* Fail Timeout 5 Qed. Admitted. (* SLOW: 525.61 sec *) *)
+  Qed.
+  (* Fail Timeout 5 Qed. Admitted. (* SLOW: 525.61 sec *) *)
 
   (* The packaged version for running the hacspec code *)
   Program Definition hacspec_or_run :
@@ -752,8 +759,8 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
         {
           #assert R (otf b.1) (otf b.2) ;;
           wr ← sample uniform #|'Z_q| ;;
-          dr ← sample uniform #|'Z_q| ;;
           rr ← sample uniform #|'Z_q| ;;
+          dr ← sample uniform #|'Z_q| ;;
           v ← is_state (zkp_one_out_of_two
                       (ret_both (WitnessToField (otf wr : 'Z_q)))
                       (ret_both (WitnessToField (otf rr : 'Z_q)))
@@ -839,8 +846,8 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
     eassert (r =
               (v ← (
         wr ← sample uniform #|'Z_q| ;;
-        dr ← sample uniform #|'Z_q| ;;
         rr ← sample uniform #|'Z_q| ;;
+        dr ← sample uniform #|'Z_q| ;;
                     is_state
                       (zkp_one_out_of_two _
                          _
@@ -932,12 +939,9 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
       simpl (lookup_op _ _).
 
 
-      destruct choice_type_eqP ; [ | subst ; contradiction ].
-      destruct choice_type_eqP ; [ | subst ; contradiction ].
-      subst.
+      choice_type_eqP_handle.
+      choice_type_eqP_handle.
       rewrite !cast_fun_K.
-
-      clear e e1.
 
       destruct x as [[hy mv] c].
       ssprove_sync_eq. intros.
@@ -1208,7 +1212,7 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
 
       now destruct vi.
     }
-  Qed.
+  Qed. (* Slow *)
 
   (* Lemma proving that the output of the extractor defined for Schnorr's *)
   (* protocol is perfectly indistinguishable from real protocol execution. *)
