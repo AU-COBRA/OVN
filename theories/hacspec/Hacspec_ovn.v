@@ -69,6 +69,7 @@ Module Type HacspecOvnParameter.
   Parameter (v_A_t_HasActions : t_HasActions v_A).
 
   Parameter (n : both uint_size).
+  Parameter (n_pos : Positive (is_pure n)).
 
   (* Extra from code *)
   Parameter (v_G_t_Sized : t_Sized v_G).
