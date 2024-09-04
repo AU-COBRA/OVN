@@ -1229,10 +1229,96 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     apply Num.Theory.lerD.
     2: rewrite Advantage_sym ; eapply (protocol_dl_real_to_ideal) ; eassumption.
 
+    replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ easy | symmetry ].
     {
-      admit.
+      trimmed_package (dl_ideal).
+      rename H0 into trimmed_dl.
+      trimmed_package (schnorr_ideal).
+      rename H0 into trimmed_schnorr.
+      trimmed_package (cds_ideal).
+      rename H0 into trimmed_cds.
+
+      
+      apply: eq_rel_perf_ind_ignore.
+      1:{
+        solve_valid_package.
+        Unshelve.
+        all: revgoals.
+        all: (apply fsubsetxx || solve_in_fset || shelve).
+      }
+      1:{
+        solve_valid_package.
+        Unshelve.
+        all: revgoals.
+        all: (apply fsubsetxx || solve_in_fset || shelve).
+        Unshelve.
+        1:{ rewrite !fset_cons. solve_in_fset. }.
+        all: shelve.
+      }
+      3:{
+        apply H.
+      }
+      1: (apply fsubsetxx || solve_in_fset || shelve).
+      2,3: apply fdisjoints0.
+
+      unfold eq_up_to_inv.
+      simplify_eq_rel inp_unit.
+
+      repeat choice_type_eqP_handle.
+      erewrite !cast_fun_K.
+      fold chElement.
+
+      ssprove_code_simpl.
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      ssprove_same_head_generic.
+      erewrite !(code_link_scheme).
+      2: ssprove_valid_code.
+      ssprove_same_head_generic.
+
+      simpl.
+      eapply (r_uniform_bij) with (f := (fun (x : Arit (uniform #|'Z_q|)) => fto (otf x + 1)%R)) ; [ | intros ? ].
+      1:{
+        eapply (Bijective (g := (fun (x : Arit (uniform #|'Z_q|)) => fto (otf x - 1)%R))).
+        {
+          unfold cancel.
+          intros.
+          rewrite otf_fto.
+          rewrite addrK.
+          rewrite fto_otf.
+          reflexivity.
+        }
+        {
+          unfold cancel.
+          intros.
+          rewrite otf_fto.
+          rewrite <- addrA.
+          rewrite addNr.
+          rewrite addr0.
+          rewrite fto_otf.
+          reflexivity.
+        }
+      }
+      
+      rewrite !FieldToWitnessCancel.
+      rewrite !otf_fto.
+      rewrite trunc_pow.
+      rewrite expgD.
+      rewrite mulg1.
+
+      erewrite !(code_link_scheme).
+      2,3: ssprove_valid_code.
+      ssprove_same_head_generic.
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      apply r_ret.
+      easy.
     }
-  Admitted.
+  Qed.
 
   Program Definition real_protocol (i : nat) (state : t_OvnContractState) (vi : 'bool) :
     package fset0
@@ -2023,7 +2109,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       f_equal.
       destruct vi ; [ rewrite rmorph1 | rewrite rmorph0 ] ; done.
     }
-  Qed.
+  Time Qed. (* 319.394 secs *)
 
   Lemma real_protocol_is_maximum_balloc_secrecy_hiding :
     forall state (i : nat),
