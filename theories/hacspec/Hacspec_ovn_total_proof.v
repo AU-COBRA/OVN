@@ -2247,8 +2247,8 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           apply (ssrbool.elimN eqP) in e.
           red ; intros.
           apply e.
-          symmetry in H16.
-          rewrite H16.
+          symmetry in H17.
+          rewrite H17.
           rewrite FieldToWitnessCancel.
           rewrite inv_is_inv.
 
@@ -2263,7 +2263,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           rewrite otf_fto.
           rewrite <- mulrA.
           rewrite mulrV.
-          2: apply H16.
+          2: apply H17.
           rewrite mulr1.
           rewrite fto_otf.
           reflexivity.
@@ -2274,7 +2274,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           intros.
           rewrite otf_fto.
           rewrite mulrVK.
-          2: apply H16.
+          2: apply H17.
           rewrite fto_otf.
           reflexivity.
         }
