@@ -689,7 +689,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     intros.
     ssprove_valid.
     destruct x as [[[? ?] ?] [? ?]].
-    (* replace (OR_ZKP.proof_args.MyParam.R _ _) with true by admit. *)
     ssprove_valid.
     1: apply valid_scheme ; rewrite <- fset0E ; apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
   Qed.
@@ -1017,7 +1016,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       ssprove_sync=> r.
       now apply r_ret.
     }
-  Admitted. (* (* Slow *) Time Qed. (* 216.817 secs *) *)
+  Fail Timeout 5 Qed. Admitted. (* 216.817 secs *)
 
   (** DL_ *)
 
@@ -1558,6 +1557,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     trimmed_package (dl_real).
     trimmed_package (dl_ideal).
     trimmed_package (dl_random).
+    trimmed_package (dl_random2).
 
     trimmed_package (schnorr_real).
     trimmed_package (schnorr_ideal).
@@ -1584,7 +1584,12 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       (* replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ easy | symmetry ]. *)
 
       unfold_advantageE.
-      unshelve unfold_advantageE ; [ admit.. | | solve_flat ].
+      unshelve unfold_advantageE ; [ .. | | solve_flat ].
+      all:revgoals.
+      all: try (apply fsubsetxx).
+      all: try rewrite <- fset0E.
+      all: try rewrite !fset0U.
+      all: try (apply fsubsetxx || solve_in_fset).
 
       eapply Order.le_trans ; [ apply Advantage_triangle with (R := (par schnorr_ideal (par (par (GPowYiNotZero_real i state) commit_real) cds_real))) | ].
       rewrite <- (add0r (ψ + ν)%R).
@@ -1596,20 +1601,46 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         eapply schnorr_advantage.
         2,3: eassumption.
 
-        pose (trimmed_ID ([interface #val #[DL] : chDLInput → chDL_Output ]
-                            :|: ([interface #val #[SCHNORR] : schnorrInput → schnorrOutput ]
-                                   :|: [interface #val #[CDS] : CDSinput → CDSoutput ]))).
         pose (trimmed_ID ([interface #val #[SCHNORR] : schnorrInput → schnorrOutput ]
-                            :|: [interface #val #[CDS] : CDSinput → CDSoutput ])).
-        pose (trimmed_ID ([interface #val #[SCHNORR] : schnorrInput → schnorrOutput ])).
+           :|: ([interface #val #[GPOWYINOTZERO] : chGPowYiNotZeroInput → chDL_Output ]
+                :|: [interface #val #[COMMIT] : chDL_Output → chCommitOutput ]
+                :|: [interface #val #[CDS] : CDSinput → CDSoutput ]))).
+        pose (trimmed_ID [interface #val #[SCHNORR] : schnorrInput → schnorrOutput ]).
 
         solve_valid_package.
         1: apply H.
+        1:{
+          unfold idents.
+          rewrite !imfsetU.
+          simpl.
+          rewrite <- !fset1E.
+          rewrite !imfset1.
+          rewrite !fset1E.
+          rewrite <- !fset_cat.
+          simpl.
+          rewrite <- !fset1E.
+          rewrite fdisjoint1s.
+          rewrite !in_fset.
+          easy.
+        }
+        1: apply valid_ID ; solve_flat.
+        1: apply valid_ID ; solve_flat.
         Unshelve.
-        all: admit.
+        all: try (apply fsubsetxx).
+        all: try rewrite <- fset0E.
+        all: try rewrite !fset0U.
+        all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+        all: try (apply fsubsetxx || solve_in_fset).
       }
 
-      unshelve unfold_advantageE ; [ admit.. | | solve_flat ].
+      unshelve unfold_advantageE ; [ .. | | solve_flat ].
+      all:revgoals.
+      all: try (apply fsubsetxx).
+      all: try rewrite <- fset0E.
+      all: try rewrite !fset0U.
+      all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+      all: try (apply fsubsetxx || solve_in_fset).
+
 
       eapply Order.le_trans ; [ apply Advantage_triangle with (R := ((par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_real))) | ].
       rewrite <- (addr0 (ψ + ν)%R).
@@ -1618,6 +1649,12 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         rewrite !(par_commut _ cds_real). 
         unfold_advantageE.
         2: solve_flat.
+        Unshelve.
+        all: try (apply fsubsetxx).
+        all: try rewrite <- fset0E.
+        all: try rewrite !fset0U.
+        all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+        all: try (apply fsubsetxx || solve_in_fset).
 
         eapply Order.le_trans ; [ apply Advantage_triangle with (R := ((par (GPowYiNotZero_real i state) commit_ideal))) | ].
         apply Num.Theory.lerD.
@@ -1640,12 +1677,17 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           rewrite Advantage_E in H2.
           apply H2.
         }
-        Unshelve.
-        all: admit.
       }
       {
         unfold_advantageE.
         2: solve_flat.
+        Unshelve.
+        all: try (apply fsubsetxx).
+        all: try rewrite <- fset0E.
+        all: try rewrite !fset0U.
+        all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+        all: try (apply fsubsetxx || solve_in_fset).
+
         eapply cds_advantage.
         2,3: eassumption.
 
@@ -1706,23 +1748,20 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       2:{
         unshelve solve_valid_package.
         all: revgoals.
-        1: admit.
-
-        (* (* Slow *) *)
-        (* all: try (apply fsubsetxx || solve_in_fset). *)
-        (* all: try (apply fsubsetxx || solve_in_fset). *)
-        all: admit.
+        all: try (apply fsubsetxx).
+        all: try rewrite <- fset0E.
+        all: try rewrite !fset0U.
+        all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+        all: try (apply fsubsetxx || solve_in_fset).
       }
       1:{
         unshelve solve_valid_package.
         all: revgoals.
-        1: admit.
-
-        (* Slow: *)
-        (* 6: (apply fsubsetxx || solve_in_fset). *)
-        (* all: try (apply fsubsetxx || solve_in_fset). *)
-        (* 2: try (apply fsubsetxx || solve_in_fset). *)
-        all: admit.
+        all: try (apply fsubsetxx).
+        all: try rewrite <- fset0E.
+        all: try rewrite !fset0U.
+        all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+        all: try (apply fsubsetxx || solve_in_fset).
       }
       3: apply H.
       1: (apply fsubsetxx || solve_in_fset).
@@ -1805,21 +1844,20 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       2:{
         unshelve solve_valid_package.
         all: revgoals.
-        (* Slow *)
-        (* 9: (apply fsubsetxx || solve_in_fset). *)
-        (* 6: (apply fsubsetxx || solve_in_fset). *)
-        (* 3: (apply fsubsetxx || solve_in_fset). *)
-        (* all: try (apply fsubsetxx || solve_in_fset). *)
-        (* 1: try (apply fsubsetxx || solve_in_fset). *)
-        all: admit.
+        all: try (apply fsubsetxx).
+        all: try rewrite <- fset0E.
+        all: try rewrite !fset0U.
+        all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+        all: try (apply fsubsetxx || solve_in_fset).
       }
       1:{
         unshelve solve_valid_package.
         all: revgoals.
-        (* Slow *)
-        (* 6: (apply fsubsetxx || solve_in_fset). *)
-        (* all: try (apply fsubsetxx || solve_in_fset). *)
-        all: admit.
+        all: try (apply fsubsetxx).
+        all: try rewrite <- fset0E.
+        all: try rewrite !fset0U.
+        all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+        all: try (apply fsubsetxx || solve_in_fset).
       }
       3: apply H.
       1: (apply fsubsetxx || solve_in_fset).
@@ -1874,7 +1912,10 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       unfold_advantageE.
       Unshelve.
       all: revgoals.
-      all: try (apply fsubsetxx || solve_in_fset).
+      all: try (apply fsubsetxx).
+      all: try rewrite <- fset0E.
+      all: try rewrite !fset0U.
+      all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
       all: try (apply fsubsetxx || solve_in_fset).
       1: eapply flat_valid_package ; apply dl_random.
       match goal with | |- context [ AdvantageE _ _ ?A ] => specialize (H0 A) end.
@@ -1890,7 +1931,64 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       subst step4.
       unshelve solve_valid_package.
       all: revgoals.
-      all: admit.
+      all: try (apply fsubsetxx).
+      all: try rewrite <- fset0E.
+      all: try rewrite !fset0U.
+      all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+      all: try (apply fsubsetxx || solve_in_fset).
+
+      eapply valid_par_upto.
+      1:{
+        rewrite <- H5 at 1.
+        erewrite !link_trim_commut.
+        apply parable_par_r.
+        1:{
+          rewrite <- H6 at 1.
+          erewrite !link_trim_commut.
+          solve_Parable.
+        }
+        apply parable_par_r.
+        1:{
+          rewrite <- H9 at 1.
+          solve_Parable.
+        }
+        apply parable_par_r.
+        1:{
+          apply parable_par_r.
+          1:{
+            rewrite <- H11.
+            solve_Parable.
+          }
+          rewrite <- H13.
+          solve_Parable.
+        }
+        rewrite <- H16.
+        solve_Parable.
+      }
+      1:{ solve_valid_package.
+          Unshelve.
+          all: revgoals.
+          all: try (apply fsubsetxx).
+          all: try rewrite <- fset0E.
+          all: try rewrite !fset0U.
+          all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+          all: try (apply fsubsetxx || solve_in_fset).
+          all: shelve. }
+      1:{ solve_valid_package.
+          Unshelve.
+          all: revgoals.
+          all: try (apply fsubsetxx).
+          all: try rewrite <- fset0E.
+          all: try rewrite !fset0U.
+          all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+          all: try (apply fsubsetxx || solve_in_fset).
+          all: shelve. }
+      all: revgoals.
+      all: try (apply fsubsetxx).
+      all: try rewrite <- fset0E.
+      all: try rewrite !fset0U.
+      all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+      all: try (apply fsubsetxx || solve_in_fset).
     }
     eapply Order.le_trans ; [ apply Advantage_triangle with (R := step4) | ].
     rewrite <- (add0r ϵ%R).
@@ -1903,10 +2001,24 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
       unfold_advantageE.
       2: solve_flat.
+      Unshelve.
+      all: revgoals.
+      all: try (apply fsubsetxx).
+      all: try rewrite <- fset0E.
+      all: try rewrite !fset0U.
+      all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+      all: try (apply fsubsetxx || solve_in_fset).
 
       rewrite !(par_commut _ (par schnorr_ideal_no_assert _)).
       unfold_advantageE.
       2: solve_flat.
+      Unshelve.
+      all: revgoals.
+      all: try (apply fsubsetxx).
+      all: try rewrite <- fset0E.
+      all: try rewrite !fset0U.
+      all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+      all: try (apply fsubsetxx || solve_in_fset).
 
       unfold_advantageE.
 
@@ -1923,17 +2035,11 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       subst step1.
       unshelve solve_valid_package.
       all: revgoals.
-      3: instantiate (1 := [interface #val #[DL] : chDLInput → chDL_Output ; #val #[SCHNORR] : schnorrInput → schnorrOutput ;
-                            #val #[CDS] : CDSinput → CDSoutput]).
-      6: instantiate (1 := [interface #val #[SCHNORR] : schnorrInput → schnorrOutput ;
-                            #val #[CDS] : CDSinput → CDSoutput]).
-
-      (* Slow *)
-      (* 6: (apply fsubsetxx || solve_in_fset). *)
-      (* 3: (apply fsubsetxx || solve_in_fset). *)
-      (* all: try (apply fsubsetxx || solve_in_fset). *)
-      (* all: try (apply fsubsetxx || solve_in_fset). *)
-      all: admit.
+      all: try (apply fsubsetxx).
+      all: try rewrite <- fset0E.
+      all: try rewrite !fset0U.
+      all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+      all: try (apply fsubsetxx || solve_in_fset).
     }
 
     pose (step2 := full_protocol_interface_step2 state i vi ∘ (par (dl_random ∘ dl_ideal) (par dl_real (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert))))).
@@ -1941,18 +2047,13 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     {
       subst step2.
       unshelve solve_valid_package.
-      all: revgoals.
-      3: instantiate (1 := [interface #val #[DL] : chDLInput → chDL_Output ; #val #[SCHNORR] : schnorrInput → schnorrOutput ;
-                            #val #[CDS] : CDSinput → CDSoutput]).
-      6: instantiate (1 := [interface #val #[SCHNORR] : schnorrInput → schnorrOutput ;
-                            #val #[CDS] : CDSinput → CDSoutput]).
 
-      (* Slow *)
-      (* 6: (apply fsubsetxx || solve_in_fset). *)
-      (* 3: (apply fsubsetxx || solve_in_fset). *)
-      (* all: try (apply fsubsetxx || solve_in_fset). *)
-      (* all: try (apply fsubsetxx || solve_in_fset). *)
-      all: admit.
+      all: revgoals.
+      all: try (apply fsubsetxx).
+      all: try rewrite <- fset0E.
+      all: try rewrite !fset0U.
+      all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+      all: try (apply fsubsetxx || solve_in_fset).
     }
 
     split_advantage step2.
@@ -1981,7 +2082,22 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       eapply r_transR.
       1: apply swap_samples.
 
-      eapply r_reflexivity_alt ; admit.
+      (** Reflexivity from here on *)
+      
+      repeat choice_type_eqP_handle.
+      erewrite !cast_fun_K.
+      fold chElement.
+
+      simpl.
+
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      ssprove_same_head_generic.
+      ssprove_same_head_generic.
+      apply (r_reflexivity_alt (L := fset0)) ; [ | easy | easy ].
+      ssprove_valid.
     }
 
     pose (step3 := full_protocol_interface_step3 state i vi ∘ (par (dl_random ∘ dl_ideal) (par dl_real (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert))))).
@@ -1990,7 +2106,11 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       subst step3.
       unshelve solve_valid_package.
       all: revgoals.
-      all: admit.
+      all: try (apply fsubsetxx).
+      all: try rewrite <- fset0E.
+      all: try rewrite !fset0U.
+      all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+      all: try (apply fsubsetxx || solve_in_fset).
     }
 
     split_advantage step3.
@@ -2175,7 +2295,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       rewrite !otf_fto.
       reflexivity.
     }
-  Admitted. (* Qed. *)
+  Time Qed.
 
   Lemma all_step_advantage :
     forall state (i : nat),
