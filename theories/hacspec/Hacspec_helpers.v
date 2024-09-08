@@ -1603,14 +1603,26 @@ Proof.
     now apply IHh1.
 Qed.
 
-Definition somewhat_substitution : forall {A : choice_type} {B : choiceType} (b : both A) (f : A -> raw_code B) (c : raw_code B),
-    ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← ret (is_pure b) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄ ->
-    ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ temp ← is_state b ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ s₀ = s₁ ⦄.
+Definition r_bind_feq :
+  forall {A B} (a b : raw_code A) (f g : A -> raw_code B) post,
+    ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ a ≈ b ⦃ Logic.eq ⦄
+    → (∀ (a₀ : A), ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ f a₀ ≈ g a₀ ⦃ post ⦄) →
+    ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ x ← a ;; f x ≈ x ← b ;; g x ⦃ post ⦄.
+Proof.
+  intros.
+  eapply r_bind with (mid := pre_to_post (λ '(s₀, s₁), s₀ = s₁)) ;
+    [eapply rpost_weaken_rule ; [ apply H | now intros [] [] ? ]
+    | intros ].
+  apply rpre_hypothesis_rule ; intros ? ? [] ; eapply rpre_weaken_rule with (pre := (λ '(s₀, s₁), s₀ = s₁)) ; [ subst ; apply H0 | now simpl ; intros ? ? [] ].
+Qed.
+
+Definition somewhat_substitution : forall {A : choice_type} {B : choiceType} (b : both A) (f : A -> raw_code B) (c : raw_code B) pre,
+    ⊢ ⦃ λ '(s₀, s₁), pre (s₀, s₁) ⦄ temp ← ret (is_pure b) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ pre (s₀, s₁) ⦄ ->
+    ⊢ ⦃ λ '(s₀, s₁), pre (s₀, s₁) ⦄ temp ← is_state b ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ pre (s₀, s₁) ⦄.
 Proof.
   clear ; intros ? ? ? ? ? ?.
 
   eapply r_transL.
-  2: apply H.
   eapply r_bind.
 
   - apply r_nice_swap_rule ; [ easy | | apply p_eq ] ; now intros [] [] ; cbn.
@@ -1622,4 +1634,445 @@ Proof.
     1: subst ; apply rreflexivity_rule.
     intros ? ? [].
     now subst.
+Qed.
+
+Definition somewhat_substitutionR : forall {A : choice_type} {B : choiceType} (b : both A) (f : A -> raw_code B) (c : raw_code B) pre,
+    ⊢ ⦃ λ '(s₀, s₁), pre (s₀, s₁) ⦄ c ≈ temp ← ret (is_pure b) ;; f temp ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ pre (s₀, s₁) ⦄ ->
+    ⊢ ⦃ λ '(s₀, s₁), pre (s₀, s₁) ⦄ c ≈ temp ← is_state b ;; f temp ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ pre (s₀, s₁) ⦄.
+Proof.
+  clear ; intros ? ? ? ? ? ?.
+
+  eapply r_transR.
+  eapply r_bind.
+
+  - apply r_nice_swap_rule ; [ easy | | apply p_eq ] ; now intros [] [] ; cbn.
+  - intros.
+    simpl.
+    apply Misc.rpre_hypothesis_rule'.
+    intros ? ? [[]].
+    eapply rpre_weaken_rule.
+    1: subst ; apply rreflexivity_rule.
+    intros ? ? [].
+    now subst.
+Qed.
+
+Lemma somewhat_let_substitution :
+  forall {A C : choice_type} {B : choiceType} (f : C -> raw_code B) (c : raw_code B) (y : both A) (r : both A -> both C) pre,
+    ⊢ ⦃ pre ⦄ b_temp ← is_state y ;; temp ← is_state (r (ret_both b_temp)) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ pre (s₀, s₁) ⦄ ->
+    ⊢ ⦃ pre ⦄ temp ← is_state (letb 'b := y in r ((b))) ;; f temp ≈ c ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ pre (s₀, s₁) ⦄.
+Proof.
+  intros.
+  unfold let_both at 1.
+
+  eapply r_transL.
+  2:{ apply H. }
+  rewrite <- bind_assoc.
+  apply r_bind_feq.
+  2:intros ; eapply rpost_weaken_rule ; [ apply rreflexivity_rule | now intros [] [] H0 ; inversion H0 ].
+
+  pose (determ := (fun (y : both A) => both_deterministic y)).
+  pose (y_det := both_deterministic y).
+
+  pose (hd₀ := determ ).
+  pose (hd₁ := deterministic_bind _ _ y_det (fun x => determ (ret_both x))).
+  simpl in hd₁.
+
+  eapply r_transL.
+  1:{
+    apply r_bind_feq.
+    1:{
+      apply r_nice_swap_rule ; [ easy | easy | ].
+      epose p_eq.
+      eapply rpost_weaken_rule.
+      1: apply r0.
+      1:now intros [] [] [[] ?].
+    }
+    intros.
+    apply rreflexivity_rule.
+  }
+  simpl.
+
+  apply both_pure_eq.
+  now rewrite <- hacspec_function_guarantees.
+Qed.
+
+Lemma somewhat_let_substitutionR :
+  forall {A C : choice_type} {B : choiceType} (f : C -> raw_code B) (c : raw_code B) (y : both A) (r : both A -> both C) pre,
+    ⊢ ⦃ pre ⦄ c ≈ b_temp ← is_state y ;; temp ← is_state (r (ret_both b_temp)) ;; f temp ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ pre (s₀, s₁) ⦄ ->
+    ⊢ ⦃ pre ⦄ c ≈ temp ← is_state (letb 'b := y in r ((b))) ;; f temp ⦃ λ '(b₀, s₀) '(b₁, s₁), b₀ = b₁ ∧ pre (s₀, s₁) ⦄.
+Proof.
+  intros.
+  eapply r_transR.
+  2:{ apply H. }
+  rewrite <- bind_assoc.
+  apply r_bind_feq.
+  2:intros ; eapply rpost_weaken_rule ; [ apply rreflexivity_rule | now intros [] [] H0 ; inversion H0 ].
+
+  pose (determ := (fun (y : both A) => both_deterministic y)).
+  pose (y_det := both_deterministic y).
+
+  pose (hd₀ := determ ).
+  pose (hd₁ := deterministic_bind _ _ y_det (fun x => determ (ret_both x))).
+  simpl in hd₁.
+
+  eapply r_transL.
+  1:{
+    apply r_bind_feq.
+    1:{
+      apply r_nice_swap_rule ; [ easy | easy | ].
+      epose p_eq.
+      eapply rpost_weaken_rule.
+      1: apply r0.
+      1:now intros [] [] [[] ?].
+    }
+    intros.
+    apply rreflexivity_rule.
+  }
+  simpl.
+
+  apply both_pure_eq.
+  now rewrite <- hacspec_function_guarantees.
+Qed.
+
+Ltac ssprove_valid_code :=
+  rewrite <- fset0E
+  ; ssprove_valid
+  ; try match goal with
+      | [ |- context [ is_state ?b ] ] =>
+          apply (ChoiceEquality.is_valid_code (both_prog_valid b))
+      end
+  ; ssprove_valid'_2 ; apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
+
+Ltac ssprove_same_head n :=
+  apply (rsame_head_alt (L := fset0)) ; [ ssprove_valid_code | done | done | intros n ].
+
+Ltac ssprove_same_head_generic :=
+  apply (rsame_head_alt (L := fset0)) ; [ ssprove_valid_code | done | done | intros ? ].
+
+Ltac ssprove_refl :=
+  apply (r_reflexivity_alt (L := fset0)) ; [ ssprove_valid_code | done | done ].
+
+Ltac ssprove_sym :=
+  apply r_nice_swap_rule ; [ easy | | apply p_eq ] ; now intros [] [] ; cbn.
+
+From extructures Require Import ord fset fmap.
+
+Ltac trim_is_interface :=
+  setoid_rewrite filterm_set ; simpl ; fold chElement ;
+  rewrite <- fset1E ;
+  rewrite in_fset1 ;
+  simpl ;
+  rewrite eqxx ;
+  rewrite filterm0 ;
+  reflexivity.
+
+From Crypt Require Import pkg_composition.
+
+Ltac trimmed_package p :=
+  match type of p with
+  | package ?L ?I ?E =>
+      assert (trimmed E p) by now unfold trimmed ; trim_is_interface
+  end.
+
+Lemma fsubset_trans : forall (T : ordType) (a b c : {fset T}), a :<=: b -> b :<=: c -> a :<=: c.
+Proof.
+  clear ; intros.
+  apply /fsetUidPr.
+  apply (ssrbool.elimT fsetUidPr) in H.
+  apply (ssrbool.elimT fsetUidPr) in H0.
+  rewrite <- H0 at 2.
+  rewrite <- H.
+  rewrite <- fsetUA.
+  rewrite H0.
+  reflexivity.
+Qed.
+
+Import PackageNotation.
+
+From Crypt Require Import Package.
+
+Lemma trimmed_par :
+  forall I1 I2 a b, Parable a b -> trimmed I1 a -> trimmed I2 b -> trimmed (I1 :|: I2) (par a b).
+Proof.
+  intros.
+  unfold trimmed.
+  unfold trim.
+  simpl.
+  unfold par.
+
+  rewrite filterm_union.
+  1:{
+    rewrite <- H0.
+    rewrite <- H1.
+
+    assert (forall (T : ordType) (S : Type) (a : {fmap T -> S}) (f g : T -> S -> bool),
+               filterm f (filterm g a) = filterm (fun t s => f t s && g t s) a).
+    {
+      clear ; intros T S a f g.
+
+      unfold filterm.
+      simpl.
+      apply eq_fmap.
+      intros ?.
+      cbn.
+      f_equal.
+      destruct a.
+      simpl.
+      clear i.
+      induction fmval.
+      - reflexivity.
+      - cbn.
+        destruct g ; simpl ; destruct f ; simpl;  now rewrite IHfmval.
+    }
+
+    rewrite H2.
+    rewrite H2.
+    f_equal.
+    1:{
+      apply eq_filterm.
+      intros ? ?.
+      destruct y as [? [? ?]].
+      rewrite in_fsetU.
+      set  (_ \in _).
+      set  (_ \in _).
+      now destruct b0.
+    }
+    1:{
+      apply eq_filterm.
+      intros ? ?.
+      destruct y as [? [? ?]].
+      rewrite in_fsetU.
+      set  (_ \in _).
+      set  (_ \in _).
+      now destruct b1.
+    }
+  }
+  {
+    apply parable.
+  }
+Qed.
+
+Lemma trimmed_link :
+  forall E a b, trimmed E a -> trimmed E (a ∘ b).
+Proof.
+  intros.
+  unfold trimmed.
+  rewrite <- link_trim_commut.
+  rewrite H.
+  done.
+Qed.
+
+Lemma parable_par_l :
+  forall a b c, Parable a c -> Parable b c -> Parable (par a b) c.
+Proof.
+  clear ; intros.
+  unfold Parable.
+  rewrite domm_union.
+  rewrite fdisjointUl.
+  rewrite H H0.
+  reflexivity.
+Qed.
+
+Lemma parable_par_r :
+  forall a b c, Parable c a -> Parable c b -> Parable c (par a b).
+Proof.
+  clear ; intros.
+  unfold Parable.
+  rewrite domm_union.
+  rewrite fdisjointUr.
+  rewrite H H0.
+  reflexivity.
+Qed.
+
+
+Ltac solve_Parable :=
+  match goal with
+  | [ |- context [ Parable (trim _ ?a) (trim _ ?b) ] ] =>
+      apply parable_trim
+      ; try (unfold idents
+             ; rewrite <- !fset1E
+             ; rewrite !imfset1
+             ; now rewrite fdisjoint1s)
+  | Ha : trimmed ?Ea ?a ,
+      Hb : trimmed ?Eb ?b
+    |- context [ Parable ?a ?b ] =>
+      rewrite <- Ha ; rewrite <- Hb ; solve_Parable
+  | Ha : trimmed ?Ea ?a ,
+      Hb : trimmed ?Eb ?b
+    |- context [ Parable ?a (?b ∘ ?c) ] =>
+      rewrite <- Ha ;
+      rewrite <- Hb ;
+      erewrite !link_trim_commut ;
+      solve_Parable
+  | Ha : trimmed ?Ea ?a ,
+      Hb : trimmed ?Eb ?b
+    |- context [ Parable (?b ∘ ?c) ?a ] =>
+      rewrite <- Ha ;
+      rewrite <- Hb ;
+      erewrite !link_trim_commut ;
+      solve_Parable
+  | |- context [ Parable ?a (par ?b ?c) ] =>
+      apply parable_par_r ; solve_Parable
+  | |- context [ Parable (par ?a ?b) ?c ] =>
+      apply parable_par_l ; solve_Parable
+  end.
+
+Ltac solve_trimmed :=
+  match goal with
+  | |- context [ trimmed ?E (par ?a ?b) ] =>
+      apply trimmed_par ; [ solve_Parable | solve_trimmed.. ]
+  | |- context [ trimmed ?E (?b ∘ ?c) ] =>
+      apply trimmed_link ; solve_trimmed
+  (* | |- context [ trimmed _ (?b ∘ ?c) ] => *)
+  (*     assert (Hb : trimmed _ b) by solve_trimmed ; *)
+  (*     rewrite <- Hb ; *)
+  (*     rewrite link_trim_commut ; *)
+  (*     solve_trimmed *)
+  (* | [ |- context [ trimmed _ (par (trim _ ?a) (trim _ ?b ∘ ?c)) ] ] => *)
+  (*     rewrite link_trim_commut ; *)
+  (*     solve_trimmed *)
+  (* | [ |- context [ trimmed _ (par ?a ?b) ] ] => *)
+  (*     apply trimmed_par ; solve_Parable *)
+  | _ => eassumption || shelve
+  end.
+
+Ltac solve_valid_package :=
+  match goal with
+  | [ |- context [ ValidPackage ?L ?I ?E (pack ?a) ] ] =>
+      apply a
+  | [ |- context [ ValidPackage ?L ?I ?E (trim ?T ?a) ] ] =>
+      apply valid_trim ; solve_valid_package
+  (* | [ |- context [ ValidPackage ?L ?I ?E (?a ∘ ?b) ] ] => *)
+  (*     apply valid_link ; solve_valid_package *)
+  | [ |- context [ ValidPackage ?L ?I ?E (?a ∘ ?b) ] ] =>
+      eapply valid_link_upto ; [ solve_valid_package | solve_valid_package | shelve | shelve ]
+  (* | [ |- context [ ValidPackage ?L ?I ?E (par (trim _ ?a) (trim _ ?b)) ] ] => *)
+  (*     apply valid_par ; [ *)
+  (*       solve_Parable *)
+  (*     | solve_valid_package | solve_valid_package ] *)
+  | [ |- context [ ValidPackage ?L ?I ?E (par ?a ?b) ] ] =>
+      eapply valid_par_upto ; [
+        solve_Parable
+      | solve_valid_package | solve_valid_package | shelve.. ]
+  | [ |- context [ ValidPackage ?L ?I ?E (par (trim _ ?a) (trim _ ?b ∘ ?c)) ] ] =>
+      rewrite link_trim_commut ;
+      solve_valid_package
+  | _ => idtac
+  end.
+
+Ltac unfold_advantageE :=
+  match goal with
+  | [ |- context [ AdvantageE (?a ∘ ?b) (?a ∘ ?c) ] ] =>
+      rewrite <- Advantage_link
+  | [ |- context [ AdvantageE (par ?a (?b)) (par ?a (?c)) ?A ] ] =>
+      erewrite (Advantage_par a b c A _ _ _ _ _)
+      ; [
+      | solve_valid_package | solve_valid_package | solve_valid_package
+      |
+      | solve_trimmed | solve_trimmed | solve_trimmed ]
+  (* | [ |- context [ AdvantageE (par ?a (?b)) (par ?a (?c)) ?A ] ] => *)
+  (*     pose 2%nat *)
+  | _ => idtac
+  end.
+
+
+Lemma bobble_sampleC :
+  ∀
+    {A : ord_choiceType}
+    {C : _}
+    (o : Op)
+    (c : raw_code C)
+    (v : raw_code A)
+    (f : A -> Arit o -> raw_code C),
+    ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄
+      r ← sample o ;;
+    a ← v ;;
+    f a r ≈
+      c ⦃ Logic.eq ⦄ <->
+      ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄
+        a ← v ;;
+      r ← sample o ;;
+      f a r ≈
+        c ⦃ Logic.eq ⦄.
+Proof.
+  intros.
+  replace
+    (a ← v ;; r ← sample o ;; f a r) with
+    ('(a,r) ← (a ← v ;; r ← sample o ;; ret (a, r)) ;; f a r) by now rewrite bind_assoc.
+
+  assert (H_eq : ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄
+                   x ← (a ← v ;;
+                        r ← sample o ;;
+                        ret (a, r)) ;;
+                 (let '(a, r) := x in f a r)
+                   ≈
+                   r ← sample o ;;
+                 a ← v ;;
+                 f a r
+                   ⦃ Logic.eq ⦄).
+  {
+    1:{
+      eapply r_transR with (c₁ := '(a,r) ← _ ;; f a r).
+      2: apply r_bind_feq ; [ apply rsamplerC | intros [] ].
+      2: apply rreflexivity_rule.
+      rewrite !bind_assoc.
+      simpl.
+      setoid_rewrite bind_assoc.
+      simpl.
+      apply rreflexivity_rule.
+    }
+  }
+
+  split ; intros H ; (eapply r_transR ; [ apply H | clear H ])
+  ; [ | apply r_nice_swap_rule ; [ easy | easy | ] ] ; simpl ; apply H_eq.
+Qed.
+
+Lemma bobble_sample_uniform_putr :
+  ∀
+    {C : choiceType}
+    {ℓ : Location}
+    (o : nat) {Ho : Positive o}
+    (c : raw_code C)
+    (v : ℓ.π1)
+    (f : Arit (uniform o) -> raw_code C),
+    (forall (v : Arit (uniform o)), valid_code fset0 fset0 (f v)) ->
+    ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄
+      r ← sample uniform o ;;
+    #put ℓ := v ;;
+              f r ≈
+                c ⦃ Logic.eq ⦄ ->
+              ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄
+                #put ℓ := v ;;
+                          r ← sample uniform o ;;
+                          f r ≈
+                            c ⦃ Logic.eq ⦄.
+Proof.
+  intros ? ? ? ? ? ? ? ? H.
+  eapply r_transR.
+  1: apply H.
+  apply better_r_put_lhs.
+  apply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros ].
+  apply better_r_put_rhs.
+  eapply rpost_weaken_rule.
+  1:{
+    set (pre := set_rhs _ _ _).
+    refine (r_reflexivity_alt (L := fset0) pre _ _ _ _).
+    1: rewrite <- fset0E ; apply (H0 _).
+    all: easy.
+  }
+  now simpl ; intros [] [] [? [? [[? []] ?]]].
+Qed.
+
+Definition r_bind_feq_alt :
+  forall {A B} (a b : raw_code A) (f g : A -> raw_code B) pre post,
+    ⊢ ⦃ pre ⦄ a ≈ b ⦃ pre_to_post pre ⦄
+    → (∀ (a₀ : A), ⊢ ⦃ pre ⦄ f a₀ ≈ g a₀ ⦃ post ⦄) →
+    ⊢ ⦃ pre ⦄ x ← a ;; f x ≈ x ← b ;; g x ⦃ post ⦄.
+Proof.
+  intros.
+  eapply r_bind with (mid := pre_to_post pre)
+  ; [eapply rpost_weaken_rule ; [ apply H | now intros [] [] ? ]
+    | intros ].
+  apply rpre_hypothesis_rule ; intros ? ? [] ; eapply rpre_weaken_rule with (pre := pre)
+  ; [ subst ; apply H0 | now simpl ; intros ? ? [] ].
 Qed.

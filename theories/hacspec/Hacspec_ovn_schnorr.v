@@ -107,95 +107,167 @@ Module OVN_schnorr_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAn
     refine (((otf l2) = r1) /\ (WitnessToField (otf l3) = r2) /\ (WitnessToField (otf l4) = r3)).
   Defined.
 
-  (* Running Schnorr is equal to running OVN Schnorr implementation *)
- Lemma schnorr_run_eq  (pre : precond) :
-   forall (b : Witness),
-      ⊢ ⦃ pre ⦄
-        match lookup_op RUN_interactive (RUN, (choiceStatement × choiceWitness, choiceTranscript)) with
-        | Some c =>
-            c
-        | None => λ _ : src (RUN, (choiceStatement × choiceWitness, choiceTranscript)),
-              ret (chCanonical (chtgt (RUN, (choiceStatement × choiceWitness, choiceTranscript))))
-        end (fto (HacspecGroup.g ^+ b), fto b)
-        ≈
+  Lemma hacspec_run_valid :
+    ValidPackage Sigma_locs (fset [::])
+      [interface #val #[RUN] : chRelation → chTranscript ]
+      [fmap (RUN,
+           mkdef (choiceStatement × choiceWitness) choiceTranscript
+             (λ '(h, x),
+          #assert R (otf h) (otf x) ;;
+          (
         r ← sample (uniform (H := Witness_pos) i_witness) ;;
-        is_state (schnorr_zkp (ret_both (WitnessToField (otf r : 'Z_q))) (ret_both ((HacspecGroup.g ^+ b))) (ret_both (WitnessToField b)))
-          ⦃ fun '(x,_) '(y,_) => schnorr_run_post_cond x y  ⦄.
+        '(u,e,z) ← is_state (schnorr_zkp (ret_both (WitnessToField (otf r : 'Z_q))) (ret_both (otf h : v_G)) (ret_both (WitnessToField (otf x) : f_Z))) ;;
+        ret ((h : choiceStatement, fto (u : Statement), fto (FieldToWitness e),fto (FieldToWitness z)) : choiceTranscript))
+      ))].
+  Proof.
+    ssprove_valid.
+    match goal with
+    | [ |- context [ is_state ?b ] ] =>
+        apply valid_scheme ; rewrite <- fset0E ; apply (ChoiceEquality.is_valid_code (both_prog_valid b))
+    end.
+  Qed.
+
+  (* The packaged version for running the hacspec code *)
+  Definition hacspec_run :
+    package Sigma_locs
+        [interface]
+        [interface
+          #val #[ RUN ] : chRelation → chTranscript
+        ] :=
+    {package _ #with hacspec_run_valid}.
+  
+  (* Adversary gets no advantage by running hacspec version *)
+  Lemma hacspec_vs_RUN_interactive :
+    ∀ LA A,
+      ValidPackage LA [interface
+                         #val #[ RUN ] : chRelation → chTranscript
+        ] A_export A →
+      fdisjoint LA Sigma_locs →
+      AdvantageE hacspec_run RUN_interactive A = 0%R.
   Proof.
     intros.
+    rewrite Advantage_sym.
+    apply: eq_rel_perf_ind_ignore.
+    2: apply hacspec_run.
+    1: eapply valid_package_inject_export ; [ | apply RUN_interactive ] ; solve_in_fset.
+    1: rewrite fsetUid ; apply fsubsetxx.
+    2: apply H.
+    2,3: apply H0.
 
-    (* Unfold lhs *)
-    epose (lookup_op_valid _ _ _ _ (RUN, (choiceStatement × choiceWitness, choiceTranscript)) (pack_valid RUN_interactive) (* TODO: *) ltac:(rewrite fset_cons (in_fsetU) ; solve_in_mem) ).
-    destruct e as [c [H _]]. rewrite H.
+    unfold eq_up_to_inv.
+    simplify_eq_rel inp_unit.
+    destruct inp_unit as [h xi].
 
-    cbn in H.
-    destruct choice_type_eqP ; [ | discriminate ].
-    destruct choice_type_eqP ; [ | discriminate ].
-    rewrite cast_fun_K in H.
-    clear e e1.
+    intros.
+
     inversion_clear H.
-    rewrite !otf_fto; unfold R; rewrite eqxx; unfold assertD.
+    apply r_assertD_same.
+    intros.
 
+    unfold R in e.
+    apply (ssrbool.elimT eqP) in e.
+    rewrite <- (fto_otf h).
+    rewrite e. clear e.
+    clear h.
+    
     (* Unfold rhs *)
     unfold schnorr_zkp.
 
     (* Equate randomness *)
     eapply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros ].
-    apply better_r_put_lhs.
-
-    (* Unfold definintions triple *)
-    eapply (Misc.r_transR_both).
-    {
-      apply both_equivalence_is_pure_eq.
-      repeat unfold let_both at 1.
-      Transparent lift1_both.
-      Transparent Build_t_SchnorrZKPCommit.
-      simpl.
-      apply Misc.prod_both_pure_eta_3.
-    }
-
-    (* Pull out definition of f_hash from triple *)
-    eapply (Misc.r_transR_both).
-    {
-      symmetry.
-
-      set (r := prod_b (_, _, _)).
-      set (f_hash _) in r.
-      pattern b0 in r.
-      subst r.
-
-      apply (bind_both_eta _ b0).
-    }
-    hnf.
+    (* apply better_r_put_lhs. *)
     simpl.
 
-    (* Equate hash with random oracle (Fiat-Shamir heuristic) *)
-    eapply (HGPA.hash_is_psudorandom i_random _ (fun x => WitnessToField (otf x)) _ _ _ _ [:: _; _; _]).
+    rewrite bind_assoc.
+    unfold let_both at 1.
+    unfold let_both at 1.
+    set (fun _ => let_both _ _).
+    apply (@somewhat_let_substitutionR _ _ choiceTranscript _ _ (f_hash _) b).
+    
+    eapply r_transR.
+    1:{
+      set ([:: _; _; _]).
+      eapply (HGPA.hash_is_psudorandom _ _ _ _ _ _ _ l).
+      intros.
+      unshelve instantiate (1 := (fun x0 => WitnessToField (otf x0))).
+      simpl.
+
+      rewrite bind_assoc.
+      simpl.
+
+      set (fun _ => _).
+      apply better_r.
+      eapply rpost_weaken_rule.
+      1:{
+        rewrite !bind_assoc.
+        apply (somewhat_substitutionR).
+        rewrite bind_rewrite.
+
+        rewrite !bind_assoc.
+        apply (somewhat_substitutionR).
+        rewrite bind_rewrite.
+
+        rewrite !bind_assoc.
+        apply (somewhat_substitutionR).
+        rewrite !bind_rewrite.
+
+        now apply r_ret.
+      }
+      simpl. intros [] [] []. subst.
+      reflexivity.
+    }
+    hnf.
+
+    apply better_r_put_lhs.
+
+    simpl.
+    unfold i_random.
+    simpl.
+    unfold Schnorr.q.
+    unfold q.
+
+    eapply r_uniform_bij with (f := _).
+    1: instantiate (1 := fun x => x) ; now apply inv_bij.
     intros.
 
-    (* Read location *)
     apply getr_set_lhs.
-
-    (* Make rhs pure *)
-    set (ret _) ;
-    set (prod_b (_,_,_)) ;
-    apply (Misc.make_pure (x := r) (y := b0)) ;
-    subst r b0.
-
-    (* Show equality of return values *)
     apply r_ret.
-    intros ; repeat split.
-    * rewrite! otf_fto.
-      (* Field isomorphism property *)
-      rewrite <- HGPA.conversion_is_true.
-      rewrite FieldToWitnessCancel.
-      reflexivity.
-    * rewrite! otf_fto.
-      (* Field isomorphism properties *)
-      rewrite rmorphD.
-      rewrite rmorphM.
+    intros ? ? [? []].
+    subst.
 
-      (* Equality up to `ret_both (is_pure _)` *)
-      now Misc.push_down_sides.
+    split.
+    2:{
+      intros ? ?.
+      rewrite get_set_heap_neq.
+      1: apply H, H2.
+      apply /eqP.
+      red ; intros.
+      subst.
+      unfold Sigma_locs in H2.
+      rewrite notin_fset in H2.
+      
+      unfold "\notin" in H2.
+      unfold "\in" in H2.
+      simpl in H2.
+      rewrite eqxx in H2.
+      easy.
+    }
+    
+    repeat rewrite pair_equal_spec ; repeat split.
+
+     * rewrite <- HGPA.conversion_is_true.
+       rewrite FieldToWitnessCancel.
+       reflexivity.
+     * rewrite FieldToWitnessCancel.
+       rewrite fto_otf.
+       reflexivity.
+     * rewrite <- FieldToWitnessCancel.
+       (* Field isomorphism properties *)
+       rewrite rmorphD.
+       rewrite rmorphM.
+       f_equal.
+       f_equal.
+       now Misc.push_down_sides.
   Qed.
+
 End OVN_schnorr_proof.
