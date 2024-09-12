@@ -57,6 +57,8 @@ Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
 From OVN Require Import Hacspec_ovn_Ovn_traits.
 Export Hacspec_ovn_Ovn_traits.
 
+Notation " x '.a[' a ']'" := (array_index x (* (n_seq_array_or_seq x _) *) a) (at level 40).
+
 Module Type HacspecOvnParameter.
   (** Move arguments to context *)
   Parameter (v_G : choice_type).

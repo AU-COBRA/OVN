@@ -172,6 +172,29 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         symmetry ] ; revgoals.
 
 
+  Lemma nseq_n_pos :
+    forall A n,
+      Positive n ->
+      match
+      nseq_ A n
+    with
+    | 'unit => True
+    | chMap (chFin n0) C =>
+        match pos n0 with
+        | 0%N => False
+        | _.+1 => C = A
+        end
+    | chMap 'nat C | chList C => C = A
+    | _ => False
+         end.
+  Proof.
+    intros.
+    simpl.
+    destruct n0.
+    - done.
+    - reflexivity.
+  Defined.
+
   (*** Solution *)
 
   (** DL *)
@@ -200,7 +223,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret (g ^+ FieldToWitness xi)
         }
     ].
-  Solve All Obligations with now intros ; destruct from_uint_size.
   Fail Next Obligation.
 
   Program Definition dl_ideal :
@@ -217,7 +239,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret (g ^+ FieldToWitness xi)
         }
     ].
-  Solve All Obligations with now intros ; destruct from_uint_size.
   Fail Next Obligation.
 
   Notation " 'chDLRandom' " :=
@@ -246,7 +267,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret (h, xi : f_Z)
         }
     ].
-  Solve All Obligations with now intros ; destruct from_uint_size.
   Fail Next Obligation.
 
   Definition dl_real_ : loc_package [interface] [interface #val #[ DL_RANDOM ] : 'unit → chDLRandom] := {locpackage (pack dl_random ∘ pack dl_real) #with ltac:(unshelve solve_valid_package ; apply fsubsetxx)} .
@@ -546,7 +566,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret (commit : v_Z)
         }
     ].
-  Solve All Obligations with now intros ; destruct from_uint_size.
   Next Obligation.
     intros.
     ssprove_valid.
@@ -568,7 +587,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret (xi : v_Z)
         }
     ].
-  Solve All Obligations with now intros ; destruct from_uint_size.
   Fail Next Obligation.
 
   (* hash_is_psudorandom / commit - game *)
@@ -609,7 +627,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret (temp : v_G)
         }
     ].
-  Solve All Obligations with now intros ; destruct from_uint_size.
   Next Obligation.
     intros.
     ssprove_valid.
@@ -632,7 +649,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret (temp : v_G)
         }
     ].
-  Solve All Obligations with now intros ; destruct from_uint_size.
   Next Obligation.
     intros.
     ssprove_valid.
@@ -1016,7 +1032,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       ssprove_sync=> r.
       now apply r_ret.
     }
-  Qed. (* Fail Timeout 5 Qed. Admitted. (* 216.817 secs *) *)
+  (* Qed. *) Fail Timeout 5 Qed. Admitted. (* 216.817 secs *)
 
   (** DL_ *)
 
@@ -1416,7 +1432,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret res
         }
     ].
-  Solve All Obligations with now intros ; destruct from_uint_size.
   Fail Next Obligation.
 
   Program Definition full_protocol_interface_step4 (state : t_OvnContractState) (i : nat) (vi : 'bool) :
@@ -2295,7 +2310,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       rewrite !otf_fto.
       reflexivity.
     }
-  Time Qed.
+  Fail Timeout 5 Qed. Admitted. (* 123.43 secs *)
 
   Lemma all_step_advantage :
     forall state (i : nat),
@@ -2529,6 +2544,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     }
   Qed.
 
+
   Program Definition real_protocol (i : nat) (state : t_OvnContractState) (vi : 'bool) :
     package fset0
       [interface]
@@ -2576,7 +2592,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret ((round_1, round_2) , round_3)
         }
     ].
-  Solve All Obligations with now intros ; destruct from_uint_size.
+  Solve All Obligations with now intros ; apply nseq_n_pos, HOP.n_pos.
   Next Obligation.
     fold chElement in *.
     intros.
@@ -2589,21 +2605,251 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   Qed.
   Fail Next Obligation.
 
-  Lemma array_update_eq : forall {A : choice_type} (b5 : both (nseq_ A (from_uint_size (is_pure n)))) b (i : int32) H,
+  Lemma array_update_eq : forall {A : choice_type} (b5 : both (nseq_ A (from_uint_size (is_pure n)))) b (i : int32),
+      (Z.to_nat (unsigned i) < (from_uint_size (is_pure n)))%coq_nat ->
       is_pure (array_index
-                 (n_seq_array_or_seq
-                    (update_at_usize b5 (ret_both i) b)
-                    (* (HOGaFE.GroupAndField.OVN.compute_g_pow_yi_obligations_obligation_1 *)
-                    (*    (update_at_usize b5 (ret_both i) b)) *)
-                    H)
+                 (update_at_usize b5 (ret_both i) b)
                  (ret_both i)) =
         is_pure b.
   Proof.
-    clear ; intros.
-    admit.
-  Admitted.
+    intros A.
+    intros.
+
+    unfold update_at_usize at 1.
+    unfold lift3_both at 1.
+    unfold array_index at 1.
+    unfold lift2_both at 1 2.
+    simpl.
+
+    simpl in *.
+    epose proof (wrepr_unsigned (is_pure HOP.n)).
+    epose HOP.n_pos.
+    rewrite <- (Z2Nat.id (unsigned (is_pure n))) in H0.
+    2: apply wunsigned_range.
+    rewrite <- H0 in p ; clear H0.
+
+    destruct (Z.to_nat (unsigned (is_pure n))).
+    1: discriminate.
+
+    clear p.
+
+
+    unfold Hacspec_Lib_Pre.array_upd.
+    unfold array_upd_clause_1.
+    unfold array_upd_clause_1_clause_1.
+
+    unfold Hacspec_Lib_Pre.array_index at 1.
+
+    destruct lt_dec.
+    {
+      unfold array_index_clause_2.
+      destruct le_lt_dec ; [ easy | ].
+      rewrite setmE.
+      epose (proj1 (ord_ext
+               (Z.to_nat (unsigned i))
+               (Z.to_nat (unsigned i))) erefl).
+      apply (ssrbool.introT eqP) in e.
+      rewrite e.
+      simpl.
+      reflexivity.
+
+      Unshelve.
+      2,3: apply /ltP ; apply H.
+    }
+    {
+      contradiction.
+    }
+  Qed.
+
+  Lemma array_update_neq : forall {A : choice_type} (b5 : both (nseq_ A (from_uint_size (is_pure n)))) b (i x : int32),
+      (Z.to_nat (unsigned i) < (from_uint_size (is_pure n)))%coq_nat ->
+      (Z.to_nat (unsigned x) <> Z.to_nat (unsigned i)) ->
+      is_pure (array_index
+                 (update_at_usize b5 (ret_both i) b)
+                 (ret_both x)) =
+        is_pure (array_index b5 (ret_both x)).
+  Proof.
+    intros A.
+    intros.
+
+    unfold update_at_usize at 1.
+    unfold lift3_both at 1.
+    unfold array_index at 1 2.
+    unfold lift2_both at 1 2 3.
+    simpl.
+
+    simpl in *.
+    epose proof (wrepr_unsigned (is_pure HOP.n)).
+    epose HOP.n_pos.
+    rewrite <- (Z2Nat.id (unsigned (is_pure n))) in H1.
+    2: apply wunsigned_range.
+    rewrite <- H1 in p ; clear H1.
+
+    destruct (Z.to_nat (unsigned (is_pure n))).
+    1: discriminate.
+
+    clear p.
+
+
+    unfold Hacspec_Lib_Pre.array_upd.
+    unfold array_upd_clause_1.
+    unfold array_upd_clause_1_clause_1.
+
+    unfold Hacspec_Lib_Pre.array_index at 1 2.
+
+    destruct lt_dec.
+    {
+      unfold array_index_clause_2.
+      destruct le_lt_dec ; [ easy | ].
+      {
+        rewrite setmE.
+
+        replace (_ == _) with false.
+        {
+          reflexivity.
+        }
+        symmetry.
+        apply /eqP.
+        red ; intros.
+        apply ord_ext in H1.
+        apply H0.
+        easy.
+      }
+    }
+    {
+      contradiction.
+    }
+  Qed.
+
+  Lemma n_seq_array_or_seq_simpl : forall {A : choice_type} {n : nat} (b5 : both (nseq_ A n.+1)),
+      (n_seq_array_or_seq b5 (nseq_n_pos A n.+1 erefl)) = b5.
+  Proof.
+    intros.
+    unfold nseq_n_pos.
+    cbn.
+    assert (positive_eqP {| pos := n0.+1; cond_pos := erefl |} _ (eqxx _) = erefl).
+    {
+      easy.
+    }
+    rewrite H.
+    reflexivity.
+  Qed.
+
+  Check n_seq_array_or_seq.
+  
+  Lemma n_seq_array_or_seq_simpl_pos : forall {A : choice_type} {n : nat} (b5 : both (nseq_ A n)),
+      (Positive n)%R ->
+      match n as k return both (nseq_ A k) -> _ with
+      | 0%nat => fun _ => False
+      | S n0 => fun b5 => n_seq_array_or_seq b5 (nseq_n_pos A n0.+1 erefl) = b5
+      end b5.
+  Proof.
+    intros.
+    destruct n0.
+    - discriminate.
+    - apply (n_seq_array_or_seq_simpl b5).
+  Defined.
+
+  Lemma pos_pos : Positive (from_uint_size (is_pure n)).
+  Proof. apply n_pos. Qed.
+  
+  (* Lemma array_update_eq_n_seq_array_or_seq : forall {A : choice_type} (b5 : both (nseq_ A (from_uint_size (is_pure n)))) b (i : int32), *)
+  (*     (Z.to_nat (unsigned i) < (from_uint_size (is_pure n)))%coq_nat -> *)
+  (*     is_pure (array_index *)
+  (*                (n_seq_array_or_seq *)
+  (*                   (update_at_usize b5 (ret_both i) b) *)
+  (*                   (nseq_n_pos A (is_pure n) pos_pos)) *)
+  (*                (ret_both i)) = *)
+  (*       is_pure b. *)
+  (* Proof. *)
+  (*   intros. *)
+  (*   auto. *)
+    
+  (*   unfold array_index at 1. *)
+  (*   unfold lift2_both at 1. *)
+  (*   unfold n_seq_array_or_seq. *)
+  (*   unfold nseq_n_pos. *)
+  (*   simpl. *)
+  (*   unfold uint_size_to_nat. *)
+  (*   unfold update_at_usize at 1. *)
+  (*   simpl in *. *)
+  (*   unfold Hacspec_Lib_Pre.array_index at 1. *)
+  (*   unfold array_index_clause_2. *)
+  (*   unfold array_index_clause_2_clause_1. *)
+  (*   simpl. *)
+
+  (*   set pos_pos. *)
+  (*   simpl in *. *)
+  (*   set (Z.to_nat (unsigned (is_pure n))) in *. *)
+  (*   subst p. *)
+    
+    
+  (*   generalize dependent n0. *)
+  (*   destruct n0. *)
+    
+
+  (*   unfold nseq_n_pos. *)
+    
+  (*   Require Import Coq.Program.Equality. *)
+  (*   clear H. *)
+  (*   elim (is_pure n). *)
+  (*   dependent elimination (is_pure n). *)
+  (*   simplify_dep_elim. *)
+    
+  (*   unfold nseq_n_pos. *)
+  (*   unfold uint_size_to_nat. *)
+  (*   set (from_uint_size _) in *. *)
+  (*   unfold n_pos. *)
+  (*   unfold update_at_usize at 1. *)
+  (*   set (HOP.n_pos). *)
+  (*   set (is_pure n) in *. *)
+  (*   clear Hop.n_pos. *)
+  (*   generalize dependent s. *)
+    
+  (*   generalize dependent y. *)
+
+  (*   epose (array_update_eq b5 b i H). *)
+  (*   assert (both (nseq_ A (from_uint_size (is_pure n))) = both (nseq_ A (from_uint_size (is_pure n)).-1.+1)). *)
+  (*   { *)
+  (*     now rewrite <- (Lt.S_pred_pos_stt (from_uint_size (is_pure n))). *)
+  (*   } *)
+  (*   generalize dependent b5. *)
+  (*   intros b5. *)
+  (*   simpl. *)
+  (*   unfold array_index at 1. *)
+    
+  (*   rewrite H0 in b5. *)
+      
+      
+      
+  (*     rewrite H. *)
+    
+  (*   rewrite <- (array_update_eq b5 b i H). *)
+  (*   clear H. *)
+
+  (*   epose proof (Lt.S_pred_pos_stt (from_uint_size (is_pure n)) _). *)
+  (*   apply f_equal. *)
+  (*   apply f_equal. *)
+  (*   setoid_rewrite (f_equal (fun x => array_index x (ret_both i))). *)
+  (*   2:{ *)
+  (*     destruct (from_uint_size _). *)
+  (*   2,3 : reflexivity. *)
+
+  (*   simpl in e. *)
+  (*   setoid_rewrite e. *)
+
+  (*   destruct n. *)
+
+
+  (*   setoid_rewrite n_seq_array_or_seq_simpl. *)
+    
+  (*   destruct b5. *)
+      
+  (*   intros. *)
+  (* Qed. *)
 
   Lemma compute_g_pow_yi_update_eq : forall (b5 : both (nseq_ v_G (from_uint_size (is_pure n)))) b (i : int32),
+      (Z.to_nat (unsigned i) < from_uint_size (is_pure n))%coq_nat ->
       is_pure (compute_g_pow_yi
                  (ret_both i)
                  (update_at_usize b5 (ret_both i) b)) =
@@ -2612,12 +2858,45 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
                             b5
                           ).
   Proof.
-    clear ; intros.
+    intros.
+
+    (* unfold update_at_usize at 1. *)
+    (* unfold lift3_both at 1. *)
+    unfold compute_g_pow_yi at 1 2.
+    (* unfold lift2_both at 1 2. *)
+    simpl.
+
+    repeat unfold let_both at 1.
+    set (fun _ => _).
+    set (fun _ => _).
+    set (fun _ => _).
+
+    assert (forall (x : both int32), Z.to_nat (unsigned (is_pure x)) ≠ Z.to_nat (unsigned i) -> forall y, is_pure (y0 x y) = is_pure (y1 x y)).
+    {
+      intros.
+      subst y0 y1.
+      simpl.
+      rewrite !(hacspec_function_guarantees2 f_prod y2).
+      f_equal.
+      f_equal.
+      f_equal.
+      f_equal.
+
+      rewrite hacspec_function_guarantees.
+      rewrite array_update_neq ; easy.
+    }
+
+    (* TODO: fold stuff *)
     admit.
+
+    (* rewrite !H. *)
+    (* reflexivity. *)
+    (* Qed. *)
   Admitted.
 
   Lemma real_to_full_protocol_advantage :
     forall state (i : nat) vi,
+      (Z.to_nat (unsigned (i : int32)) < from_uint_size (is_pure n))%coq_nat ->
     ∀ (LA : {fset Location}) (A : raw_package),
       ValidPackage LA [interface #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript ] A_export A →
       (AdvantageE
@@ -2625,6 +2904,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
          (full_protocol_interface state i vi ∘ par dl_real (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real)))
          A = 0)%R.
   Proof.
+    intros state i vi i_lt_n.
     intros.
 
     trimmed_package (dl_real).
@@ -2722,7 +3002,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
     repeat set (update_at_usize _ _ _).
     rewrite (hacspec_function_guarantees (fun x => array_index x _)).
-    rewrite (hacspec_function_guarantees (fun x => n_seq_array_or_seq x _)).
     rewrite <- hacspec_function_guarantees.
 
     eassert (forall state (v : both (nseq_ _ (from_uint_size (is_pure n)))), is_pure (f_zkp_xis (Build_t_OvnContractState [ state ] ( f_round1 := v))) = is_pure (f_zkp_xis state)).
@@ -2747,7 +3026,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     rewrite H14.
     clear H13 H14.
 
-    rewrite <- (hacspec_function_guarantees (fun x => n_seq_array_or_seq x _)).
     rewrite <- (hacspec_function_guarantees (fun x => array_index x _)).
     subst b0.
     replace (cast_int (ret_both i)) with (ret_both (i : int32)).
@@ -2760,7 +3038,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     }
 
     set (f_zkp_xis _).
-    setoid_rewrite (array_update_eq b0 (ret_both a) i real_protocol_obligation_1).
+    setoid_rewrite (array_update_eq b0 (ret_both a) i i_lt_n).
     subst b0.
     simpl.
 
@@ -2773,7 +3051,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     apply somewhat_substitution.
 
     rewrite (hacspec_function_guarantees (fun x => array_index x _)).
-    rewrite (hacspec_function_guarantees (fun x => n_seq_array_or_seq x _)).
     rewrite <- hacspec_function_guarantees.
 
       eassert (forall state (v : both (nseq_ _ (from_uint_size (is_pure n)))),
@@ -2816,7 +3093,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       clear H14 H15 H16.
 
 
-    rewrite <- (hacspec_function_guarantees (fun x => n_seq_array_or_seq x _)).
     rewrite <- (hacspec_function_guarantees (fun x => array_index x _)).
     subst b.
     replace (cast_int (ret_both i)) with (ret_both (i : int32)).
@@ -2828,7 +3104,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         reflexivity.
     }
 
-    setoid_rewrite (array_update_eq _ (ret_both _) i real_protocol_obligation_2).
+    setoid_rewrite (array_update_eq _ (ret_both _) i i_lt_n).
     rewrite bind_rewrite.
     subst r H13.
     hnf.
@@ -2906,7 +3182,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     }
 
     rewrite <- hacspec_function_guarantees.
-    rewrite compute_g_pow_yi_update_eq.
+    rewrite compute_g_pow_yi_update_eq. 2: apply i_lt_n.
     rewrite bind_rewrite.
 
     apply somewhat_let_substitution.
@@ -2947,8 +3223,8 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     intros.
     apply somewhat_substitution.
     rewrite !bind_rewrite.
-    apply somewhat_substitution.
-    rewrite !bind_rewrite.
+    (* apply somewhat_substitution. *)
+    (* rewrite !bind_rewrite. *)
     simpl.
 
     (* Round 3 / cast_vote *)
@@ -3067,7 +3343,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
         subst b.
         rewrite <- hacspec_function_guarantees.
-        rewrite compute_g_pow_yi_update_eq.
+        rewrite compute_g_pow_yi_update_eq. 2: apply i_lt_n.
         reflexivity.
       }
       apply (r_reflexivity_alt (L := fset0)).
@@ -3101,121 +3377,129 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     rewrite bind_assoc.
     apply somewhat_substitution.
 
-    replace (ret _) with (ret (is_pure (ret_both
-                                          (is_pure
-                                             (compute_group_element_for_vote
-                                                (ret_both
-                                                (WitnessToField (otf xi)))
-                                                (ret_both vi) b))))).
-    2:{
-      clear.
-      repeat set (update_at_usize _ _ _).
-      rewrite (hacspec_function_guarantees (fun x => array_index (n_seq_array_or_seq x _) _)).
-      rewrite <- (hacspec_function_guarantees f_g_pow_xi_yi_vis).
-
-    eassert (forall state (v : both (nseq_ _ (from_uint_size (is_pure n)))),
-                is_pure (f_g_pow_xi_yi_vis (Build_t_OvnContractState [ state ] ( f_zkp_vis := v)))
-                = is_pure (f_g_pow_xi_yi_vis (state))).
+    clear -i_lt_n.
+    
+    eapply r_transL.
     {
-      clear ; intros.
-      unfold f_g_pow_xis at 1.
-      unfold Build_t_OvnContractState at 1.
-      simpl.
-      reflexivity.
-    }
-    rewrite H ; clear H.
+      apply r_bind_feq.
+      {
+        apply r_ret.
+        intros.
+        
+        rewrite pair_equal_spec ; split ; [ | subst ; easy ].
 
-    eassert (forall state (v : both (nseq_ _ (from_uint_size (is_pure n)))),
-                is_pure (f_g_pow_xi_yi_vis (Build_t_OvnContractState [ state ] ( f_g_pow_xi_yi_vis := v)))
-                = is_pure v).
-    {
-      clear ; intros.
-      unfold f_g_pow_xis at 1.
-      unfold Build_t_OvnContractState at 1.
-      simpl.
-      reflexivity.
-    }
-    rewrite H ; clear H.
+        repeat set (update_at_usize _ _ _).
+        rewrite (hacspec_function_guarantees (fun x => array_index x _)).
+        rewrite <- (hacspec_function_guarantees f_g_pow_xi_yi_vis).
 
-    subst b4.
-    rewrite <- (hacspec_function_guarantees (fun x => array_index (n_seq_array_or_seq x _) _)).
-
-    replace (cast_int (ret_both i)) with (ret_both (i : int32)).
-    2:{ apply both_eq.
+        eassert (forall state (v : both (nseq_ _ (from_uint_size (is_pure n)))),
+                    is_pure (f_g_pow_xi_yi_vis (Build_t_OvnContractState [ state ] ( f_zkp_vis := v)))
+                    = is_pure (f_g_pow_xi_yi_vis (state))).
+        {
+          clear ; intros.
+          unfold f_g_pow_xis at 1.
+          unfold Build_t_OvnContractState at 1.
+          simpl.
+          reflexivity.
+        }
+        rewrite H0 ; clear H0.
         simpl.
-        unfold cast_int at 1, lift1_both at 1, bind_both, bind_raw_both.
+
+        eassert (forall state (v : both (nseq_ _ (from_uint_size (is_pure n)))),
+                    is_pure (f_g_pow_xi_yi_vis (Build_t_OvnContractState [ state ] ( f_g_pow_xi_yi_vis := v)))
+                    = is_pure v).
+        {
+          clear ; intros.
+          unfold f_g_pow_xis at 1.
+          unfold Build_t_OvnContractState at 1.
+          simpl.
+          reflexivity.
+        }
+        rewrite H0 ; clear H0.
+
+        subst b4.
+        rewrite <- (hacspec_function_guarantees (fun x => array_index x _)).
+
+        replace (cast_int (ret_both i)) with (ret_both (i : int32)).
+        2:{ apply both_eq.
+            simpl.
+            unfold cast_int at 1, lift1_both at 1, bind_both, bind_raw_both.
+            simpl.
+            rewrite wrepr_unsigned.
+            reflexivity.
+        }
+
+        setoid_rewrite (array_update_eq _ (ret_both _) i i_lt_n).
         simpl.
-        rewrite wrepr_unsigned.
         reflexivity.
-    }
-
-    setoid_rewrite (array_update_eq _ (ret_both _) i real_protocol_obligation_4).
-    reflexivity.
+      }
+      intros.
+      apply rreflexivity_rule.
     }
     rewrite bind_rewrite.
-
 
     rewrite bind_assoc.
     match goal with | |- context [ ⊢ ⦃ _ ⦄ bind (is_state ?a) ?f ≈ _ ⦃ _ ⦄ ] => apply (somewhat_substitution a f) end.
 
-    apply r_ret.
-    intros ; split ; [ | easy ].
-
-    clear.
-
+    eapply r_transL.
     {
-      repeat set (update_at_usize _ _ _).
-
-      eassert (forall state (v : both (nseq_ _ (from_uint_size (is_pure n)))),
-                  is_pure (f_commit_vis (Build_t_OvnContractState [ state ] ( f_commit_vis := v)))
-                  = is_pure v).
+      apply r_bind_feq.
       {
-        clear ; intros.
-        unfold f_g_pow_xis at 1.
-        unfold Build_t_OvnContractState at 1.
+        apply r_ret.
+        intros.
+
+        rewrite pair_equal_spec ; split ; [ | subst ; easy ].
+
+        repeat set (update_at_usize _ _ _).
+        rewrite (hacspec_function_guarantees (fun x => array_index x _)).
+        rewrite <- (hacspec_function_guarantees f_zkp_vis).
+
+        eassert (forall state (v : both (nseq_ _ (from_uint_size (is_pure n)))),
+                    is_pure (f_zkp_vis (Build_t_OvnContractState [ state ] ( f_zkp_vis := v)))
+                    = is_pure v).
+        {
+          clear ; intros.
+          unfold f_g_pow_xis at 1.
+          unfold Build_t_OvnContractState at 1.
+          simpl.
+          reflexivity.
+        }
+        rewrite H0 ; clear H0.
+        rewrite <- (hacspec_function_guarantees (fun x => array_index x _)).
+        simpl.
+        
+        subst b5.
+        replace (cast_int (ret_both i)) with (ret_both (i : int32)).
+        2:{ apply both_eq.
+            simpl.
+            unfold cast_int at 1, lift1_both at 1, bind_both, bind_raw_both.
+            simpl.
+            rewrite wrepr_unsigned.
+            reflexivity.
+        }
+
+        setoid_rewrite (array_update_eq _ (ret_both _) i i_lt_n).
         simpl.
         reflexivity.
       }
-      rewrite (hacspec_function_guarantees (fun x => array_index (n_seq_array_or_seq x _) _)).
-      rewrite <- (hacspec_function_guarantees f_commit_vis).
-      rewrite H ; clear H.
-      rewrite <- (hacspec_function_guarantees (fun x => array_index (n_seq_array_or_seq x _) _)).
-
-      rewrite array_update_eq.
-
-      rewrite (hacspec_function_guarantees (fun x => array_index (n_seq_array_or_seq x _) _)).
-      rewrite <- (hacspec_function_guarantees f_zkp_vis).
-
-      
-    eassert (forall state (v : both (nseq_ _ (from_uint_size (is_pure n)))),
-                is_pure (f_zkp_vis (Build_t_OvnContractState [ state ] ( f_zkp_vis := v)))
-                = is_pure v).
-    {
-      clear ; intros.
-      unfold f_g_pow_xis at 1.
-      unfold Build_t_OvnContractState at 1.
-      simpl.
-      reflexivity.
+      intros.
+      apply rreflexivity_rule.
     }
-    rewrite H ; clear H.
-    rewrite <- (hacspec_function_guarantees (fun x => array_index (n_seq_array_or_seq x _) _)).
-    simpl.
+    rewrite bind_rewrite.
+    rewrite bind_rewrite.
+    apply r_ret.
+    intros.
+    split ; [ | easy ].
 
-    rewrite pair_equal_spec ; repeat split ; [ rewrite pair_equal_spec ; repeat split ; [ try rewrite pair_equal_spec ; repeat split.. ].. ].
-    1:{
-      clear.
-      subst b5.
+    repeat rewrite pair_equal_spec ; repeat split.
+    {
+      simpl.
+      clear -i_lt_n.
+      repeat set (update_at_usize _ _ _).
+      unfold Build_t_OvnContractState at 1 ; simpl.
+      subst b2.
 
-      replace (cast_int (ret_both i)) with (ret_both (i : int32)).
-      2:{ apply both_eq.
-          simpl.
-          unfold cast_int at 1, lift1_both at 1, bind_both, bind_raw_both.
-          simpl.
-          rewrite wrepr_unsigned.
-          reflexivity.
-      }
-
-      rewrite array_update_eq.
+      setoid_rewrite (array_update_eq _ (ret_both _) i i_lt_n).
       reflexivity.
     }
     {
@@ -3289,21 +3573,20 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         }
 
         rewrite (hacspec_function_guarantees (compute_g_pow_yi (ret_both i))).
+        rewrite H3.
         rewrite H2.
         rewrite H1.
         rewrite H0.
-        rewrite H.
-        clear H H0 H1 H2.
+        clear H0 H1 H2 H3.
         rewrite <- (hacspec_function_guarantees (compute_g_pow_yi (ret_both i))).
         
-        rewrite compute_g_pow_yi_update_eq.
+        rewrite compute_g_pow_yi_update_eq. 2: apply i_lt_n.
         Misc.push_down_sides.
         rewrite <- pow_witness_to_field.
         rewrite <- conversion_is_true.
         destruct vi ; [ rewrite rmorph1 | rewrite rmorph0 ] ; reflexivity.
     }
-    }
-  Qed. (* Fail Timeout 5 Qed. Admitted. (* 319.394 secs *) *)
+  (* Qed. *) Fail Timeout 5 Qed. Admitted. (* 319.394 secs *)
 
   Lemma real_protocol_is_maximum_balloc_secrecy_hiding :
     forall state (i : nat),
@@ -3346,38 +3629,3 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   (*** /Solution *)
 
 End OVN_proof.
-
-(* (*** Broken examples *) *)
-
-(* Program Definition full_protocol_interface_step2 (state : t_OvnContractState) (i : nat) (vi : 'bool) (f : f_Z -> ((t_SchnorrZKPCommit × v_G) × (v_Z) × (t_OrZKPCommit × v_G))) : *)
-(*   package fset0 *)
-(*     [interface *)
-(*        #val #[ DL ] : chDLInput → chDLOutput *)
-(*      ; #val #[ SCHNORR ] : schnorrInput → schnorrOutput *)
-(*      ; #val #[ CDS ] : CDSinput → CDSoutput *)
-(*      ; #val #[ DL_RANDOM ] : 'unit → chDLRandom *)
-(*     ] *)
-(*     [interface *)
-(*        #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript *)
-(*     ] := *)
-(*   [package *)
-(*      #def #[ FULL_PROTOCOL_INTERFACE ] (_ : 'unit) : chSingleProtocolTranscript *)
-(*      { *)
-(*        #import {sig #[ DL ] : chDLInput → chDLOutput } *)
-(*        as dl ;; *)
-(*        #import {sig #[ SCHNORR ] : schnorrInput → schnorrOutput } *)
-(*        as schnorr ;; *)
-(*        #import {sig #[ CDS ] : CDSinput → CDSoutput } *)
-(*        as CDS ;; *)
-(*        #import {sig #[ DL_RANDOM ] : 'unit → chDLRandom } *)
-(*        as dl_random ;; *)
-(*        '(g_pow_xi, x_other) ← dl_random Datatypes.tt ;; *)
-(*        xi ← sample uniform #|'Z_q| ;; *)
-(*        let xi : f_Z := WitnessToField (otf xi : 'Z_q) in *)
-(*        f xi *)
-(*  }]. *)
-(* Next Obligation. *)
-(*   intros. *)
-(*   ssprove_valid. *)
-(*   1,2: apply valid_scheme ; rewrite <- fset0E ; apply (ChoiceEquality.is_valid_code (both_prog_valid _)). *)
-(* Defined. *)
