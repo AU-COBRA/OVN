@@ -1,23 +1,24 @@
-#![no_std]
-#![feature(register_tool)]
-#![register_tool(hax)]
+// #![no_std]
+// #![feature(register_tool)]
+// #![register_tool(hax)]
 
-#[hax_lib_macros::exclude]
-extern crate hax_lib_macros;
+// #[hax_lib_macros::exclude]
+// extern crate hax_lib_macros;
 
-#[hax_lib_macros::exclude]
-use hax_lib_macros::*;
+// #[hax_lib_macros::exclude]
+// use hax_lib_macros::*;
 
-#[exclude]
-use hacspec_concordium::*;
-
+// #[exclude]
+use concordium_std::*;
 
 ////////////
 // Traits //
 ////////////
 
 /** Interface for field implementation */
-pub trait Field: core::marker::Copy + PartialEq + Eq + Clone + Copy + hacspec_concordium::Serialize {
+pub trait Field:
+    core::marker::Copy + PartialEq + Eq + Clone + Copy + concordium_std::Serialize
+{
     fn q() -> Self;
 
     fn random_field_elem(random: u32) -> Self;
@@ -33,8 +34,10 @@ pub trait Field: core::marker::Copy + PartialEq + Eq + Clone + Copy + hacspec_co
 }
 
 /** Interface for group implementation */
-pub trait Group: core::marker::Copy + PartialEq + Eq + Clone + Copy + hacspec_concordium::Serialize {
-    type Z : Field;
+pub trait Group:
+    core::marker::Copy + PartialEq + Eq + Clone + Copy + concordium_std::Serialize
+{
+    type Z: Field;
 
     fn g() -> Self; // Generator (elemnent of group)
 

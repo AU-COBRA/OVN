@@ -1,10 +1,10 @@
-#[hax_lib_macros::exclude]
-use hax_lib_macros::*;
+// #[hax_lib::exclude]
+// use hax_lib::*;
 
-#[exclude]
-use hacspec_concordium::*;
-#[exclude]
-use hacspec_concordium_derive::*;
+// #[exclude]
+use concordium_std::*;
+// #[exclude]
+use concordium_std_derive::*;
 
 pub use crate::ovn_traits::*;
 
@@ -12,11 +12,11 @@ pub use crate::ovn_traits::*;
 // Useful definitions //
 ////////////////////////
 
-fn sub<Z : Field>(x: Z, y: Z) -> Z {
+fn sub<Z: Field>(x: Z, y: Z) -> Z {
     Z::add(x, Z::opp(y))
 }
 
-fn div<G : Group>(x: G, y: G) -> G {
+fn div<G: Group>(x: G, y: G) -> G {
     G::prod(x, G::group_inv(y))
 }
 
@@ -34,11 +34,7 @@ pub struct SchnorrZKPCommit<G: Group> {
 /** Non-interactive Schnorr proof using Fiat-Shamir heuristics (RFC 8235) */
 // https://www.rfc-editor.org/rfc/rfc8235
 // https://crypto.stanford.edu/cs355/19sp/lec5.pdf
-pub fn schnorr_zkp<G: Group>(
-    random: G::Z,
-    h: G,
-    x: G::Z,
-) -> SchnorrZKPCommit<G> {
+pub fn schnorr_zkp<G: Group>(random: G::Z, h: G, x: G::Z) -> SchnorrZKPCommit<G> {
     let r = random;
     let u = G::g_pow(r);
     let c = G::hash(vec![G::g(), h, u]);
@@ -52,10 +48,7 @@ pub fn schnorr_zkp<G: Group>(
 }
 
 // https://crypto.stanford.edu/cs355/19sp/lec5.pdf
-pub fn schnorr_zkp_validate<G: Group>(
-    h: G,
-    pi: SchnorrZKPCommit<G>,
-) -> bool {
+pub fn schnorr_zkp_validate<G: Group>(h: G, pi: SchnorrZKPCommit<G>) -> bool {
     pi.schnorr_zkp_c == G::hash(vec![G::g(), h, pi.schnorr_zkp_u])
         && G::g_pow(pi.schnorr_zkp_z) == G::prod(pi.schnorr_zkp_u, G::pow(h, pi.schnorr_zkp_c))
 }
@@ -155,10 +148,7 @@ pub fn zkp_one_out_of_two<G: Group>(
 }
 
 // Anonymous voting by two-round public discussion
-pub fn zkp_one_out_of_two_validate<G: Group>(
-    h: G,
-    zkp: OrZKPCommit<G>,
-) -> bool {
+pub fn zkp_one_out_of_two_validate<G: Group>(h: G, zkp: OrZKPCommit<G>) -> bool {
     let c = G::hash(vec![
         zkp.or_zkp_x,
         zkp.or_zkp_y,
@@ -187,14 +177,11 @@ pub fn commit_to<G: Group>(g_pow_xi_yi_vi: G) -> G::Z {
     G::hash(vec![g_pow_xi_yi_vi])
 }
 
-pub fn check_commitment<G: Group>(
-    g_pow_xi_yi_vi: G,
-    commitment: G::Z,
-) -> bool {
+pub fn check_commitment<G: Group>(g_pow_xi_yi_vi: G, commitment: G::Z) -> bool {
     G::hash(vec![g_pow_xi_yi_vi]) == commitment
 }
 
-#[hax::contract_state(contract = "OVN")]
+// #[hax::contract_state(contract = "OVN")]
 // #[cfg_attr(not(feature = "hax_compilation"), contract_state(contract = "OVN"))]
 #[derive(Serialize, SchemaType, Clone, Copy)]
 pub struct OvnContractState<G: Group, const n: usize> {
@@ -208,10 +195,10 @@ pub struct OvnContractState<G: Group, const n: usize> {
 
     pub tally: u32,
 
-    pub round1 : [bool; n],
+    pub round1: [bool; n],
 }
 
-#[hax::init(contract = "OVN")]
+// #[hax::init(contract = "OVN")]
 // #[cfg_attr(not(feature = "hax_compilation"), init(contract = "OVN"))]
 pub fn init_ovn_contract<G: Group, const n: usize>(// _: &impl HasInitContext,
 ) -> InitResult<OvnContractState<G, n>> {
@@ -246,7 +233,7 @@ pub fn init_ovn_contract<G: Group, const n: usize>(// _: &impl HasInitContext,
         tally: 0,
 
         round1: [false; n],
-   })
+    })
 }
 
 #[derive(Serialize, SchemaType)]
@@ -257,7 +244,7 @@ pub struct RegisterParam<Z: Field> {
 }
 
 /** Primary function in round 1 */
-#[hax::receive(contract = "OVN", name = "register", parameter = "RegisterParam")]
+// #[hax::receive(contract = "OVN", name = "register", parameter = "RegisterParam")]
 // #[cfg_attr(not(feature = "hax_compilation"), receive(contract = "OVN", name = "register", parameter = "RegisterParam"))]
 pub fn register_vote<G: Group, const n: usize, A: HasActions>(
     ctx: impl HasReceiveContext,
@@ -286,10 +273,7 @@ pub struct CastVoteParam<Z: Field> {
     pub cvp_vote: bool,
 }
 
-pub fn compute_g_pow_yi<G: Group, const n: usize>(
-    i: usize,
-    xis: [G; n],
-) -> G {
+pub fn compute_g_pow_yi<G: Group, const n: usize>(i: usize, xis: [G; n]) -> G {
     let mut prod1 = G::group_one();
     for j in 0..i {
         prod1 = G::prod(prod1, xis[j]);
@@ -305,11 +289,7 @@ pub fn compute_g_pow_yi<G: Group, const n: usize>(
     g_pow_yi
 }
 
-pub fn compute_group_element_for_vote<G: Group>(
-    xi: G::Z,
-    vote: bool,
-    g_pow_yi: G,
-) -> G {
+pub fn compute_group_element_for_vote<G: Group>(xi: G::Z, vote: bool, g_pow_yi: G) -> G {
     G::prod(
         G::pow(g_pow_yi, xi),
         G::g_pow(if vote {
@@ -321,7 +301,7 @@ pub fn compute_group_element_for_vote<G: Group>(
 }
 
 /** Commitment before round 2 */
-#[hax::receive(contract = "OVN", name = "commit_to_vote", parameter = "CastVoteParam")]
+// #[hax::receive(contract = "OVN", name = "commit_to_vote", parameter = "CastVoteParam")]
 // #[cfg_attr(not(feature = "hax_compilation"), receive(contract = "OVN", name = "commit_to_vote", parameter = "CastVoteParam"))]
 pub fn commit_to_vote<G: Group, const n: usize, A: HasActions>(
     ctx: impl HasReceiveContext,
@@ -346,7 +326,7 @@ pub fn commit_to_vote<G: Group, const n: usize, A: HasActions>(
 }
 
 /** Primary function in round 2, also opens commitment */
-#[hax::receive(contract = "OVN", name = "cast_vote", parameter = "CastVoteParam")]
+// #[hax::receive(contract = "OVN", name = "cast_vote", parameter = "CastVoteParam")]
 // #[cfg_attr(not(feature = "hax_compilation"), receive(contract = "OVN", name = "cast_vote", parameter = "CastVoteParam"))]
 pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
     ctx: impl HasReceiveContext,
@@ -378,7 +358,7 @@ pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
 #[derive(Serialize, SchemaType)]
 pub struct TallyParameter {}
 
-#[hax::receive(contract = "OVN", name = "tally", parameter = "TallyParameter")]
+// #[hax::receive(contract = "OVN", name = "tally", parameter = "TallyParameter")]
 // #[cfg_attr(not(feature = "hax_compilation"), receive(contract = "OVN", name = "tally", parameter = "TallyParameter"))]
 /** Anyone can tally the votes */
 pub fn tally_votes<G: Group, const n: usize, A: HasActions>(
