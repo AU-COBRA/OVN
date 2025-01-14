@@ -13,6 +13,7 @@ env:
 jobs:
   cache:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout branch ${{ github.ref_name }}
         uses: actions/checkout@v4
