@@ -22,7 +22,7 @@ permissions:
   contents: read
 env:
   OCAML_COMILER_VERSION: "4.14.2"
-  JOBS: 2
+  JOBS: 4
 jobs:
   build:
     runs-on: ubuntu-latest
