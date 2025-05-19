@@ -1,7 +1,7 @@
 (* begin details: Imports *)
 From mathcomp Require Import all_ssreflect fingroup.fingroup ssreflect.
 Set Warnings "-notation-overridden,-ambiguous-paths".
-From Crypt Require Import choice_type Package Prelude.
+From SSProve.Crypt Require Import choice_type Package Prelude.
 Import PackageNotation.
 From extructures Require Import ord fset.
 From mathcomp Require Import word_ssrZ word.
@@ -35,11 +35,11 @@ From OVN Require Import Hacspec_ovn_group_and_field.
 
 From HB Require Import structures.
 
-From Crypt Require Import jasmin_word.
+From SSProve.Crypt Require Import jasmin_word.
 
-From Crypt Require Import Schnorr SigmaProtocol.
+From OVN Require Import Schnorr SigmaProtocol.
 
-From Relational Require Import OrderEnrichedCategory GenericRulesSimple.
+From SSProve.Relational Require Import OrderEnrichedCategory GenericRulesSimple.
 
 Set Warnings "-notation-overridden,-ambiguous-paths".
 From mathcomp Require Import all_ssreflect all_algebra reals distr realsum
@@ -47,12 +47,11 @@ From mathcomp Require Import all_ssreflect all_algebra reals distr realsum
   eqtype choice seq.
 Set Warnings "notation-overridden,ambiguous-paths".
 
-From Mon Require Import SPropBase.
+From SSProve.Mon Require Import SPropBase.
 
-From Crypt Require Import Axioms ChoiceAsOrd SubDistr Couplings
+From SSProve.Crypt Require Import Axioms ChoiceAsOrd SubDistr Couplings
   UniformDistrLemmas FreeProbProg Theta_dens RulesStateProb UniformStateProb
-  pkg_core_definition choice_type pkg_composition pkg_rhl Package Prelude
-  SigmaProtocol.
+  pkg_core_definition choice_type pkg_composition pkg_rhl Package Prelude.
 
 From Coq Require Import Utf8.
 From extructures Require Import ord fset fmap.
@@ -228,7 +227,7 @@ End FieldEquality.
 (** * Hacspec Group Param *)
 (* Make an instance of [GroupParam] such that we can use the Schnorr framework in SSProve *)
 Module HacspecGroupParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldParameter HOP) (HOGaFE : HacspecOvnGroupAndFieldExtra HOP HOGaFP) <: GroupParam.
-  
+
   #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Group_temp.
   #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_Sized_temp.
   #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_HasActions_temp.
@@ -537,7 +536,7 @@ Module Type HacspecGroupParamAxiom (HOP : HacspecOvnParameter) (HOGaFP : Hacspec
   #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Sized_temp.
 
   (* Parameter pow_witness_to_field : *)
-  
+
   (* Lemma pow_witness_to_field : *)
   (*   forall (h : GaFP.HacspecGroup.gT) (b : 'Z_GaFP.q), *)
   (*     (h ^+ b = is_pure (f_pow (ret_both h) (ret_both (GaFP.WitnessToField b)))). *)

@@ -16,6 +16,9 @@ theories/ovn/OVN.v
 theories/hacspec/Hacspec_ovn_total_proof.v
 # theories/hacspec/Hacspec_ovn_proof_z_89.v
 
+theories/ssprove/Schnorr.v
+theories/ssprove/SigmaProtocol.v
+
 # -R theories/hacspec Examples
 # -arg -w
 # -arg all

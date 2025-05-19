@@ -1,8 +1,8 @@
 From mathcomp Require Import all_ssreflect fingroup.fingroup ssreflect.
 Set Warnings "-notation-overridden,-ambiguous-paths".
-From Relational Require Import OrderEnrichedCategory .
-From Crypt Require Import choice_type Package Prelude.
-From Crypt Require Import Axioms ChoiceAsOrd RulesStateProb UniformStateProb.
+From SSProve.Relational Require Import OrderEnrichedCategory .
+From SSProve.Crypt Require Import choice_type Package Prelude.
+From SSProve.Crypt Require Import Axioms ChoiceAsOrd RulesStateProb UniformStateProb.
 Import PackageNotation.
 From extructures Require Import ord fset.
 From mathcomp Require Import word_ssrZ word.
@@ -444,7 +444,7 @@ Proof.
   f_equal.
 
   apply both_eq.
-  
+
   destruct x as [[] [] ?].
   now inversion is_valid_both ; subst.
 Qed.
@@ -1523,7 +1523,7 @@ Proof.
   unfold det_jdg in H12.
   intros s0 s2 H.
   destruct (Hp s0 s2 H) as [s1 []].
-  
+
   refine (Hq _ (det_run c1 s1) _ _ _).
   - apply H01.
     apply H0.
@@ -1766,7 +1766,7 @@ Ltac trim_is_interface :=
   rewrite filterm0 ;
   reflexivity.
 
-From Crypt Require Import pkg_composition.
+From SSProve.Crypt Require Import pkg_composition.
 
 Ltac trimmed_package p :=
   match type of p with
@@ -1789,7 +1789,7 @@ Qed.
 
 Import PackageNotation.
 
-From Crypt Require Import Package.
+From SSProve.Crypt Require Import Package.
 
 Lemma trimmed_par :
   forall I1 I2 a b, Parable a b -> trimmed I1 a -> trimmed I2 b -> trimmed (I1 :|: I2) (par a b).

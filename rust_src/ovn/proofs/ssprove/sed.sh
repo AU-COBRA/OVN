@@ -9,7 +9,7 @@ sed -i "s/(t_PartialEq f_Z)/(t_PartialEq f_Z f_Z)/g" extraction/Hacspec_ovn_Ovn_
 # Remove imports
 sed -i -z "s/Require Import Concordium_std_derive.\nExport Concordium_std_derive.\n//g" extraction/Hacspec_ovn_Ovn_group.v
 sed -i -z 's/Require Import Concordium_std.\nExport Concordium_std.\n//g' extraction/Hacspec_ovn_Ovn_group.v
-sed -i "s/[(][*] From Jasmin Require Import word. [*][)]/From Crypt Require Import jasmin_word./g" extraction/Hacspec_ovn_Ovn_group.v
+sed -i "s/[(][*] From Jasmin Require Import word. [*][)]/From SSProve.Crypt Require Import jasmin_word./g" extraction/Hacspec_ovn_Ovn_group.v
 
 # Import names changed:
 # ```

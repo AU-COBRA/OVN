@@ -9,14 +9,15 @@ license: "MIT"
 homepage: "https://github.com/AU-COBRA/OVN"
 bug-reports: "https://github.com/AU-COBRA/OVN/issues"
 depends: [
-  "base" {= "v0.16.3"}
+  "base" {= "v0.16.4"}
   "coq" {= "8.18.0"}
   "coq-concert" {= "dev"}
   "coq-hacspec-ssprove" {= "dev"}
-  "coq-mathcomp-word" {= "3.0"}
+  "coq-mathcomp-word" {= "3.1"}
   "coq-mathcomp-zify" {= "1.5.0+2.0+8.16"}
   "coq-stdpp" {= "1.9.0"}
-  "ssprove" {= "dev"}
+  "ssprove" {= "0.2.4"}
+  "coq-hierarchy-builder" {= "1.8.0"}
 ]
 build: [make "theory"]
 install: [make "install"]
@@ -29,7 +30,7 @@ pin-depends: [
   ]
   [
     "coq-hacspec-ssprove.dev"
-    "git+https://github.com/hacspec/hax.git#ssprove_backend_lib"
+    "git+https://github.com/4ever2/hax.git#ssprove_backend_lib"
   ]
   [
     "coq-quickchick.dev"
@@ -38,9 +39,5 @@ pin-depends: [
   [
     "coq-rust-extraction.dev"
     "git+https://github.com/AU-COBRA/coq-rust-extraction.git#0053733e56008c917bf43d12e8bf0616d3b9a856"
-  ]
-  [
-    "ssprove.dev"
-    "git+https://github.com/ssprove/ssprove.git#jasmin-coq.8.18.0"
   ]
 ]

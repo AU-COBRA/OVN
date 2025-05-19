@@ -1,7 +1,7 @@
 (* begin details: Imports *)
 From mathcomp Require Import all_ssreflect fingroup.fingroup ssreflect.
 Set Warnings "-notation-overridden,-ambiguous-paths".
-From Crypt Require Import choice_type Package Prelude.
+From SSProve.Crypt Require Import choice_type Package Prelude.
 Import PackageNotation.
 From extructures Require Import ord fset.
 From mathcomp Require Import word_ssrZ word.
@@ -36,11 +36,11 @@ From OVN Require Import Hacspec_ovn_sigma_setup.
 
 From HB Require Import structures.
 
-From Crypt Require Import jasmin_word.
+From SSProve.Crypt Require Import jasmin_word.
 
-From Crypt Require Import Schnorr SigmaProtocol.
+From OVN Require Import Schnorr SigmaProtocol.
 
-From Relational Require Import OrderEnrichedCategory GenericRulesSimple.
+From SSProve.Relational Require Import OrderEnrichedCategory GenericRulesSimple.
 
 Set Warnings "-notation-overridden,-ambiguous-paths".
 From mathcomp Require Import all_ssreflect all_algebra reals distr realsum
@@ -48,12 +48,11 @@ From mathcomp Require Import all_ssreflect all_algebra reals distr realsum
   eqtype choice seq.
 Set Warnings "notation-overridden,ambiguous-paths".
 
-From Mon Require Import SPropBase.
+From SSProve.Mon Require Import SPropBase.
 
-From Crypt Require Import Axioms ChoiceAsOrd SubDistr Couplings
+From SSProve.Crypt Require Import Axioms ChoiceAsOrd SubDistr Couplings
   UniformDistrLemmas FreeProbProg Theta_dens RulesStateProb UniformStateProb
-  pkg_core_definition choice_type pkg_composition pkg_rhl Package Prelude
-  SigmaProtocol.
+  pkg_core_definition choice_type pkg_composition pkg_rhl Package Prelude.
 
 From Coq Require Import Utf8.
 From extructures Require Import ord fset fmap.
@@ -135,7 +134,7 @@ Module OVN_schnorr_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAn
           #val #[ RUN ] : chRelation → chTranscript
         ] :=
     {package _ #with hacspec_run_valid}.
-  
+
   (* Adversary gets no advantage by running hacspec version *)
   Lemma hacspec_vs_RUN_interactive :
     ∀ LA A,
@@ -169,7 +168,7 @@ Module OVN_schnorr_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAn
     rewrite <- (fto_otf h).
     rewrite e. clear e.
     clear h.
-    
+
     (* Unfold rhs *)
     unfold schnorr_zkp.
 
@@ -183,7 +182,7 @@ Module OVN_schnorr_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAn
     unfold let_both at 1.
     set (fun _ => let_both _ _).
     apply (@somewhat_let_substitutionR _ _ choiceTranscript _ _ (f_hash _) b).
-    
+
     eapply r_transR.
     1:{
       set ([:: _; _; _]).
@@ -245,14 +244,14 @@ Module OVN_schnorr_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAn
       subst.
       unfold Sigma_locs in H2.
       rewrite notin_fset in H2.
-      
+
       unfold "\notin" in H2.
       unfold "\in" in H2.
       simpl in H2.
       rewrite eqxx in H2.
       easy.
     }
-    
+
     repeat rewrite pair_equal_spec ; repeat split.
 
      * rewrite <- HGPA.conversion_is_true.

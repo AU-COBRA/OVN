@@ -1,7 +1,7 @@
 (* begin details: Imports *)
 From mathcomp Require Import all_ssreflect fingroup.fingroup ssreflect.
 Set Warnings "-notation-overridden,-ambiguous-paths".
-From Crypt Require Import choice_type Package Prelude.
+From SSProve.Crypt Require Import choice_type Package Prelude.
 Import PackageNotation.
 From extructures Require Import ord fset.
 From mathcomp Require Import word_ssrZ word.
@@ -36,11 +36,11 @@ From OVN Require Import Hacspec_ovn_sigma_setup.
 
 From HB Require Import structures.
 
-From Crypt Require Import jasmin_word.
+From SSProve.Crypt Require Import jasmin_word.
 
-From Crypt Require Import Schnorr SigmaProtocol.
+From OVN Require Import Schnorr SigmaProtocol.
 
-From Relational Require Import OrderEnrichedCategory GenericRulesSimple.
+From SSProve.Relational Require Import OrderEnrichedCategory GenericRulesSimple.
 
 Set Warnings "-notation-overridden,-ambiguous-paths".
 From mathcomp Require Import all_ssreflect all_algebra reals distr realsum
@@ -48,12 +48,11 @@ From mathcomp Require Import all_ssreflect all_algebra reals distr realsum
   eqtype choice seq.
 Set Warnings "notation-overridden,ambiguous-paths".
 
-From Mon Require Import SPropBase.
+From SSProve.Mon Require Import SPropBase.
 
-From Crypt Require Import Axioms ChoiceAsOrd SubDistr Couplings
+From SSProve.Crypt Require Import Axioms ChoiceAsOrd SubDistr Couplings
   UniformDistrLemmas FreeProbProg Theta_dens RulesStateProb UniformStateProb
-  pkg_core_definition choice_type pkg_composition pkg_rhl Package Prelude
-  SigmaProtocol.
+  pkg_core_definition choice_type pkg_composition pkg_rhl Package Prelude.
 
 From Coq Require Import Utf8.
 From extructures Require Import ord fset fmap.
@@ -312,7 +311,7 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
     - intros z.
       unfold f_d2r2_to_wd.
       rewrite <- prod2ch_ch2prod.
-      set (ch2prod _) at 2 3.
+      set (ch2prod _) as s at 2 3.
       destruct s eqn:ch2z.
       rewrite ch2prod_prod2ch.
       rewrite !otf_fto.
@@ -327,7 +326,7 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
     - intros z.
       unfold f_d2r2_to_wd.
       rewrite <- prod2ch_ch2prod.
-      set (ch2prod _) at 2 3.
+      set (ch2prod _) as s at 2 3.
       destruct s eqn:ch2z.
       rewrite ch2prod_prod2ch.
       rewrite !otf_fto.
@@ -356,7 +355,7 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
     - intros z.
       unfold f_d1r1_to_wd.
       rewrite <- prod2ch_ch2prod.
-      set (ch2prod _) at -1.
+      set (ch2prod _) as s at -1.
       destruct s eqn:ch2z.
       rewrite ch2prod_prod2ch.
       rewrite !fto_otf.
@@ -369,7 +368,7 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
     - intros z.
       unfold f_d1r1_to_wd.
       rewrite <- prod2ch_ch2prod.
-      set (ch2prod _) at -1.
+      set (ch2prod _) as s at -1.
       destruct s eqn:ch2z.
       rewrite ch2prod_prod2ch.
       rewrite !fto_otf.
@@ -1355,4 +1354,3 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
   Qed.
 
 End OVN_or_proof.
-

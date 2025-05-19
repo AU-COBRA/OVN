@@ -1,6 +1,6 @@
 From mathcomp Require Import all_ssreflect fingroup.fingroup ssreflect.
 Set Warnings "-notation-overridden,-ambiguous-paths".
-From Crypt Require Import choice_type Package Prelude.
+From SSProve.Crypt Require Import choice_type Package Prelude.
 Import PackageNotation.
 From extructures Require Import ord fset.
 From mathcomp Require Import word_ssrZ word.
@@ -33,11 +33,11 @@ From OVN Require Import Hacspec_helpers.
 
 From HB Require Import structures.
 
-From Crypt Require Import jasmin_word.
+From SSProve.Crypt Require Import jasmin_word.
 
-From Crypt Require Import Schnorr SigmaProtocol.
+From OVN Require Import Schnorr SigmaProtocol.
 
-From Relational Require Import OrderEnrichedCategory GenericRulesSimple.
+From SSProve.Relational Require Import OrderEnrichedCategory GenericRulesSimple.
 
 Set Warnings "-notation-overridden,-ambiguous-paths".
 From mathcomp Require Import all_ssreflect all_algebra reals distr realsum
@@ -45,12 +45,11 @@ From mathcomp Require Import all_ssreflect all_algebra reals distr realsum
   eqtype choice seq.
 Set Warnings "notation-overridden,ambiguous-paths".
 
-From Mon Require Import SPropBase.
+From SSProve.Mon Require Import SPropBase.
 
-From Crypt Require Import Axioms ChoiceAsOrd SubDistr Couplings
+From SSProve.Crypt Require Import Axioms ChoiceAsOrd SubDistr Couplings
   UniformDistrLemmas FreeProbProg Theta_dens RulesStateProb UniformStateProb
-  pkg_core_definition choice_type pkg_composition pkg_rhl Package Prelude
-  SigmaProtocol.
+  pkg_core_definition choice_type pkg_composition pkg_rhl Package Prelude.
 
 From Coq Require Import Utf8.
 From extructures Require Import ord fset fmap.
@@ -171,7 +170,7 @@ Module OVN_GroupAndFieldParameter_Z89 <: HacspecOvnGroupAndFieldParameter OVN_Z8
         repeat unfold ".%" at 1.
         repeat unfold lift2_both at 1.
 
-        
+
         apply both_eq.
         cbn ; unfold bind_raw_both ; cbn.
         assert (
@@ -211,8 +210,8 @@ Module OVN_GroupAndFieldParameter_Z89 <: HacspecOvnGroupAndFieldParameter OVN_Z8
         unfold Hacspec_Lib_Pre.int_mul.
         unfold mul_word.
         setoid_rewrite H.
-        
-        setoid_rewrite 
+
+        setoid_rewrite
       }
 
       rewrite both_equivalence_is_pure_eq.
@@ -254,12 +253,12 @@ Module OVN_GroupAndFieldParameter_Z89 <: HacspecOvnGroupAndFieldParameter OVN_Z8
       unfold unsigned.
       rewrite !urepr_word.
 
-      
-      
+
+
       rewrite both_equivalence_is_pure_eq.
 
-      
-      
+
+
 
       cbn.
 
@@ -288,7 +287,7 @@ Module OVN_GroupAndFieldParameter_Z89 <: HacspecOvnGroupAndFieldParameter OVN_Z8
       unfold mul_word.
       rewrite !urepr_word.
 
-      
+
 
       setoid_rewrite <- wrepr_mul.
 
@@ -302,18 +301,18 @@ Module OVN_GroupAndFieldParameter_Z89 <: HacspecOvnGroupAndFieldParameter OVN_Z8
       simpl.
       rewrite <- !Zmult_mod_distr_r.
       simpl.
-      
+
 
       rewrite <- !Zmult_mod_distr_r.
-      
+
       rewrite Zmod_small.
-      
+
       set (_ mod _) at 5.
       replace (is_pure b mod nat15.+1) with (is_pure b).
-      
+
       rewrite <- Zmult_mod.
       rewrite <- Zmult_mod.
-      
+
       rewrite !Zmod_small ; [ | admit.. ].
       setoid_rewrite <- wmulE.
 
