@@ -27,7 +27,7 @@ depends: [
   # "coq-concert" {= "dev"}
   # "coq-rust-extraction" {= "dev"}
   # "coq-elm-extraction" {= "dev"}
-  "ssprove" {= "0.2.4"}
+  "coq-ssprove" {= "0.2.4"}
   # "jasmin" {= "dev"}
   "coq-hacspec-ssprove" {= "dev"}
 ]
