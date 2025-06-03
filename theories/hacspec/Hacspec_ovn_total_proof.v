@@ -1950,6 +1950,20 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
          #val #[ GET ] : chGETBinp → chGETBout
       ] := K_any_package (A := 'bool) (B := 'bool) (erefl) K_loc SET GET (H_disj := H_disj) b.
 
+  Lemma Gschnorr_x_zkp_advantage :
+    forall B (C : finType) H K_loc SET GET H_disj (H_pos : Positive #|C|),
+    ∀ (LA : {fset Location}) (A : raw_package),
+      ValidPackage LA [interface
+         #val #[ SET ] : chSETBinp → chSETBout ;
+         #val #[ GET ] : chGETBinp → chGETBout
+      ] A_export A →
+      (AdvantageE
+         (K_any_package (A := B) (B := C) H K_loc SET GET (H_disj := H_disj) true)
+         (K_any_package (A := B) (B := C) H K_loc SET GET (H_disj := H_disj) false) A <= 0)%R.
+  Proof.
+    intros.
+  Admitted.
+
   Definition Bound_nat := OVN_Param.N : nat.
   Lemma Bound_nat_Pos : Positive Bound_nat. Proof. apply HOP.n_pos. Qed.
 
@@ -2261,99 +2275,247 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   Lemma fsub1Eset : ∀ {T : ordType} x (l : list T), x \in l -> fset [x] :<=: fset l.
   Proof. intros. rewrite <- fset1E. rewrite fsub1set. rewrite in_fset. apply H. Qed.
 
+  Lemma combined_interfaces_Game_import :
+    forall u, combined_interfaces (λ _ : nat, Game_import) u = Game_import.
+  Proof.
+    induction u.
+    + reflexivity.
+    + by move: IHu fsetUid => /= -> ->.
+  Qed.
+
+  Ltac solve_flat :=
+    clear ;
+    unfold flat ;
+
+    intros n u1 u2 ;
+    try rewrite !in_fsetU ;
+
+    let H := fresh in
+    let H0 := fresh in
+    intros H H0 ;
+
+    rewrite <- !fset1E in H, H0 ;
+    rewrite !in_fset1 in H, H0 ;
+
+    repeat (apply (ssrbool.elimT ssrbool.orP) in H ; destruct H) ; apply (ssrbool.elimT eqP) in H ; inversion H ; subst ;
+
+    repeat (apply (ssrbool.elimT ssrbool.orP) in H0 ; destruct H0) ; apply (ssrbool.elimT eqP) in H0 ; now inversion H0 ; subst.
+
   Section Gschnorr_x_zkp.
+    Definition SCHNORR_ (i : nat) := (Bound_nat * 18 + i)%nat.
 
-    Definition Gschnorr_x_zkp_raw u b :=
-      par (Gschnorr b)
-        (par
-           (parallel_package (fun n => Kx n b) u)
-           (parallel_package (fun n => Kzkp n b) u)).
+    Definition schnorr_i_real i :
+      package fset0
+        [interface
+           #val #[SET_x i] : chSETFinp → chSETFout ;
+           #val #[GET_gx i] : chGETinp → chGETout ;
+           #val #[SET_zkp i] : schnorrOutput → chSETORout
+        ]
+        [interface #val #[ SCHNORR_ i ] : 'unit → 'unit].
+    Admitted.
 
-    Lemma Gschnorr_x_zkp_valid_full :
-      forall u b,
+    Definition schnorr_i_ideal i :
+      package fset0
+        [interface
+           #val #[GET_gx i] : chGETinp → chGETout ;
+           #val #[SET_zkp i] : schnorrOutput → chSETORout
+        ]
+        [interface #val #[ SCHNORR_ i ] : 'unit → 'unit].
+    Admitted.
+
+    Definition schnorr_i i (b : bool) :
+      package fset0
+        [interface
+           #val #[SET_x i] : chSETFinp → chSETFout ;
+           #val #[GET_gx i] : chGETinp → chGETout ;
+           #val #[SET_zkp i] : schnorrOutput → chSETORout
+        ]
+        [interface #val #[ SCHNORR_ i ] : 'unit → 'unit].
+    Proof.
+      refine (if b then _ else _).
+      - refine {package schnorr_i_ideal i #with valid_package_inject_import _ _ _ _ _ _ (valid_package_inject_locations _ _ _ _ _ _ _)}.
+        all: solve_in_fset.
+      - apply schnorr_i_real.
+    Defined.
+
+    Definition Gschnorr_i_raw i b :=
+      schnorr_i i b
+        ∘ (par
+             (KF_package (H_disj := H_disj_x i) (LOC_x i) (SET_x i) (GET_x i) b)
+             (par
+                (K_package (H_disj := H_disj_gx i) (LOC_gx i) (SET_gx i) (GET_gx i) b)
+                (Kzkp_package (H_disj := H_disj_zkp i) (LOC_zkp i) (SET_zkp i) (GET_zkp i) b))).
+
+    Lemma Gschnorr_i_valid : forall i b,
         ValidPackage
-          (locs (Gschnorr b) :|:
-             (combined_interfaces (λ n : nat, locs (Kx n b)) u :|:
-                combined_interfaces (λ n : nat, locs (Kzkp n b)) u))
-          ([interface] :|:
-             (combined_interfaces (λ _ : nat, Game_import) u :|:
-                combined_interfaces (λ _ : nat, Game_import) u))
-          ([interface #val #[SCHNORR] : schnorrInput → schnorrOutput ] :|:
-             (combined_interfaces (λ n : nat, [interface #val #[SET_x n] : chCommitOutput → chSETORout ; #val #[GET_x n] : chSETORout → chCommitOutput ]) u :|:
-                combined_interfaces (λ n : nat, [interface #val #[SET_zkp n] : schnorrOutput → chSETORout ; #val #[GET_zkp n] : chSETORout → schnorrOutput ]) u))
-          (Gschnorr_x_zkp_raw u b).
+          (fset [:: ('option v_Z; LOC_x i)]
+                 :|: (fset [:: ('option v_G; LOC_gx i)]
+                 :|: fset [:: ('option t_SchnorrZKPCommit; LOC_zkp i)]))
+          [interface]
+          [interface #val #[ SCHNORR_ i ] : 'unit → 'unit]
+          (Gschnorr_i_raw i b).
     Proof.
       intros.
-      unfold Gschnorr_x_zkp_raw.
-      apply valid_par.
-      - apply ignore_Parable.
-      - apply pack_valid.
-      - apply valid_par.
-        + apply ignore_Parable.
-        + apply pack_valid.
-        + apply pack_valid.
+      rewrite <- fset0U.
+      unfold Gschnorr_i_raw.
+      refine (valid_link _ _ _ _ _ _ _ _ _).
+      2:{
+        rewrite <- (fsetUid [interface]).
+        refine (valid_par _ _ _ _ _ _ _ _ (ignore_Parable _ _) _ _).
+        rewrite <- (fsetUid [interface]).
+        refine (valid_par _ _ _ _ _ _ _ _ (ignore_Parable _ _) _ _).
+      }
+      eapply valid_package_inject_import.
+      2: apply pack_valid.
+      solve_in_fset.
     Qed.
 
-    Lemma combined_interfaces_Game_import :
-      forall u, combined_interfaces (λ _ : nat, Game_import) u = Game_import.
-    Proof.
-      induction u.
-      + reflexivity.
-      + by move: IHu fsetUid => /= -> ->.
-    Qed.
+    Definition Gschnorr_x_zkp_raw u b : raw_package :=
+      parallel_package
+        (E := fun i => [interface #val #[ SCHNORR_ i ] : 'unit → 'unit])
+        (I := _)
+        (fun i => {package _ #with Gschnorr_i_valid i b}) u.
 
-    Lemma Gschnorr_x_zkp_valid :
-      forall u b,
-        ValidPackage
-          (locs (Gschnorr b) :|:
-             (combined_interfaces (λ n : nat, locs (Kx n b)) u :|:
-                combined_interfaces (λ n : nat, locs (Kzkp n b)) u))
-          ([interface])
-          ([interface #val #[SCHNORR] : schnorrInput → schnorrOutput ] :|:
-             (combined_interfaces (λ n : nat, [interface #val #[SET_x n] : chCommitOutput → chSETORout ; #val #[GET_x n] : chSETORout → chCommitOutput ]) u :|:
-                combined_interfaces (λ n : nat, [interface #val #[SET_zkp n] : schnorrOutput → chSETORout ; #val #[GET_zkp n] : chSETORout → schnorrOutput ]) u))
-          (Gschnorr_x_zkp_raw u b).
+    Lemma Gschnorr_x_zkp_valid : forall u b, ValidPackage (combined_interfaces (fun i => fset [:: ('option v_Z; LOC_x i)]
+                 :|: (fset [:: ('option v_G; LOC_gx i)]
+                 :|: fset [:: ('option t_SchnorrZKPCommit; LOC_zkp i)])) u) Game_import
+     (combined_interfaces (λ i : nat, [interface #val #[SCHNORR_ i] : 'unit → 'unit ])
+        u) (Gschnorr_x_zkp_raw u b).
     Proof.
       intros.
-      replace (fset [::]) with ([interface] :|:
-                                 (combined_interfaces (λ _ : nat, Game_import) u :|:
-                                    combined_interfaces (λ _ : nat, Game_import) u)).
-      - apply Gschnorr_x_zkp_valid_full.
-      - rewrite combined_interfaces_Game_import.
-        by rewrite !fsetUid.
+      setoid_rewrite <- (trivial_combined_interface u [interface]).
+      apply pack_valid.
     Qed.
 
-    Definition Gschnorr_x_zkp u : loc_GamePair _ :=
+    Definition Gschnorr_x_zkp u : loc_GamePair (combined_interfaces (fun i => [interface #val #[ SCHNORR_ i ] : 'unit → 'unit]) u) :=
       fun b => {locpackage Gschnorr_x_zkp_raw u b #with Gschnorr_x_zkp_valid u b}.
+
+    Lemma Gschnorr_x_zkp_advantage :
+      forall u,
+      ∀ (LA : {fset Location}) (A : raw_package),
+        ValidPackage LA (combined_interfaces (fun i => [interface #val #[SCHNORR_ i] : 'unit → 'unit ]) u) A_export A →
+        (Advantage (Gschnorr_x_zkp u) A <= 0)%R.
+    Proof.
+      intros.
+    Admitted.
 
   End Gschnorr_x_zkp.
 
   Section Gdl_gx.
-    Definition Gdl_gx_raw u b : raw_package :=
-      par (dl_game b) (parallel_package (fun i => K_package (H_disj := H_disj_gx i) (LOC_gx i) (SET_gx i) (GET_gx i) b) u).
+    Definition DL_i (i : nat) := (Bound_nat * 19 + i)%nat.
 
-    Lemma Gdl_gx_valid_full u b :
-      ValidPackage
-        (locs (dl_game b) :|: combined_interfaces (λ i : nat, fset [:: ('option v_G; LOC_gx i)]) u)
-        ([interface])
-        ([interface #val #[DL] : chCommitOutput → chDL_Output ] :|:
-           combined_interfaces (λ i : nat, [interface #val #[SET_gx i] : chDL_Output → chSETORout ; #val #[GET_gx i] : chSETORout → chDL_Output ]) u)
-        (Gdl_gx_raw u b).
+    Definition dl_i_real i :
+      package fset0
+        [interface
+           #val #[GET_x i] : chGETFinp → chGETFout ;
+           #val #[SET_gx i] : chSETinp → chSETout
+        ]
+        [interface
+           #val #[ DL_i i ] : 'unit → 'unit
+        ]
+      :=
+      [package
+        #def #[ DL_i i ] (_ : 'unit) : 'unit
+        {
+          #import {sig #[ GET_x i ] : chGETFinp → chGETFout }
+          as get_x ;;
+          #import {sig #[ SET_gx i ] : chDL_Output → chSETORout }
+          as set_gx ;;
+          x ← get_x Datatypes.tt ;;
+          set_gx (g ^+ FieldToWitness x)
+        }
+      ].
+
+  Definition dl_i_ideal i :
+    package fset0
+      [interface
+         #val #[SET_gx i] : chSETinp → chSETout
+      ]
+      [interface
+         #val #[ DL_i i ] : 'unit → 'unit
+      ]
+    :=
+    [package
+        #def #[ DL_i i ] (_ : 'unit) : 'unit
+        {
+          #import {sig #[ SET_gx i ] : chDL_Output → chSETORout }
+          as set_gx ;;
+          xi ← sample (uniform #|'Z_q|) ;; let xi := WitnessToField (otf xi) in
+          set_gx (g ^+ FieldToWitness xi)
+        }
+    ].
+
+    Definition dl_i i (b : bool) :
+      package fset0
+        [interface
+           #val #[GET_x i] : chGETFinp → chGETFout ;
+           #val #[SET_gx i] : chSETinp → chSETout
+        ]
+        [interface #val #[ DL_i i ] : 'unit → 'unit].
     Proof.
-      replace ([interface]) with ([interface] :|: combined_interfaces (λ _ : nat, Game_import) u).
-      - apply valid_par.
-        + apply ignore_Parable.
-        + apply pack_valid.
-        + apply pack_valid.
-      - move: combined_interfaces_Game_import fsetUid => -> -> //.
+      refine (if b then _ else _).
+      - refine {package dl_i_ideal i #with valid_package_inject_import _ _ _ _ _ _ (valid_package_inject_locations _ _ _ _ _ _ _)}.
+        all: solve_in_fset.
+      - apply dl_i_real.
+    Defined.
+
+    Definition Gdl_i_raw i b :=
+      (dl_i i b) ∘ (par
+                      (KF_package (H_disj := H_disj_x i) (LOC_x i) (SET_x i) (GET_x i) b)
+                      (K_package (H_disj := H_disj_gx i) (LOC_gx i) (SET_gx i) (GET_gx i) b)).
+
+    Lemma Gdl_i_valid :
+      forall i b,
+        ValidPackage
+          (fset [:: ('option v_Z; LOC_x i)] :|: fset [:: ('option v_G; LOC_gx i)])
+          [interface]
+          [interface #val #[ DL_i i ] : 'unit → 'unit]
+          (Gdl_i_raw i b).
+    Proof.
+      intros.
+      unfold Gdl_i_raw.
+      rewrite <- fset0U.
+      eapply valid_link.
+      2:{
+        rewrite <- (fsetUid [interface]).
+        apply valid_par ; [ apply ignore_Parable | apply pack_valid .. ].
+      }
+      eapply valid_package_inject_import.
+      2: apply pack_valid.
+      solve_in_fset.
+    Qed.
+
+    Definition Gdl_raw u b := parallel_package (fun i => {package _ #with Gdl_i_valid i b}) u.
+
+    Lemma Gdl_valid :
+      forall u b,
+        ValidPackage
+          (combined_interfaces (fun i => fset [:: ('option v_Z; LOC_x i)] :|: fset [:: ('option v_G; LOC_gx i)]) u)
+          [interface]
+          (combined_interfaces (fun i => [interface #val #[ DL_i i ] : 'unit → 'unit]) u)
+          (Gdl_raw u b).
+    Proof.
+      intros.
+      setoid_rewrite <- (trivial_combined_interface u [interface]).
+      apply pack_valid.
     Qed.
 
     Definition Gdl_gx u : loc_GamePair _ :=
-      fun b => {locpackage Gdl_gx_raw u b #with Gdl_gx_valid_full u b}.
+      fun b => {locpackage Gdl_raw u b #with Gdl_valid u b}.
+
+    Lemma Gdl_gx_advantage :
+      forall u,
+      ∀ (LA : {fset Location}) (A : raw_package),
+        ValidPackage LA (combined_interfaces (fun i => [interface #val #[DL_i i] : 'unit → 'unit ]) u) A_export A →
+        (Advantage (Gdl_gx u) A <= 0)%R.
+    Proof.
+      intros.
+    Admitted.
+
   End Gdl_gx.
 
   Section Gg_y.
-    Definition GPOWY (i : nat) := (Bound_nat * 18 + i)%nat.
+    Definition GPOWY (i : nat) := (Bound_nat * 20 + i)%nat.
 
     Program Definition g_yi_real i u `{_ : (i <= u)%nat}:
       package fset0
@@ -2483,56 +2645,51 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
          }
       ].
 
+    Definition g_yi u (i : 'I_u.+1) (b : bool) :
+      package fset0
+        (combined_interfaces (λ i : nat, [interface #val #[SET_gx i] : chDL_Output → chSETORout ; #val #[GET_gx i] : chSETORout → chDL_Output ]) u
+           :|: [interface #val #[SET_gy i] : chDL_Output → chSETORout ])
+        [interface
+           #val #[ GPOWY i ] : 'unit → 'unit
+        ].
+    Proof.
+      refine (if b then _ else _).
+      - refine {package g_yi_ideal i #with valid_package_inject_import _ _ _ _ _ _ _}.
+        solve_in_fset.
+      - apply g_yi_real.
+        apply (ltn_ord i).
+    Qed.
+
+    Definition Kgxs u b :=
+      (parallel_package
+         (L := fun i => (fset [:: ('option v_G; LOC_gx i)]) :|: (fset [:: ('option v_G; LOC_gy i)]))
+         (I := fun _ => [interface] :|: [interface])
+         (E := fun i => [interface
+                      #val #[SET_gx i] : chDL_Output → chSETORout ;
+                      #val #[GET_gx i] : chSETORout → chDL_Output ] :|: [interface
+                      #val #[SET_gy i] : chDL_Output → chSETORout ;
+                      #val #[GET_gy i] : chSETORout → chDL_Output ])
+         (fun i => {package par (K_package (H_disj := H_disj_gx i) (LOC_gx i) (SET_gx i) (GET_gx i) b) (K_package (H_disj := H_disj_gy i) (LOC_gy i) (SET_gy i) (GET_gy i) b) #with valid_par _ _ _ _ _ _ _ _ (ignore_Parable _ _) _ _} )
+         u).
+
     Definition Gg_y_raw (u : nat) (b : bool) : raw_package :=
-      let Kgxs := (parallel_package
-                     (L := fun i => (fset [:: ('option v_G; LOC_gx i)]))
-                     (I := fun _ => [interface])
-                     (E := fun i => [interface
-                                  #val #[SET_gx i] : chDL_Output → chSETORout ;
-                                  #val #[GET_gx i] : chSETORout → chDL_Output ])
-                     (fun i => K_package (H_disj := H_disj_gx i) (LOC_gx i) (SET_gx i) (GET_gx i) b)
-                     u) in
       (parallel_package_in
          (u := S u)
          (Ordinal (n := S u) (m := u) (ltnSn u))
-         (L := fun i => fset0 :|: (fset0 :|: fset [:: ('option v_G; LOC_gy i) : Location]))
+         (L := fun i => fset0)
          (I := fun i =>
                  (combined_interfaces
                     (λ j : nat,
                         [interface #val #[SET_gx j] : chDL_Output → chSETORout ;
-                         #val #[GET_gx j] : chSETORout → chDL_Output ]) u) :|: fset [])
+                         #val #[GET_gx j] : chSETORout → chDL_Output ]) u) :|: [interface #val #[SET_gy i] : chDL_Output → chSETBout ])
          (E := fun i => [interface #val #[ GPOWY i ] : 'unit → 'unit])
-         (fun i =>
-            if b
-            then
-              {package
-                 g_yi_ideal (nat_of_ord i)
-                 ∘ K_package (H_disj := H_disj_gy i) (LOC_gy i) (SET_gy i) (GET_gy i) b
-                 #with
-                (valid_link _ _ _ _ _ _ _ (pack_valid _)
-                   (valid_package_inject_import _ _ _ _ _ (fsub0Eset _)
-                      (valid_package_inject_export _ _ _ _ _ (fsub1Eset _ _ (mem_head _ _))
-                         (valid_package_inject_locations _ _ _ _ _ (fsubsetUr _ _) _))))}
-            else
-              {package
-                 g_yi_real (nat_of_ord i) u (H := ltn_ord i)
-                 ∘ (par
-                      (ID _)
-                      (K_package (H_disj := H_disj_gy i) (LOC_gy i) (SET_gy i) (GET_gy i) b))
-                 #with
-                (valid_link _ _ _ _ _ _ _ _
-                   (valid_par _ _ _ _ _ _ _ _ (ignore_Parable _ _)
-                      (valid_ID _ _
-                         (flat_valid_package _ _ _ _ (pack_valid Kgxs) ))
-                      (valid_package_inject_export _ _ _ _ _ (fsub1Eset _ _ (mem_head _ _)) _)))}
-         )
-         ∘ Kgxs).
+         (fun i => {package g_yi u i b #with valid_package_inject_import _ _ _ _ _ (fsetUS _ (fsubsetxx _)) _}) ∘ Kgxs u b).
 
     Lemma Gg_y_valid : forall u b,
         ValidPackage
-          (combined_interfaces (fun i => fset [:: ('option v_G; LOC_gx i)]) u :|: combined_interfaces (fun i => fset [:: ('option v_G; LOC_gy i) : Location]) u)
+          (combined_interfaces (fun i => fset [:: ('option v_G; LOC_gx i)] :|: fset [:: ('option v_G; LOC_gy i) : Location]) u)
           [interface]
-          (combined_interfaces (λ i, [interface #val #[GPOWY i] : chSETBout → chSETBout ]) u)
+          (combined_interfaces (λ i, [interface #val #[GPOWY i] : 'unit → 'unit ]) u)
           (Gg_y_raw u b).
     Proof.
       intros.
@@ -2540,13 +2697,12 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       rewrite <- fsetUid.
       eapply valid_link.
       2:{
-        refine (valid_package_inject_locations _ _ _ _ _ (fsubsetUl _ _) _).
-        setoid_rewrite <- (trivial_combined_interface u [interface]).
+        setoid_rewrite <- (fsetUid [interface]).
+        setoid_rewrite <- (trivial_combined_interface u ([interface] :|: [interface])).
         apply pack_valid.
       }
       {
-        refine (valid_package_inject_locations _ _ _ _ _ (fsubsetUr _ _) _).
-        setoid_rewrite (trivial_combined_interface_to_in (u := u) u (ltnSn u) (λ i : nat, fset [:: ('option v_G; LOC_gy i)])).
+        setoid_rewrite (trivial_combined_interface_to_in (u := u) u (ltnSn u) (λ i : nat, fset [:: ('option v_G; LOC_gx i)] :|: fset [:: ('option v_G; LOC_gy i)])).
         setoid_rewrite (trivial_combined_interface_to_in (u := u) u (ltnSn u) (λ i : nat, [interface #val #[GPOWY i] : chSETBout → chSETBout ])).
         setoid_rewrite <- (trivial_combined_interface_in (Ordinal (n:=u.+1) (m:=u) (ltnSn u)) (combined_interfaces _ _)).
         set (parallel_package_in _ _).
@@ -2556,30 +2712,94 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         2:{
           refine (valid_package_inject_import _ _ _ _ _ _ _).
           simpl.
-          rewrite <- fset0E.
-          rewrite fsetU0.
-          apply fsubsetxx.
+          clear.
+          destruct Ordinal.
+          induction m.
+          - rewrite !combined_interfaces_in_equation_1.
+            simpl.
+            clear.
+            rewrite fsubUset.
+            apply /andP ; split.
+            + induction u.
+              * simpl.
+                solve_in_fset.
+              * simpl.
+                rewrite fsubUset.
+                apply /andP ; split ; apply fsubsetU ; apply /orP ; [ left | right ].
+                -- apply IHu.
+                -- solve_in_fset.
+            + induction u.
+              * simpl.
+                solve_in_fset.
+              * simpl.
+                apply fsubsetU ; apply /orP ; left.
+                apply IHu.
+          - rewrite !combined_interfaces_in_equation_2.
+            simpl.
+            rewrite fsubUset.
+            apply /andP ; split.
+            + apply fsubsetU ; apply /orP ; left.
+              apply IHm.
+            + apply fsubsetU ; apply /orP ; right.
+              clear -i.
+
+              rewrite fsubUset ; apply /andP ; split.
+              1:{
+                clear.
+                induction u.
+                - simpl.
+                  apply fsubsetUl.
+                - simpl.
+                  rewrite fsubUset ; apply /andP ; split; apply fsubsetU ; apply /orP ; [ left | right ].
+                  + apply IHu.
+                  + solve_in_fset.
+              }
+              1:{
+                destruct (m == u) eqn:m_is_u ; move /eqP: m_is_u => m_is_u.
+                - subst.
+                  exfalso.
+                  Lia.lia.
+                - generalize dependent m.
+                  induction u ; intros ; [ discriminate | ].
+                  simpl.
+                  destruct (m == u) eqn:m_is_u2 ; move /eqP: m_is_u2 => m_is_u2 ; apply fsubsetU ; apply /orP ; [ right | left ].
+                  + subst.
+                    clear.
+                    solve_in_fset.
+                  + apply IHu.
+                    * Lia.lia.
+                    * easy.
+              }
         }
-        simpl.
-        clear.
         destruct Ordinal.
         induction m.
         - rewrite !combined_interfaces_in_equation_1.
-          rewrite !fset0U.
-          apply fsubsetxx.
+          apply fsub0set.
         - rewrite !combined_interfaces_in_equation_2.
-          rewrite !fset0U.
-          apply fsetSU.
+          rewrite fsetU0.
+          apply fsubsetU ; apply /orP ; left.
           apply IHm.
+
+          apply pack_valid.
       }
     Qed.
 
     Definition Gg_y u : loc_GamePair (combined_interfaces (λ i, [interface #val #[GPOWY i] : chSETBout → chSETBout ]) u) :=
       fun b => {locpackage Gg_y_raw u b #with Gg_y_valid u b}.
+
+    Lemma Gg_y_advantage :
+      forall u,
+      ∀ (LA : {fset Location}) (A : raw_package),
+        ValidPackage LA (combined_interfaces (fun i => [interface #val #[GPOWY i] : 'unit → 'unit ]) u) A_export A →
+        (Advantage (Gg_y u) A <= 0)%R.
+    Proof.
+      intros.
+    Admitted.
+
   End Gg_y.
 
   Section Gvote.
-    Definition VOTE (i : nat) := (Bound_nat * 19 + i)%nat.
+    Definition VOTE (i : nat) := (Bound_nat * 21 + i)%nat.
 
     Definition g_vote_i_real i :
       package fset0
@@ -2645,7 +2865,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       - refine {package g_vote_i_ideal i #with valid_package_inject_import _ _ _ _ _ _ _}.
         solve_in_fset.
       - apply g_vote_i_real.
-    Qed.
+    Defined.
 
     Definition Gvote_i_raw i (b : bool) : raw_package :=
       (g_vote_i i b)
@@ -2710,7 +2930,717 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
     Definition Gvote (u : nat) : loc_GamePair (combined_interfaces (λ i, [interface #val #[VOTE i] : chSETBout → chSETBout ]) u) :=
       fun b => {locpackage (parallel_package (fun i => {package Gvote_i_raw i b #with Gvote_i_valid i b}) u) #with Gvote_valid u b}.
+
+    Lemma Gvote_advantage :
+      forall u,
+      ∀ (LA : {fset Location}) (A : raw_package),
+        ValidPackage LA (combined_interfaces (fun i => [interface #val #[VOTE i] : 'unit → 'unit ]) u) A_export A →
+        (Advantage (Gvote u) A <= 0)%R.
+    Proof.
+      intros.
+    Admitted.
+
   End Gvote.
+
+  Section Gcommit.
+    Definition COMMIT_VOTE (i : nat) := (Bound_nat * 22 + i)%nat.
+
+    Program Definition g_commit_i_real i :
+      package fset0
+        [interface
+           #val #[GET_vote i] : chGETinp → chGETout ;
+           #val #[SET_commit i] : chSETFinp → chSETFout
+        ]
+        [interface
+           #val #[ COMMIT_VOTE i ] : 'unit → 'unit
+        ] :=
+      [package
+         #def #[ COMMIT_VOTE i ] (_ : 'unit) : 'unit
+         {
+           #import {sig #[ GET_vote i ] : chGETinp → chGETout }
+           as get_vote ;;
+           #import {sig #[ SET_commit i ] : chSETFinp → chSETFout }
+           as set_commit ;;
+           vote_i ← get_vote Datatypes.tt ;;
+           commit_i ← is_state (f_hash (t_Group := HOGaFE.GroupAndField.OVN.v_G_t_Group)
+             (impl__into_vec
+                (unsize
+                   (box_new
+                      (array_from_list [(ret_both vote_i)]))))) ;;
+           set_commit commit_i
+         }
+      ].
+    Final Obligation.
+      intros.
+      ssprove_valid_package.
+      ssprove_valid.
+      apply valid_scheme.
+      rewrite <- fset0E.
+      apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
+    Qed.
+
+    Definition g_commit_i_ideal i :
+      package fset0
+        [interface
+           #val #[SET_commit i] : chSETFinp → chSETFout
+        ]
+        [interface
+           #val #[ COMMIT_VOTE i ] : 'unit → 'unit
+        ]
+      :=
+      [package
+         #def #[ COMMIT_VOTE i ] (_ : 'unit) : 'unit
+         {
+           #import {sig #[ SET_commit i ] : chSETFinp → chSETFout }
+           as set_commit ;;
+           z ← sample (uniform #|'Z_q|) ;; let z := WitnessToField (otf z) in
+           set_commit z
+         }
+      ].
+
+    Definition g_commit_i i (b : bool) :
+      package fset0
+        [interface
+           #val #[GET_vote i] : chSETORout → chDL_Output ;
+           #val #[SET_commit i] : chSETFinp → chSETFout
+        ]
+        [interface
+           #val #[ COMMIT_VOTE i ] : 'unit → 'unit
+        ].
+    Proof.
+      refine (if b then _ else _).
+      - refine {package g_commit_i_ideal i #with valid_package_inject_import _ _ _ _ _ _ _}.
+        solve_in_fset.
+      - apply g_commit_i_real.
+    Qed.
+
+    Definition Gcommit_i_raw i (b : bool) : raw_package :=
+      (g_commit_i i b)
+        ∘ (par
+             (K_package (H_disj := H_disj_vote i) (LOC_vote i) (SET_vote i) (GET_vote i) b)
+             (KF_package (H_disj := H_disj_commit i) (LOC_commit i) (SET_commit i) (GET_commit i) b)).
+
+    Lemma Gcommit_i_valid : forall i b,
+        ValidPackage
+          (fset [:: ('option v_G; LOC_vote i)]
+             :|: fset [:: ('option v_Z; LOC_commit i)])
+          (fset [::])
+          [interface #val #[COMMIT_VOTE i] : chSETBout → chSETBout ]
+          (Gcommit_i_raw i b).
+    Proof.
+      intros.
+      unfold Gcommit_i_raw.
+      rewrite <- fset0U.
+      eapply valid_link ; [ apply pack_valid | .. ].
+
+      rewrite (fset_cons (_ i, _)).
+      rewrite fset1E.
+      rewrite <- (fsetUid [interface]).
+      apply valid_par ; [ apply ignore_Parable | eapply valid_package_inject_export ; [ | apply pack_valid] ; solve_in_fset | .. ].
+
+      eapply valid_package_inject_export ; [ | apply pack_valid] ; solve_in_fset.
+    Qed.
+
+    Lemma Gcommit_valid :
+      ∀ (u : nat) (b : bool),
+    ValidPackage
+      (combined_interfaces
+           (fun i =>
+              (fset [:: ('option v_G; LOC_vote i)]
+             :|: fset [:: ('option v_Z; LOC_commit i)])) u)
+        [interface]
+        (combined_interfaces (λ i, [interface #val #[COMMIT_VOTE i] : chSETBout → chSETBout ]) u)
+        (parallel_package (fun i => {package Gcommit_i_raw i b #with Gcommit_i_valid i b}) u).
+    Proof.
+      intros.
+      setoid_rewrite <- (trivial_combined_interface _ [interface]).
+      apply pack_valid.
+    Qed.
+
+    Definition Gcommit (u : nat) : loc_GamePair (combined_interfaces (λ i, [interface #val #[COMMIT_VOTE i] : chSETBout → chSETBout ]) u) :=
+      fun b => {locpackage (parallel_package (fun i => {package Gcommit_i_raw i b #with Gcommit_i_valid i b}) u) #with Gcommit_valid u b}.
+
+    Lemma Gcommit_advantage :
+      forall u,
+      ∀ (LA : {fset Location}) (A : raw_package),
+        ValidPackage LA (combined_interfaces (fun i => [interface #val #[COMMIT_VOTE i] : 'unit → 'unit ]) u) A_export A →
+        (Advantage (Gcommit u) A <= 0)%R.
+    Proof.
+      intros.
+    Admitted.
+
+  End Gcommit.
+
+  Section G_CDS.
+    Definition OR (i : nat) := (Bound_nat * 23 + i)%nat.
+    fail. (* TODO *)
+  End G_CDS.
+
+  Section G_register.
+    (* REGISTER_VOTE_INTERFACE *)
+    Definition REGISTER (i : nat) := (Bound_nat * 24 + i)%nat.
+
+    Definition register_i i :
+      package fset0
+        [interface
+           #val #[SET_x i] : chSETFinp → chSETFout ;
+           #val #[SCHNORR_ i] : 'unit → 'unit ;
+           #val #[DL_i i] : 'unit → 'unit
+        ]
+        [interface
+           #val #[ REGISTER i ] : 'unit → 'unit
+        ] :=
+      [package
+         #def #[ REGISTER i ] (_ : 'unit) : 'unit
+         {
+           #import {sig #[ SET_x i ] : chSETFinp → chSETFout }
+           as set_x ;;
+           #import {sig #[ DL_i i ] : 'unit → 'unit }
+           as dl ;;
+           #import {sig #[ SCHNORR_ i ] : 'unit → 'unit }
+           as schnorr ;;
+           xi ← sample (uniform #|'Z_q|) ;; let xi := WitnessToField (otf xi) in
+           set_x xi ;;
+           dl Datatypes.tt ;;
+           schnorr Datatypes.tt
+         }
+      ].
+
+    Definition Gregister_i_raw i b :=
+      register_i i
+        ∘ (par (ID [interface #val #[SET_x i] : chSETFinp → chSETFout]) (par (schnorr_i i b) (dl_i i b)))
+        ∘ (par
+             (KF_package (H_disj := H_disj_x i) (LOC_x i) (SET_x i) (GET_x i) b)
+             (par
+                (K_package (H_disj := H_disj_gx i) (LOC_gx i) (SET_gx i) (GET_gx i) b)
+                (Kzkp_package (H_disj := H_disj_zkp i) (LOC_zkp i) (SET_zkp i) (GET_zkp i) b))).
+
+    Lemma Gregister_i_valid i b :
+      ValidPackage
+        (fset [:: ('option v_Z; LOC_x i)]
+           :|: (fset [:: ('option v_G; LOC_gx i)]
+           :|: fset [:: ('option t_SchnorrZKPCommit; LOC_zkp i)]))
+        [interface]
+        [interface #val #[REGISTER i] : 'unit → 'unit ]
+        (Gregister_i_raw i b).
+    Proof.
+      unfold Gregister_i_raw.
+      rewrite <- fset0U.
+      eapply valid_link.
+      2:{
+        rewrite <- fset0U.
+        eapply valid_link.
+        2:{
+          rewrite <- (fsetUid [interface]).
+          apply valid_par ; [ apply ignore_Parable | apply pack_valid | .. ].
+          rewrite <- (fsetUid [interface]).
+          apply valid_par ; [ apply ignore_Parable | apply pack_valid .. ].
+        }
+        eapply (valid_par_upto _ _ _ fset0 _ [interface #val #[SET_x i] : chCommitOutput → chSETBout ] _ _ _).
+        1: apply ignore_Parable.
+        1: apply valid_ID ; solve_flat.
+        1:{
+          eapply valid_par_upto.
+          1: apply ignore_Parable.
+          1, 2: apply pack_valid.
+          1: rewrite fsetUid ; apply fsubsetxx.
+          1: apply fsubsetxx.
+          1: apply fsubsetxx.
+        }
+        1: rewrite fsetUid ; apply fsubsetxx.
+        1: solve_in_fset.
+        1: apply fsubsetxx.
+      }
+      rewrite fsetUA.
+      rewrite <- !fset_cat.
+      apply pack_valid.
+    Qed.
+
+    Definition Gregister_raw (u : nat) b :=
+      parallel_package (fun i => {package Gregister_i_raw i b #with Gregister_i_valid i b}) u.
+
+    Lemma Gregister_valid : forall u b,
+        ValidPackage
+          (combined_interfaces
+             (fun i =>
+                (fset [:: ('option v_Z; LOC_x i)]
+                   :|: (fset [:: ('option v_G; LOC_gx i)]
+                   :|: fset [:: ('option t_SchnorrZKPCommit; LOC_zkp i)]))) u)
+          [interface]
+          (combined_interfaces (λ i : nat, [interface #val #[REGISTER i] : chSETBout → chSETBout ]) u)
+          (Gregister_raw u b).
+    Proof.
+      intros.
+      setoid_rewrite <- (trivial_combined_interface _ [interface]).
+      apply pack_valid.
+    Qed.
+
+    Definition Gregister (u : nat) : loc_GamePair (combined_interfaces (λ i, [interface #val #[REGISTER i] : chSETBout → chSETBout ]) u) :=
+      fun b => {locpackage Gregister_raw u b #with Gregister_valid u b}.
+
+    Lemma Gregister_advantage :
+      forall u,
+      ∀ (LA : {fset Location}) (A : raw_package),
+        ValidPackage LA (combined_interfaces (fun i => [interface #val #[REGISTER i] : 'unit → 'unit ]) u) A_export A →
+        (Advantage (Gregister u) A <= 0)%R.
+    Proof.
+      intros.
+    Admitted.
+
+  End G_register.
+
+  Section G_commit_vote.
+    (* COMMIT_TO_VOTE_INTERFACE *)
+    Definition COMMIT_TO_VOTE (i : nat) := (Bound_nat * 25 + i)%nat.
+
+    Definition commit_to_vote_i i :
+      package fset0
+        [interface
+           #val #[GPOWY i] : 'unit → 'unit ;
+           #val #[VOTE i] : 'unit → 'unit ;
+           #val #[COMMIT_VOTE i] : 'unit → 'unit
+        ]
+        [interface
+           #val #[ COMMIT_TO_VOTE i ] : 'unit → 'unit
+        ] :=
+      [package
+         #def #[ COMMIT_TO_VOTE i ] (_ : 'unit) : 'unit
+         {
+           #import {sig #[ GPOWY i ] : 'unit → 'unit }
+           as g_y ;;
+           #import {sig #[ VOTE i ] : 'unit → 'unit }
+           as vote ;;
+           #import {sig #[ COMMIT_VOTE i ] : 'unit → 'unit }
+           as commit ;;
+           g_y Datatypes.tt ;;
+           vote Datatypes.tt ;;
+           commit Datatypes.tt
+         }
+      ].
+
+    Definition Gcommit_to_vote_i_raw u (i : 'I_u.+1) b :=
+      commit_to_vote_i i
+        ∘ (par (g_yi u i b) (par (g_vote_i i b) (g_commit_i i b))).
+
+    Lemma Gcommit_to_vote_i_valid u (i : 'I_u.+1) b :
+      ValidPackage
+        (fset [:: ('option v_Z; LOC_x i)]
+           :|: (fset [:: ('option v_G; LOC_gx i)]
+           :|: fset [:: ('option t_SchnorrZKPCommit; LOC_zkp i)]))
+        (combined_interfaces (λ i : nat, [interface #val #[SET_gx i] : chSETinp → chSETout ; #val #[GET_gx i] : chGETinp → chGETout ]) u
+           :|: [interface #val #[SET_gy i] : chSETinp → chSETout ; #val #[GET_gy i] : chGETinp → chGETout ]
+           :|: [interface #val #[SET_vote i] : chSETinp → chSETout ; #val #[GET_vote i] : chGETinp → chGETout]
+           :|: [interface #val #[SET_commit i] : chCommitOutput → chSETBout ]
+           :|: [interface #val #[GET_x i] : chGETFinp → chGETFout]
+           :|: [interface #val #[GET_v i] : chSETBout → 'bool ])
+        [interface #val #[COMMIT_TO_VOTE i] : 'unit → 'unit ]
+        (Gcommit_to_vote_i_raw u i b).
+    Proof.
+    Admitted.
+
+    Definition Gcommit_to_vote_raw (u : nat) b :=
+      parallel_package_in (Ordinal (n:=u.+1) (m:=u) (ltnSn u)) (fun i => {package Gcommit_to_vote_i_raw u i b #with Gcommit_to_vote_i_valid u i b}).
+
+    Lemma combined_interfacesU :
+      forall (u : nat) {T : ordType} (f g : nat -> {fset T}),
+        (combined_interfaces (fun i => (f i :|: g i)) u) =
+          combined_interfaces f u :|: combined_interfaces g u.
+    Proof.
+      intros.
+      induction u.
+      - reflexivity.
+      - simpl.
+        rewrite IHu.
+        solve_fset_eq.
+    Qed.
+
+    Lemma combined_interfaces_combine :
+      forall (u : nat) {T : ordType} (f g : nat -> {fset T}),
+        (combined_interfaces (fun i => (combined_interfaces f u :|: g i)) u) =
+          (combined_interfaces (fun i => f i :|: g i) u).
+    Proof.
+      intros.
+      rewrite combined_interfacesU.
+      rewrite trivial_combined_interface.
+      induction u.
+      - reflexivity.
+      - simpl.
+        rewrite <- IHu.
+        solve_fset_eq.
+    Qed.
+
+    Lemma Gcommit_to_vote_valid : forall u b,
+        ValidPackage
+          (combined_interfaces
+             (fun i =>
+                (fset [:: ('option v_Z; LOC_x i)]
+                   :|: (fset [:: ('option v_G; LOC_gx i)]
+                   :|: fset [:: ('option t_SchnorrZKPCommit; LOC_zkp i)]))) u)
+          (combined_interfaces
+       (λ i : nat,
+           ([interface #val #[SET_gx i] : chSETinp → chSETout ; #val #[GET_gx i] : chGETinp → chGETout ]
+              :|: [interface #val #[SET_gy i] : chSETinp → chSETout ; #val #[GET_gy i] : chGETinp → chGETout ]
+              :|: [interface #val #[SET_vote i] : chSETinp → chSETout ; #val #[GET_vote i] : chGETinp → chGETout]
+              :|: [interface #val #[SET_commit i] : chCommitOutput → chSETBout ]
+              :|: [interface #val #[GET_x i] : chGETFinp → chGETFout]
+              :|: [interface #val #[GET_v i] : chSETBout → 'bool ])) u)
+          (combined_interfaces (λ i : nat, [interface #val #[COMMIT_TO_VOTE i] : chSETBout → chSETBout ]) u)
+          (Gcommit_to_vote_raw u b).
+    Proof.
+      intros.
+      rewrite !combined_interfacesU.
+      rewrite <- (trivial_combined_interface u (combined_interfaces (λ i : nat, [interface #val #[SET_gx i] : chDL_Output → chSETBout ; #val #[GET_gx i] : chSETBout → chDL_Output ]) u)).
+      rewrite <- !combined_interfacesU.
+      setoid_rewrite (trivial_combined_interface_to_in (Ordinal (n:=u.+1) (m:=u) (ltnSn u))).
+      unfold Gcommit_to_vote_raw.
+      apply pack_valid.
+    Qed.
+(* :|: [interface #val #[GET_vote i] : chSETBout → chDL_Output ; #val #[SET_vote i] : chDL_Output → chSETBout ] *)
+(*           :|: [interface #val #[SET_commit i] : chCommitOutput → chSETBout ] *)
+(*           :|: [interface #val #[GET_x i] : chSETBout → chCommitOutput ; #val #[GET_v i] : chSETBout → 'bool ]) u) *)
+
+    Definition commit_to_vote_keys_raw i b :=
+      par
+        (K_package (H_disj := H_disj_gx i) (LOC_gx i) (SET_gx i) (GET_gx i) b)
+        (par (K_package (H_disj := H_disj_gy i) (LOC_gy i) (SET_gy i) (GET_gy i) b)
+           (par(K_package (H_disj := H_disj_vote i) (LOC_vote i) (SET_vote i) (GET_vote i) b)
+              (par(KF_package (H_disj := H_disj_commit i) (LOC_commit i) (SET_commit i) (GET_commit i) b)
+                 (par (KF_package (H_disj := H_disj_x i) (LOC_x i) (SET_x i) (GET_x i) b)
+                    (KB_package (H_disj := H_disj_v i) (LOC_v i) (SET_v i) (GET_v i) b))))).
+
+    Lemma commit_to_vote_keys_valid : forall i b,
+        ValidPackage
+          ((fset [:: ('option v_G; LOC_gx i)])
+             :|: (fset [:: ('option v_G; LOC_gy i)])
+             :|: (fset [:: ('option v_G; LOC_vote i)])
+             :|: (fset [:: ('option v_Z; LOC_commit i)])
+             :|: (fset [:: ('option v_Z; LOC_x i)])
+             :|: fset [:: ('option 'bool; LOC_v i)])
+          [interface]
+          ([interface #val #[SET_gx i] : chSETinp → chSETout ; #val #[GET_gx i] : chGETinp → chGETout ]
+             :|: [interface #val #[SET_gy i] : chSETinp → chSETout ; #val #[GET_gy i] : chGETinp → chGETout ]
+                    :|: [interface #val #[SET_vote i] : chSETinp → chSETout ; #val #[GET_vote i] : chGETinp → chGETout]
+                           :|: [interface #val #[SET_commit i] : chCommitOutput → chSETBout ]
+                                  :|: [interface #val #[GET_x i] : chGETFinp → chGETFout]
+                                         :|: [interface #val #[GET_v i] : chSETBout → 'bool ])
+          (commit_to_vote_keys_raw i b).
+    Proof.
+      intros.
+      rewrite <- !fsetUA.
+      rewrite <- (fsetUid [interface]).
+      refine (valid_par _ _ _ _ _ _ _ _ (ignore_Parable _ _) _ _).
+      rewrite <- (fsetUid [interface]).
+      refine (valid_par _ _ _ _ _ _ _ _ (ignore_Parable _ _) _ _).
+      rewrite <- (fsetUid [interface]).
+      refine (valid_par _ _ _ _ _ _ _ _ (ignore_Parable _ _) _ _).
+      rewrite <- (fsetUid [interface]).
+      refine (valid_par _ _ _ _ _ _ _ _ (ignore_Parable _ _) (valid_package_inject_export _ _ _ _ _ (fsub1Eset _ _ (mem_head _ _)) (pack_valid _)) _).
+      rewrite <- (fsetUid [interface]).
+      refine (valid_par _ _ _ _ _ _ _ _ (ignore_Parable _ _) (valid_package_inject_export _ _ _ _ _ _ (pack_valid _)) _).
+      1: solve_in_fset.
+      refine (valid_package_inject_export _ _ _ _ _ _ _).
+      solve_in_fset.
+    Qed.
+
+    Definition Gcommit_to_vote_with_keys_raw (u : nat) (b : bool) :=
+      (Gcommit_to_vote_raw u b) ∘
+         (parallel_package
+            (fun i => {package
+                      commit_to_vote_keys_raw i b
+                      #with
+                 commit_to_vote_keys_valid i b
+            } )
+            u).
+
+    Lemma Gcommit_to_vote_with_keys_valid : forall (u : nat) (b : bool),
+        ValidPackage
+          (combined_interfaces (fun i => (fset [:: ('option v_G; LOC_gx i)])
+             :|: (fset [:: ('option v_G; LOC_gy i)])
+             :|: (fset [:: ('option v_G; LOC_vote i)])
+             :|: (fset [:: ('option v_Z; LOC_commit i)])
+             :|: (fset [:: ('option v_Z; LOC_x i)])
+             :|: fset [:: ('option 'bool; LOC_v i)]
+             :|: fset [:: ('option t_SchnorrZKPCommit; LOC_zkp i)]) u
+          )
+          [interface]
+          (combined_interfaces (fun i => [interface #val #[COMMIT_TO_VOTE i] : 'unit → 'unit ]) u)
+          (Gcommit_to_vote_with_keys_raw u b).
+    Proof.
+      intros.
+      unfold Gcommit_to_vote_with_keys_raw.
+      setoid_rewrite <- (trivial_combined_interface u [interface]).
+      (* rewrite <- fsetU0. *)
+      eapply valid_package_inject_locations.
+      2: refine (valid_link _ _ _ _ _ _ (parallel_package (λ i : nat, {package commit_to_vote_keys_raw i b }) u) (Gcommit_to_vote_valid u b) (pack_valid _)).
+      rewrite !combined_interfacesU.
+      solve_in_fset.
+    Qed.
+
+    Definition Gcommit_to_vote (u : nat) : loc_GamePair (combined_interfaces (fun i => [interface #val #[COMMIT_TO_VOTE i] : 'unit → 'unit ]) u) :=
+      fun b => {locpackage Gcommit_to_vote_with_keys_raw u b #with Gcommit_to_vote_with_keys_valid u b}.
+
+    Lemma Gcommit_to_vote_advantage :
+      forall u,
+      ∀ (LA : {fset Location}) (A : raw_package),
+        ValidPackage LA (combined_interfaces (fun i => [interface #val #[COMMIT_TO_VOTE i] : 'unit → 'unit ]) u) A_export A →
+        (Advantage (Gcommit_to_vote u) A <= 0)%R.
+    Proof.
+      intros.
+    Admitted.
+
+  End G_commit_vote.
+
+  Section G_cast.
+    Definition CAST (i : nat) := (Bound_nat * 26 + i)%nat.
+
+    fail. (* TODO *)
+  End G_cast.
+
+  Section G_tally.
+    Definition TALLY := 1000%nat.
+    fail. (* TODO *)
+  End G_tally.
+
+  Section G_ovn.
+    Definition OVN := 1001%nat.
+
+    Program Definition ovn u (b : 'bool)  :
+      package
+        fset0
+        ((combined_interfaces
+            (fun i => [interface
+                      #val #[ REGISTER i ] : 'unit → 'unit ;
+                    #val #[ COMMIT_TO_VOTE i ] : 'unit → 'unit ;
+                    #val #[ CAST i ] : 'unit → 'unit]) u)
+           :|:  [interface #val #[ TALLY ] : 'unit → 'unit ])
+        [interface
+           #val #[ OVN ] : 'unit → 'unit
+        ] :=
+      [package
+         #def #[ OVN ] (_ : 'unit) : 'unit
+         {
+           List.fold_left
+             (fun c j =>
+                p ← c ;;
+                #import {sig #[ REGISTER j ] : 'unit → 'unit }
+                as register ;;
+                   register Datatypes.tt) (iota 0 u) (ret Datatypes.tt) ;;
+           List.fold_left
+             (fun c j =>
+                p ← c ;;
+                #import {sig #[ COMMIT_TO_VOTE j ] : 'unit → 'unit }
+                as commit_to_vote ;;
+                   commit_to_vote Datatypes.tt) (iota 0 u) (ret Datatypes.tt) ;;
+           List.fold_left
+             (fun c j =>
+                p ← c ;;
+                #import {sig #[ CAST j ] : 'unit → 'unit }
+                as cast ;;
+                   cast Datatypes.tt) (iota 0 u) (ret Datatypes.tt) ;;
+           #import {sig #[ TALLY ] : 'unit → 'unit }
+           as tally ;;
+           tally Datatypes.tt
+         }
+      ].
+    Final Obligation.
+      intros.
+      ssprove_valid_package.
+      apply valid_bind.
+      1:{
+        apply fold_valid2 ; [ ssprove_valid | intros a ; ssprove_valid ; [ apply a | ] ].
+        rewrite in_fset.
+        rewrite in_cat.
+        apply /orP ; left.
+        simpl.
+        assert (b0 < u)%nat by now rewrite mem_iota in H ; Lia.lia.
+        clear -H0.
+        induction u.
+        - discriminate.
+        - simpl.
+         rewrite in_fset.
+         rewrite in_cat.
+         apply /orP ; left.
+         destruct (b0 == u) eqn:b_is_u ; move /eqP: b_is_u => b_is_u.
+          + subst.
+            clear.
+            simpl.
+            induction u.
+            * rewrite in_fset.
+              rewrite in_cons.
+              apply /orP ; left.
+              apply /eqP.
+              reflexivity.
+            * simpl.
+              rewrite in_fset.
+              rewrite in_cat.
+              apply /orP ; right.
+              simpl.
+              rewrite in_fset.
+              rewrite in_cons.
+              apply /orP ; left.
+              apply /eqP.
+              reflexivity.
+          + apply IHu.
+            Lia.lia.
+      }
+      intros _.
+ 
+      apply valid_bind.
+      1:{
+        apply fold_valid2 ; [ ssprove_valid | intros a ; ssprove_valid ; [ apply a | ] ].
+        rewrite in_fset.
+        rewrite in_cat.
+        apply /orP ; left.
+        simpl.
+        assert (b0 < u)%nat by now rewrite mem_iota in H ; Lia.lia.
+        clear -H0.
+        induction u.
+        - discriminate.
+        - simpl.
+         rewrite in_fset.
+         rewrite in_cat.
+         apply /orP ; left.
+         destruct (b0 == u) eqn:b_is_u ; move /eqP: b_is_u => b_is_u.
+          + subst.
+            clear.
+            simpl.
+            induction u.
+            * rewrite in_fset.
+              rewrite in_cons.
+              apply /orP ; right.
+              apply /orP ; left.
+              apply /eqP.
+              reflexivity.
+            * simpl.
+              rewrite in_fset.
+              rewrite in_cat.
+              apply /orP ; right.
+              simpl.
+              rewrite in_fset.
+              rewrite in_cons.
+              apply /orP ; right.
+              apply /orP ; left.
+              apply /eqP.
+              reflexivity.
+          + apply IHu.
+            Lia.lia.
+      }
+      intros _.
+
+      apply valid_bind.
+      1:{
+        apply fold_valid2 ; [ ssprove_valid | intros a ; ssprove_valid ; [ apply a | ] ].
+        rewrite in_fset.
+        rewrite in_cat.
+        apply /orP ; left.
+        simpl.
+        assert (b0 < u)%nat by now rewrite mem_iota in H ; Lia.lia.
+        clear -H0.
+        induction u.
+        - discriminate.
+        - simpl.
+         rewrite in_fset.
+         rewrite in_cat.
+         apply /orP ; left.
+         destruct (b0 == u) eqn:b_is_u ; move /eqP: b_is_u => b_is_u.
+          + subst.
+            clear.
+            simpl.
+            induction u.
+            * rewrite in_fset.
+              rewrite in_cons.
+              apply /orP ; right.
+              apply /orP ; right.
+              apply /orP ; left.
+              apply /eqP.
+              reflexivity.
+            * simpl.
+              rewrite in_fset.
+              rewrite in_cat.
+              apply /orP ; right.
+              simpl.
+              rewrite in_fset.
+              rewrite in_cons.
+              apply /orP ; right.
+              apply /orP ; right.
+              apply /orP ; left.
+              apply /eqP.
+              reflexivity.
+          + apply IHu.
+            Lia.lia.
+      }
+      intros _.
+
+      ssprove_valid.
+      rewrite in_fset.
+      rewrite in_cat.
+      apply /orP ; right.
+      rewrite in_fset.
+      reflexivity.
+    Defined.
+
+    Definition ovn_keys_raw i b :=
+      par
+        (K_package (H_disj := H_disj_gx i) (LOC_gx i) (SET_gx i) (GET_gx i) b)
+        (par (K_package (H_disj := H_disj_gy i) (LOC_gy i) (SET_gy i) (GET_gy i) b)
+           (par(K_package (H_disj := H_disj_vote i) (LOC_vote i) (SET_vote i) (GET_vote i) b)
+              (par(KF_package (H_disj := H_disj_commit i) (LOC_commit i) (SET_commit i) (GET_commit i) b)
+                 (par (KF_package (H_disj := H_disj_x i) (LOC_x i) (SET_x i) (GET_x i) b)
+                    (KB_package (H_disj := H_disj_v i) (LOC_v i) (SET_v i) (GET_v i) b))))).
+
+    Lemma ovn_keys_valid : forall i b,
+        ValidPackage
+          ((fset [:: ('option v_G; LOC_gx i)])
+             :|: (fset [:: ('option v_G; LOC_gy i)])
+             :|: (fset [:: ('option v_G; LOC_vote i)])
+             :|: (fset [:: ('option v_Z; LOC_commit i)])
+             :|: (fset [:: ('option v_Z; LOC_x i)])
+             :|: fset [:: ('option 'bool; LOC_v i)])
+          [interface]
+          ([interface #val #[SET_gx i] : chSETinp → chSETout ; #val #[GET_gx i] : chGETinp → chGETout ]
+             :|: [interface #val #[SET_gy i] : chSETinp → chSETout ; #val #[GET_gy i] : chGETinp → chGETout ]
+                    :|: [interface #val #[SET_vote i] : chSETinp → chSETout ; #val #[GET_vote i] : chGETinp → chGETout]
+                           :|: [interface #val #[SET_commit i] : chCommitOutput → chSETBout ]
+                                  :|: [interface #val #[GET_x i] : chGETFinp → chGETFout]
+                                         :|: [interface #val #[GET_v i] : chSETBout → 'bool ])
+          (ovn_keys_raw i b).
+    Proof.
+    Admitted.
+
+    Definition Govn_raw u b :=
+      ovn u b
+        ∘ (par
+           (parallel_package (fun i => register_i i) u)
+           (parallel_package (fun i => commit_to_vote_i i) u))
+        ∘ parallel_package (fun i => {package ovn_keys_raw i b #with ovn_keys_valid i b }) u.
+
+    Lemma Govn_valid u b :
+      ValidPackage
+        (combined_interfaces
+           (fun i => (fset [:: ('option v_G; LOC_gx i)])
+                    :|: (fset [:: ('option v_G; LOC_gy i)])
+                    :|: (fset [:: ('option v_G; LOC_vote i)])
+                    :|: (fset [:: ('option v_Z; LOC_commit i)])
+                    :|: (fset [:: ('option v_Z; LOC_x i)])
+                    :|: fset [:: ('option 'bool; LOC_v i)]) u)
+        [interface]
+        [interface #val #[ OVN ] : 'unit → 'unit ]
+        (Govn_raw u b).
+    Proof.
+    Admitted.
+
+    Definition Govn (u : nat) : loc_GamePair [interface #val #[ OVN ] : 'unit → 'unit ] :=
+      fun b => {locpackage Govn_raw u b #with Govn_valid u b}.
+
+    Lemma Govn_advantage :
+      forall u,
+      ∀ (LA : {fset Location}) (A : raw_package),
+        ValidPackage LA [interface #val #[ OVN ] : 'unit → 'unit ] A_export A →
+        (Advantage (Govn u) A <= 0)%R.
+    Proof.
+      intros.
+    Admitted.
+  End G_ovn.
 
   Lemma Advantage_par_emptyR :
     ∀ G₀ G₁ A,
@@ -2909,24 +3839,6 @@ Qed.
 
   (* Lemma full_proof : *)
   (*   full_protocol *)
-
-  Ltac solve_flat :=
-    clear ;
-    unfold flat ;
-
-    intros n u1 u2 ;
-    try rewrite !in_fsetU ;
-
-    let H := fresh in
-    let H0 := fresh in
-    intros H H0 ;
-
-    rewrite <- !fset1E in H, H0 ;
-    rewrite !in_fset1 in H, H0 ;
-
-    repeat (apply (ssrbool.elimT ssrbool.orP) in H ; destruct H) ; apply (ssrbool.elimT eqP) in H ; inversion H ; subst ;
-
-    repeat (apply (ssrbool.elimT ssrbool.orP) in H0 ; destruct H0) ; apply (ssrbool.elimT eqP) in H0 ; now inversion H0 ; subst.
 
   Lemma protocol_dl_real_to_ideal :
     forall state (i : nat) vi,
