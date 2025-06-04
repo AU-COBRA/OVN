@@ -1950,16 +1950,14 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
          #val #[ GET ] : chGETBinp → chGETBout
       ] := K_any_package (A := 'bool) (B := 'bool) (erefl) K_loc SET GET (H_disj := H_disj) b.
 
-  Lemma Gschnorr_x_zkp_advantage :
+  Lemma K_any_advantage :
     forall B (C : finType) H K_loc SET GET H_disj (H_pos : Positive #|C|),
     ∀ (LA : {fset Location}) (A : raw_package),
       ValidPackage LA [interface
          #val #[ SET ] : chSETBinp → chSETBout ;
          #val #[ GET ] : chGETBinp → chGETBout
       ] A_export A →
-      (AdvantageE
-         (K_any_package (A := B) (B := C) H K_loc SET GET (H_disj := H_disj) true)
-         (K_any_package (A := B) (B := C) H K_loc SET GET (H_disj := H_disj) false) A <= 0)%R.
+      (Advantage (K_any_package (A := B) (B := C) H K_loc SET GET (H_disj := H_disj)) A <= 0)%R.
   Proof.
     intros.
   Admitted.
@@ -2300,6 +2298,76 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     repeat (apply (ssrbool.elimT ssrbool.orP) in H ; destruct H) ; apply (ssrbool.elimT eqP) in H ; inversion H ; subst ;
 
     repeat (apply (ssrbool.elimT ssrbool.orP) in H0 ; destruct H0) ; apply (ssrbool.elimT eqP) in H0 ; now inversion H0 ; subst.
+
+  Lemma Advantage_par_emptyR :
+    ∀ G₀ G₁ A,
+      AdvantageE (par G₀ emptym) (par G₁ emptym) A = AdvantageE G₀ G₁ A.
+  Proof.
+    intros G₀ G₁ A.
+    unfold AdvantageE.
+    unfold par.
+    rewrite !unionm0.
+    reflexivity.
+  Qed.
+
+  Lemma Advantage_parR :
+    ∀ G₀ G₁ G₁' A L₀ L₁ L₁' E₀ E₁,
+      ValidPackage L₀ Game_import E₀ G₀ →
+      ValidPackage L₁ Game_import E₁ G₁ →
+      ValidPackage L₁' Game_import E₁ G₁' →
+      flat E₁ →
+      trimmed E₀ G₀ →
+      trimmed E₁ G₁ →
+      trimmed E₁ G₁' →
+      AdvantageE (par G₁ G₀) (par G₁' G₀) A =
+        AdvantageE G₁ G₁' (A ∘ par (ID E₁) G₀).
+  Proof.
+    intros G₀ G₁ G₁' A L₀ L₁ L₁' E₀ E₁.
+    intros Va0 Va1 Va1' Fe0 Te0 Te1 Te1'.
+    replace (par G₁ G₀) with ((par (ID E₁) G₀) ∘ (par G₁ (ID Game_import) )).
+    2:{
+      erewrite <- interchange.
+      all: ssprove_valid.
+      4:{
+        ssprove_valid.
+        rewrite domm_ID_fset.
+        rewrite -fset0E.
+        apply fdisjoints0.
+      }
+      2:{ unfold Game_import. rewrite -fset0E. discriminate. }
+      2: apply trimmed_ID.
+      rewrite link_id.
+      2:{ unfold Game_import. rewrite -fset0E. discriminate. }
+      2: assumption.
+      rewrite id_link.
+      2: assumption.
+      reflexivity.
+    }
+    replace (par G₁' G₀) with ((par (ID E₁) G₀) ∘ (par G₁' (ID Game_import))).
+    2:{
+      erewrite <- interchange.
+      all: ssprove_valid.
+      4:{
+        ssprove_valid.
+        rewrite domm_ID_fset.
+        rewrite -fset0E.
+        apply fdisjoints0.
+      }
+      2:{ unfold Game_import. rewrite -fset0E. discriminate. }
+      2: apply trimmed_ID.
+      rewrite link_id.
+      2:{ unfold Game_import. rewrite -fset0E. discriminate. }
+    2: assumption.
+    rewrite id_link.
+    2: assumption.
+    reflexivity.
+  }
+  rewrite -Advantage_link.
+  unfold Game_import. rewrite -fset0E.
+  rewrite Advantage_par_emptyR.
+  reflexivity.
+  Unshelve. all: auto.
+Qed.
 
   Section Gschnorr_x_zkp.
     Definition SCHNORR_ (i : nat) := (Bound_nat * 18 + i)%nat.
@@ -3073,7 +3141,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
   Section G_CDS.
     Definition OR (i : nat) := (Bound_nat * 23 + i)%nat.
-    fail. (* TODO *)
+    (* fail. (* TODO *) *)
   End G_CDS.
 
   Section G_register.
@@ -3393,18 +3461,18 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   Section G_cast.
     Definition CAST (i : nat) := (Bound_nat * 26 + i)%nat.
 
-    fail. (* TODO *)
+    (* fail. (* TODO *) *)
   End G_cast.
 
   Section G_tally.
     Definition TALLY := 1000%nat.
-    fail. (* TODO *)
+    (* fail. (* TODO *) *)
   End G_tally.
 
   Section G_ovn.
     Definition OVN := 1001%nat.
 
-    Program Definition ovn u (b : 'bool)  :
+    Program Definition ovn u  :
       package
         fset0
         ((combined_interfaces
@@ -3452,7 +3520,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         rewrite in_cat.
         apply /orP ; left.
         simpl.
-        assert (b0 < u)%nat by now rewrite mem_iota in H ; Lia.lia.
+        assert (b < u)%nat by now rewrite mem_iota in H ; Lia.lia.
         clear -H0.
         induction u.
         - discriminate.
@@ -3460,7 +3528,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
          rewrite in_fset.
          rewrite in_cat.
          apply /orP ; left.
-         destruct (b0 == u) eqn:b_is_u ; move /eqP: b_is_u => b_is_u.
+         destruct (b == u) eqn:b_is_u ; move /eqP: b_is_u => b_is_u.
           + subst.
             clear.
             simpl.
@@ -3492,7 +3560,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         rewrite in_cat.
         apply /orP ; left.
         simpl.
-        assert (b0 < u)%nat by now rewrite mem_iota in H ; Lia.lia.
+        assert (b < u)%nat by now rewrite mem_iota in H ; Lia.lia.
         clear -H0.
         induction u.
         - discriminate.
@@ -3500,7 +3568,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
          rewrite in_fset.
          rewrite in_cat.
          apply /orP ; left.
-         destruct (b0 == u) eqn:b_is_u ; move /eqP: b_is_u => b_is_u.
+         destruct (b == u) eqn:b_is_u ; move /eqP: b_is_u => b_is_u.
           + subst.
             clear.
             simpl.
@@ -3534,7 +3602,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         rewrite in_cat.
         apply /orP ; left.
         simpl.
-        assert (b0 < u)%nat by now rewrite mem_iota in H ; Lia.lia.
+        assert (b < u)%nat by now rewrite mem_iota in H ; Lia.lia.
         clear -H0.
         induction u.
         - discriminate.
@@ -3542,7 +3610,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
          rewrite in_fset.
          rewrite in_cat.
          apply /orP ; left.
-         destruct (b0 == u) eqn:b_is_u ; move /eqP: b_is_u => b_is_u.
+         destruct (b == u) eqn:b_is_u ; move /eqP: b_is_u => b_is_u.
           + subst.
             clear.
             simpl.
@@ -3608,7 +3676,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     Admitted.
 
     Definition Govn_raw u b :=
-      ovn u b
+      ovn u
         ∘ (par
            (parallel_package (fun i => register_i i) u)
            (parallel_package (fun i => commit_to_vote_i i) u))
@@ -3639,6 +3707,48 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         (Advantage (Govn u) A <= 0)%R.
     Proof.
       intros.
+      unfold Govn.
+      simpl.
+      unfold Govn_raw.
+      unfold ovn_keys_raw.
+
+      rewrite Advantage_E.
+
+      eapply Order.le_trans ; [ eapply Advantage_triangle with (R := (ovn u
+                                                                        ∘ par (Gregister u false) (parallel_package [eta commit_to_vote_i] u ∘ _))) | ].
+
+      replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ rewrite add0r | symmetry ; admit ].
+
+      eapply Order.le_trans ; [ eapply Advantage_triangle with (R := (ovn u
+                                                                        ∘ par (Gregister u true) (parallel_package [eta commit_to_vote_i] u ∘ _))) | ].
+
+      replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ rewrite add0r | symmetry ].
+      2:{
+        epose Advantage_le_0.
+        rewrite -Advantage_link.
+        set (_ ∘ _).
+        set (_ ∘ _).
+        assert (r = r0) by admit.
+        subst r r0.
+        rewrite H0.
+        setoid_rewrite Advantage_parR ; [ | admit .. ].
+        set (_ ∘ _).
+        erewrite <- Advantage_le_0.
+        2:{ eapply (Gregister_advantage u _ r _). }
+        reflexivity.
+      }
+
+      eapply Order.le_trans ; [ eapply Advantage_triangle with (R := (ovn u
+      ∘ par (parallel_package [eta register_i] u) (parallel_package [eta commit_to_vote_i] u)
+        ∘ parallel_package
+            (λ i : nat,
+               {package par (K_package (LOC_gx i) (SET_gx i) (GET_gx i) true)
+                          (par (K_package (LOC_gy i) (SET_gy i) (GET_gy i) false)
+                             (par (K_package (LOC_vote i) (SET_vote i) (GET_vote i) false)
+                                (par (KF_package (LOC_commit i) (SET_commit i) (GET_commit i) false)
+                                   (par (KF_package (LOC_x i) (SET_x i) (GET_x i) true)
+                                      (KB_package (LOC_v i) (SET_v i) (GET_v i) false))))) }) u)) | ].
+
     Admitted.
   End G_ovn.
 
