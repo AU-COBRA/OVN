@@ -3709,15 +3709,169 @@ Qed.
       now rewrite (mkpackage_rewrite id _ (split_parallel_package_raw u _ _)).
     Qed.
 
-Lemma advantage_reflexivity :
-  forall P A, AdvantageE P P A = 0%R.
-Proof.
-  unfold AdvantageE.
-  intros.
-  rewrite subrr.
-  rewrite Num.Theory.normr0.
-  reflexivity.
-Qed.
+    Lemma advantage_reflexivity :
+      forall P A, AdvantageE P P A = 0%R.
+    Proof.
+      unfold AdvantageE.
+      intros.
+      rewrite subrr.
+      rewrite Num.Theory.normr0.
+      reflexivity.
+    Qed.
+
+    Lemma package_split :
+      forall p, p = par p p.
+    Proof.
+      intros.
+      unfold par.
+      now rewrite unionmI.
+    Qed.
+
+    Lemma keyed_package :
+      forall {LA EA},
+      forall {LB EB},
+      forall {LK IK EK},
+      forall (A : raw_package)
+        (B : raw_package)
+        (K : raw_package),
+        ValidPackage LA EK EA A ->
+        ValidPackage LB EK EB B ->
+        ValidPackage LK IK EK K ->
+        trimmed EA A ->
+        trimmed EB B ->
+        trimmed EK K ->
+        (par A B) ∘ K = (par (A ∘ ID EK) (B ∘ ID EK)) ∘ K.
+    Proof.
+      intros.
+      set (K) at 2.
+      rewrite <- (id_link LK IK EK K) ; [ | assumption | assumption ].
+      set (ID EK) at 2 3.
+      rewrite (package_split (ID EK)).
+      subst r r0.
+      rewrite link_assoc.
+      now erewrite <- (interchange) ; [ .. | apply ignore_Parable] ; (reflexivity || eassumption || apply valid_ID, (flat_valid_package _ _ _ K _)).
+      Unshelve. all: exact fset0.
+    Qed.
+
+    Lemma advantage_helper :
+      forall {LA IA EA},
+      forall {LB IB EB},
+      forall {LK IK EK},
+      forall {A : bool -> raw_package}
+        {B : bool -> raw_package}
+        {K : bool -> raw_package},
+        fsubset IA EK ->
+        fsubset IB EK ->
+        fsubset IK [interface] ->
+        (forall b, ValidPackage LA IA EA (A b)) ->
+        (forall b, ValidPackage LB IB EB (B b)) ->
+        (forall b, ValidPackage LK IK EK (K b)) ->
+        (forall b, trimmed EA (A b)) ->
+        (forall b, trimmed EB (B b)) ->
+        (forall b, trimmed EK (K b)) ->
+        forall ε ν,
+          (forall Adv, (AdvantageE (A false ∘ K false) (A true ∘ K true) Adv <= ε)%R) ->
+          (forall Adv, (AdvantageE (B false ∘ K false) (B true ∘ K true) Adv <= ν)%R) ->
+        (forall Adv, (AdvantageE (par (A false) (B false) ∘ K false) (par (A true) (B true) ∘ K true) Adv <= ν + ε)%R).
+    Proof.
+      intros.
+      rewrite (package_split (K false)).
+      rewrite (package_split (K true)).
+      erewrite <- !interchange ; [ | try (easy || apply ignore_Parable) .. ].
+      2-5: eapply valid_package_inject_export ; [ | easy ] ; assumption.
+      eapply Order.le_trans ; [ eapply Advantage_triangle with (R := par (A false ∘ K false) (B true ∘ K true)) | ].
+      apply Num.Theory.lerD.
+      {
+        erewrite Advantage_par ;
+          [ | (eapply valid_link || eapply flat_valid_package || apply trimmed_link) ; try easy.. ].
+        2-4: eapply valid_package_inject_export ; [ | eapply valid_package_inject_import ; easy ] ; assumption.
+        apply H9.
+      }
+      {
+        erewrite Advantage_parR ;
+          [ | (eapply valid_link || eapply flat_valid_package || apply trimmed_link) ; try easy.. ].
+        2-4: eapply valid_package_inject_export ; [ | eapply valid_package_inject_import ; easy ] ; assumption.
+        apply H8.
+      }
+      Unshelve. all: apply false.
+    Qed.
+
+    Corollary advantage_helper0 :
+            forall {LA IA EA},
+      forall {LB IB EB},
+      forall {LK IK EK},
+      forall {A : bool -> raw_package}
+        {B : bool -> raw_package}
+        {K : bool -> raw_package},
+        fsubset IA EK ->
+        fsubset IB EK ->
+        fsubset IK [interface] ->
+        (forall b, ValidPackage LA IA EA (A b)) ->
+        (forall b, ValidPackage LB IB EB (B b)) ->
+        (forall b, ValidPackage LK IK EK (K b)) ->
+        (forall b, trimmed EA (A b)) ->
+        (forall b, trimmed EB (B b)) ->
+        (forall b, trimmed EK (K b)) ->
+        (forall Adv, (AdvantageE (A false ∘ K false) (A true ∘ K true) Adv <= 0)%R) ->
+        (forall Adv, (AdvantageE (B false ∘ K false) (B true ∘ K true) Adv <= 0)%R) ->
+        (forall Adv, (AdvantageE (par (A false) (B false) ∘ K false) (par (A true) (B true) ∘ K true) Adv <= 0)%R).
+    Proof. intros. rewrite <- (add0r 0%R). now rewrite advantage_helper. Qed.
+
+    Lemma link_par_right :
+      forall {LA IA EA},
+      forall {LB IB EB},
+      (* forall {LC IC EC}, *)
+      forall {A : raw_package}
+        {B : raw_package}
+        {C : raw_package},
+        fsubset IA EB ->
+        ValidPackage LA IA EA A ->
+        ValidPackage LB IB EB B ->
+        (* ValidPackage LC IC EC C -> *)
+        trimmed EA A ->
+        A ∘ par B C = A ∘ B.
+    Proof.
+      intros.
+      apply eq_fmap.
+      unfold link.
+      intro n. repeat rewrite ?mapmE.
+      destruct (A n) as [[S1 [T1 f1]]|] eqn:e. 2: reflexivity.
+      cbn. f_equal. f_equal. f_equal. extensionality x.
+      erewrite (code_link_par_left _ _ _ _ IA) ; [ reflexivity | | eapply valid_package_inject_export ; easy ].
+
+      eapply trimmed_valid_Some_in in e as hi ; [ | eassumption.. ].
+      eapply from_valid_package in H0.
+      specialize (H0 _ hi).
+      destruct H0 as [g [eg hg]].
+      rewrite e in eg.
+      noconf eg.
+      cbn in hg.
+      apply hg.
+    Qed.
+
+    Lemma advantage_helper2 :
+      forall {LA IA EA},
+      forall {LB IB EB},
+      forall {A : bool -> raw_package}
+        {B : bool -> raw_package}
+        {C : bool -> raw_package}
+        {K : bool -> raw_package},
+        fsubset IA EB ->
+        (forall b, ValidPackage LA IA EA (A b)) ->
+        (forall b, ValidPackage LB IB EB (B b)) ->
+        (forall b, trimmed EA (A b)) ->
+        (forall b, K b = par (B b) (C b)) ->
+        forall ε,
+        (forall Adv, (AdvantageE (A false ∘ B false) (A true ∘ B true) Adv <= ε)%R) ->
+        (forall Adv, (AdvantageE (A false ∘ K false) (A true ∘ K true) Adv <= ε)%R).
+    Proof.
+      intros.
+      subst.
+      rewrite !H3.
+      rewrite link_par_right ; [ | easy .. ].
+      rewrite link_par_right ; [ | easy .. ].
+      apply H4.
+    Qed.
 
     Lemma Govn_advantage :
       forall u,
@@ -3730,8 +3884,6 @@ Qed.
       simpl.
       unfold Govn_raw.
 
-      unfold parallel_package, pack.
-
       (* Ignore 'just' code *)
       rewrite Advantage_E
       ; rewrite -Advantage_link
@@ -3740,108 +3892,71 @@ Qed.
       ; subst Hl Hr
       ; erewrite <- Advantage_E.
 
-      (* Isolate Gregister *)
-      eassert (H_Gregister : forall b, parallel_package_raw (Gregister_i_funcs_raw^~ b) _ ∘ _ = (pack (locs_pack (Gregister u b)))).
-      {
-        intros.
-        unfold pack. unfold Gregister.
-        rewrite pack_parallel_package.
-        unfold locs_pack.
-        unfold Gregister_raw.
-        unfold pack.
-        rewrite <- parallel_package_interchange_raw.
-        f_equal.
-        apply functional_extensionality => ?.
-        unfold Gregister_i_raw.
-        rewrite link_assoc.
-        reflexivity.
-      }
-
-      eassert (exists M, forall b,
-                  parallel_package_raw (ovn_keys_raw^~ b) u
-                  = par (parallel_package_raw (register_i_keys_raw^~ b) u) (M b)) by admit.
-      destruct H0.
-
-      rewrite Advantage_E !H0
-      ; setoid_rewrite <- interchange ; [ | admit .. ]
-      ; rewrite !H_Gregister
-      ; set (Hl := par _ _) ; pattern false in Hl
-      ; set (Hr := par _ _) ; pattern true in Hr
-      ; subst Hl Hr
-      ; rewrite -Advantage_E.
-
-      (* idealize Gregister *)
-      rewrite Advantage_E
-      ; eapply Order.le_trans ; [ eapply Advantage_triangle with (R := par (Gregister u true) _) | ]
-      ; replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ rewrite add0r | symmetry ].
-      2:{
-        setoid_rewrite Advantage_parR ; [ | admit .. ].
-        apply (Advantage_le_0 (Gregister u)).
-        eapply Gregister_advantage.
-        admit.
-      }
-      set (Hl := par _ _) ; pattern false in Hl
-      ; set (Hr := par _ _) ; pattern true in Hr
-      ; subst Hl Hr
-      ; rewrite -Advantage_E.
-
-      (* Unfold Gregister and put keys back *)
       rewrite Advantage_E.
-      rewrite -H_Gregister.
-      setoid_rewrite interchange ; [ | admit .. ]
-      ; set (Hl := _ ∘ _) ; pattern false in Hl
-      ; set (Hr := _ ∘ _) ; pattern true in Hr
-      ; subst Hl Hr
-      ; rewrite -Advantage_E.
+      match goal with
+      | [ |- context [ par (pack ?a) (pack ?b) ∘ (pack ?c) ] ] => set a ; set b ; set c
+      end.
+      pattern false in p.
+      set (fun _ => _) in p.
+      subst p.
+      pattern false in p0.
+      set (fun _ => _) in p0.
+      subst p0.
+      pattern false in p1.
+      set (fun _ => _) in p1.
+      subst p1.
 
-      (* Continue to commit_to_vote *)
+      fold (y true).
+      fold (y0 true).
+      fold (y1 true).
 
-      (* Isolate Gcommit_to_vote *)
-      eassert (H_Gcommit_to_vote : forall b,
-                  (parallel_package_in (Ordinal (n:=u.+1) (m:=u) (ltnSn u))
-             (λ i : 'I_u.+1, {package Gcommit_to_vote_i_raw u i b #with Gcommit_to_vote_i_valid u i b})
-           ∘ parallel_package_raw (commit_to_vote_keys_raw^~ b) u) =
-                    (pack (locs_pack (Gcommit_to_vote u b)))).
+      refine (advantage_helper0 _ _ _ (fun b => pack_valid (y b)) (fun b => pack_valid (y0 b)) (fun b => pack_valid (y1 b)) _ _ _ _ _ _) ; [ admit .. | clear ; intros | clear ; intros ].
       {
-        intros.
-        unfold pack. unfold Gcommit_to_vote.
-        rewrite pack_parallel_package_in.
-        unfold locs_pack.
-        unfold Gregister_raw.
-        unfold pack.
-        unfold Gcommit_to_vote_with_keys_raw.
-        unfold Gcommit_to_vote_raw.
-        unfold Gcommit_to_vote_i_raw.
-        unfold pack.
-        rewrite pack_parallel_package_in.
-        reflexivity.
+        refine (advantage_helper2
+                    (A := y)
+                    (B := fun b => parallel_package_raw (fun i => register_i_keys_raw _ b) u)
+                    (K := y1)
+                    _ _ _ _ _ 0%R _ Adv) ; [ admit .. | clear Adv ; intros ].
+        {
+          intros.
+          subst y.
+          hnf.
+          unfold pack, parallel_package.
+          rewrite !parallel_package_interchange_raw.
+          rewrite <- !link_assoc.
+          rewrite <- !parallel_package_interchange_raw.
+
+          set (Hl := parallel_package_raw _ _) ; pattern false in Hl
+          ; set (Hr := parallel_package_raw _ _) ; pattern true in Hr
+          ; subst Hl Hr
+          ; erewrite <- Advantage_E.
+
+          refine (Gregister_advantage u _ _ _).
+          admit.
+        }
       }
+      {
+        refine (advantage_helper2
+                    (A := y0)
+                    (B := fun b => parallel_package_raw (fun i => commit_to_vote_keys_raw _ b) u)
+                    (K := y1)
+                    _ _ _ _ _ 0%R _ Adv) ; [ admit .. | clear Adv ; intros ].
+        {
+          intros.
+          subst y0.
+          hnf.
+          unfold pack, parallel_package_in.
+          (* rewrite <- !parallel_package_in_interchange_raw. *)
 
-      eassert (exists M, forall b1 b2,
-                  par (parallel_package_raw (register_i_keys_raw^~ b2) u) (x b1)
-                  = par (M b2) (parallel_package_raw (commit_to_vote_keys_raw^~ b1) u)) by admit.
-      destruct H1.
+          set (Hl := _ ∘ _) ; pattern false in Hl
+          ; set (Hr := _ ∘ _) ; pattern true in Hr
+          ; subst Hl Hr
+          ; erewrite <- Advantage_E.
 
-      rewrite Advantage_E !H1
-      ; setoid_rewrite <- interchange ; [ | admit .. ]
-      ; rewrite !H_Gcommit_to_vote
-      ; set (Hl := par _ _) ; pattern false in Hl
-      ; set (Hr := par _ _) ; pattern true in Hr
-      ; subst Hl Hr
-      ; rewrite -Advantage_E.
-
-      (* idealize Gcommit_to_vote *)
-      rewrite Advantage_E
-      ; eapply Order.le_trans ; [ eapply Advantage_triangle with (R := par _ (Gcommit_to_vote u true)) | ]
-      ; replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ rewrite add0r | symmetry ].
-      2:{
-        setoid_rewrite Advantage_par ; [ | admit .. ].
-        apply (Advantage_le_0 (Gcommit_to_vote u)).
-        eapply Gcommit_to_vote_advantage.
-        admit.
+          refine (Gcommit_to_vote_advantage u _ _ _).
+          admit.
+        }
       }
-
-      now rewrite advantage_reflexivity.
     Admitted.
   End G_ovn.
 
