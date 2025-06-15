@@ -1421,7 +1421,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       ssprove_sync=> r.
       now apply r_ret.
     }
-    Fail Timeout 5 Qed. Admitted. (* 216.817 secs *)
+  Fail Timeout 5 Qed. Admitted. (* 216.817 secs *)
 
   (** DL_ *)
 
@@ -1832,17 +1832,190 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
          #val #[ GET ] : chGETBinp → chGETBout
       ] := K_any_package (A := 'bool) (B := 'bool) id K_loc SET GET (H_disj := H_disj) b.
 
-  Lemma K_any_advantage :
+  Definition K_use_raw {A : choice_type} {B : finType} (F : Finite.sort B -> Choice.sort A) `{H_pos : Positive #|B|} SET :
+    raw_package :=
+    (mkfmap [(SET, (A; ('unit; (fun _ => (let set_x := λ x, opr (SET, (A, 'unit)) x (λ y, ret y) in
+              xi ← sample (uniform (H := H_pos) #|B|) ;;
+              set_x (F (otf xi) : A))))))]).
+
+  Lemma K_use_valid :
+    forall {A : choice_type} {B : finType} (F : Finite.sort B -> Choice.sort A) `{H_pos : Positive #|B|} SET,
+      ValidPackage
+        fset0
+      (fset [(SET, (A, 'unit))])
+      (fset [(SET, (A, 'unit))])
+      (K_use_raw F SET).
+  Proof. intros. ssprove_valid_package. ssprove_valid. Qed.
+
+  Definition GK_raw {A : choice_type} {B : finType} (F : Finite.sort B -> Choice.sort A) `{H_pos : Positive #|B|} (K_loc : nat) SET GET {H_disj : SET <> GET} (b : bool) :
+    raw_package :=
+    par (K_use_raw F SET) (ID (fset [(GET, ('unit, A))])) ∘ K_any_package F K_loc SET GET (H_disj := H_disj) b.
+
+  Axiom ignore_Parable : forall A B, Parable A B.
+
+  Ltac solve_flat :=
+    clear ;
+    unfold flat ;
+
+    intros n u1 u2 ;
+    try rewrite !in_fsetU ;
+
+    let H := fresh in
+    let H0 := fresh in
+    intros H H0 ;
+
+    rewrite <- !fset1E in H, H0 ;
+    rewrite !in_fset1 in H, H0 ;
+
+    repeat (apply (ssrbool.elimT ssrbool.orP) in H ; destruct H) ; apply (ssrbool.elimT eqP) in H ; inversion H ; subst ;
+
+    repeat (apply (ssrbool.elimT ssrbool.orP) in H0 ; destruct H0) ; apply (ssrbool.elimT eqP) in H0 ; now inversion H0 ; subst.
+
+  Definition GK_valid {A : choice_type} {B : finType} (F : Finite.sort B -> Choice.sort A) `{H_pos : Positive #|B|} (K_loc : nat) SET GET {H_disj : SET <> GET} (b : bool) :
+    ValidPackage
+      (fset [('option A ; K_loc) : Location])
+      [interface]
+      (fset [(SET, (A, 'unit)); (GET, ('unit, A))])
+      (GK_raw F K_loc SET GET (H_disj := H_disj) b).
+  Proof.
+    rewrite <- fset0U.
+    refine (valid_link _ _ _ _ _ _ _ _ (pack_valid _)).
+    rewrite <- fset0U.
+    rewrite fset_cons.
+    rewrite fset1E.
+    refine (valid_par  _ _ _ _ _ _ _ _ _ _ _).
+    + apply ignore_Parable.
+    + apply K_use_valid.
+    + apply valid_ID.
+      solve_flat.
+  Qed.
+
+  Definition GK {A : choice_type} {B : finType} (F : Finite.sort B -> Choice.sort A) `{H_pos : Positive #|B|} (K_loc : nat) SET GET {H_disj : SET <> GET} :
+    loc_GamePair (fset [(SET, (A, 'unit)); (GET, ('unit, A))]) :=
+    fun b => {locpackage _ #with GK_valid F K_loc SET GET (H_disj := H_disj) b}.
+
+  Lemma bobble_sample_uniform_getr :
+    ∀
+      {C : choiceType}
+      {ℓ : Location}
+      (o : nat) {Ho : Positive o}
+      (c : raw_code C)
+      (f : Arit (uniform o) -> ℓ.π1 -> raw_code C),
+      (* (forall (r : Arit (uniform o)) (v : ℓ.π1), exists L, valid_code L fset0 (f r v)) -> *)
+      ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄
+        r ← sample uniform o ;;
+      v ← get ℓ ;;
+      f r v ≈
+        c ⦃ Logic.eq ⦄ <->
+        ⊢ ⦃ λ '(h₀, h₁), h₀ = h₁ ⦄
+          v ← get ℓ ;;
+        r ← sample uniform o ;;
+        f r v ≈
+          c ⦃ Logic.eq ⦄.
+  Proof.
+    intros ? ? ? ? ? ?.
+    split.
+    - intros H.
+      eapply r_transR.
+      1: apply H.
+      apply (r_get_remember_lhs _ _ _ (fun '(H0, H1) => H0 = H1)).
+      intros v.
+      apply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros ].
+      eapply (r_get_remind_rhs _ v _ _ _) ;
+        [ apply Remembers_rhs_from_tracked_lhs ;
+          [ apply Remembers_lhs_conj_right
+            ; apply Remembers_lhs_rem_lhs
+          | apply Syncs_conj ; apply (Syncs_eq ℓ) ]
+        | apply r_forget_lhs ; apply rreflexivity_rule ].
+    - intros H.
+      eapply r_transR.
+      1: apply H.
+      apply (r_get_remember_rhs _ _ _ (fun '(H0, H1) => H0 = H1)).
+      intros v.
+      apply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros ].
+      eapply (r_get_remind_lhs _ v _ _ _) ;
+        [ apply Remembers_lhs_from_tracked_rhs ;
+          [ apply Remembers_rhs_conj_right
+            ; apply Remembers_rhs_rem_rhs
+          | apply Syncs_conj ; apply (Syncs_eq ℓ) ]
+        | apply r_forget_rhs ; apply rreflexivity_rule ].
+  Qed.
+
+  Lemma GK_advantage :
     forall B (C : finType) H K_loc SET GET H_disj (H_pos : Positive #|C|),
     ∀ (LA : {fset Location}) (A : raw_package),
-      ValidPackage LA [interface
-         #val #[ SET ] : chSETBinp → chSETBout ;
-         #val #[ GET ] : chGETBinp → chGETBout
-      ] A_export A →
-      (Advantage (K_any_package (A := B) (B := C) H K_loc SET GET (H_disj := H_disj)) A <= 0)%R.
+      LA :#: fset [:: ('option B; K_loc) : Location] ->
+      ValidPackage LA (fset [:: (SET, (B, 'unit)); (GET, ('unit, B))]) A_export A →
+      (Advantage (GK (A := B) (B := C) H K_loc SET GET (H_disj := H_disj)) A <= 0)%R.
   Proof.
     intros.
-  Admitted.
+    rewrite Advantage_E.
+    replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ easy | symmetry ].
+    Locate eq_upto_inv_perf_ind.
+    eapply eq_rel_perf_ind_eq.
+    1: apply pack_valid.
+    1: apply pack_valid.
+    2: eassumption.
+    2,3: assumption.
+
+    unfold GK.
+    unfold locs_pack, pack.
+    unfold GK_raw.
+    unfold K_use_raw.
+    unfold K_any_package.
+    unfold K_any_package_raw.
+    unfold pack.
+
+    (* unfold eq_up_to_inv. *)
+    simplify_eq_rel b.
+    - eapply (rpost_weaken_rule _ Logic.eq) ; [ | intros [] [] => [ [] ] // ]. 
+      unfold par.
+      rewrite !setmE ; rewrite eqxx.
+      unfold ".2".
+      repeat choice_type_eqP_handle.
+      erewrite !cast_fun_K.
+
+      simpl.
+
+      rewrite !setmE ; rewrite eqxx.
+      repeat choice_type_eqP_handle.
+      erewrite !cast_fun_K.
+
+      simpl.
+      apply r_dead_sample_R ; [ apply LosslessOp_uniform | intros ].
+
+      apply (proj2 (bobble_sample_uniform_getr (ℓ := ('option B; K_loc)) _ _ _)).
+      ssprove_sync_eq => [ [ * | * ] ].
+      + apply r_const_sample_L ; [ apply LosslessOp_uniform | intros ].
+        now apply r_ret.
+      + simpl.
+        apply r_uniform_bij with (f := id) ; [ now apply inv_bij | intros ].
+        apply better_r_put_rhs.
+        apply better_r_put_lhs.
+        apply r_ret.
+        now intros ? ? [? [[? []] ?]].
+    - eapply (rpost_weaken_rule _ Logic.eq) ; [ | intros [] [] => [ [] ] // ]. 
+      unfold par.
+      rewrite !setmE.
+      apply RelationClasses.neq_Symmetric in H_disj.
+      rewrite !(ssrbool.introF eqP H_disj).
+      rewrite !IDE.
+      rewrite <- !fset1E.
+      simpl.
+      rewrite !eqxx.
+      simpl.
+      repeat choice_type_eqP_handle.
+      erewrite !cast_fun_K.
+
+      simpl.
+      rewrite !setmE ; rewrite eqxx.
+      rewrite !(ssrbool.introF eqP H_disj).
+      repeat choice_type_eqP_handle.
+      erewrite !cast_fun_K.
+
+      simpl.
+      ssprove_sync_eq => [ [ * | * ] ] ; [ | simpl ; ssprove_sync_eq => * ] ; now apply r_ret.
+  Qed.
 
   Definition Bound_nat := OVN_Param.N : nat.
   Lemma Bound_nat_Pos : Positive Bound_nat. Proof. apply HOP.n_pos. Qed.
@@ -1901,8 +2074,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   Lemma H_disj_or : forall i, SET_or i <> GET_or i. Proof. by now unfold SET_or, GET_or, OVN_Param.N; epose proof Bound_nat_Pos; destruct Bound_nat ; easy || Lia.lia. Qed.
   Lemma H_disj_tally : forall i, SET_tally i <> GET_tally i. Proof. by now unfold SET_tally, GET_tally, OVN_Param.N; epose proof Bound_nat_Pos; destruct Bound_nat ; easy || Lia.lia. Qed.
 
-  Axiom ignore_Parable : forall A B, Parable A B.
-
   Definition schnorr_game := fun b =>
     if b
     then schnorr_ideal
@@ -1947,7 +2118,8 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     | O => i O
     | S n => (combined_interfaces i n) :|: (i (S n))
     end.
-  Lemma parallel_package_valid : forall L I E (p : forall (n : nat), package (L n) (I n) (E n)) u,
+
+  Lemma parallel_package_valid : forall L I E (p : nat -> raw_package) (H : forall (n : nat), ValidPackage (L n) (I n) (E n) (p n)) u,
       ValidPackage
         (combined_interfaces L u)
         (combined_interfaces I u)
@@ -1956,18 +2128,15 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   Proof.
     intros.
     induction u.
-    - apply pack_valid.
+    - apply H.
     - simpl.
       apply valid_par.
       + apply ignore_Parable.
       + apply IHu.
-      + apply p.
+      + apply H.
   Qed.
-  Definition parallel_package {L I E} p u := {package _ #with parallel_package_valid L I E p u}.
+  Definition parallel_package {L I E} p u := {package _ #with parallel_package_valid L I E (fun i => pack (p i)) (fun i => pack_valid (p i)) u}.
 
-  Check nat_of_ord (Ordinal (m := O) _).
-  Check Ordinal.
-  
   Equations parallel_package_in_raw {u : nat} (index : 'I_u) (p : forall (n : 'I_u), raw_package) : raw_package by wf (nat_of_ord index) lt :=
     parallel_package_in_raw (@Ordinal _ O i) p := p (Ordinal (m := O) i) ;
     parallel_package_in_raw (@Ordinal _ (S n) i) p := par (parallel_package_in_raw (Ordinal (m := n) (ltnW i)) p) (p (Ordinal (m := S n) i)).
@@ -2129,6 +2298,25 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       reflexivity.
   Qed.
 
+    Lemma package_split :
+      forall p, par p p = p.
+    Proof.
+      intros.
+      unfold par.
+      now rewrite unionmI.
+    Qed.
+
+  Lemma trivial_parallel_package_raw :
+    forall u (p : raw_package), parallel_package_raw (fun _ => p) u = p.
+  Proof.
+    intros.
+    induction u.
+    - reflexivity.
+    - simpl.
+      rewrite IHu.
+      now rewrite package_split.
+  Qed.
+
   Lemma trivial_combined_interface_to_in :
     forall {u : nat} (m : nat) (H_le : (m <= u)%nat) {T : ordType} (f : nat -> {fset T}),
       combined_interfaces f m
@@ -2162,24 +2350,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     + reflexivity.
     + by move: IHu fsetUid => /= -> ->.
   Qed.
-
-  Ltac solve_flat :=
-    clear ;
-    unfold flat ;
-
-    intros n u1 u2 ;
-    try rewrite !in_fsetU ;
-
-    let H := fresh in
-    let H0 := fresh in
-    intros H H0 ;
-
-    rewrite <- !fset1E in H, H0 ;
-    rewrite !in_fset1 in H, H0 ;
-
-    repeat (apply (ssrbool.elimT ssrbool.orP) in H ; destruct H) ; apply (ssrbool.elimT eqP) in H ; inversion H ; subst ;
-
-    repeat (apply (ssrbool.elimT ssrbool.orP) in H0 ; destruct H0) ; apply (ssrbool.elimT eqP) in H0 ; now inversion H0 ; subst.
 
   Lemma Advantage_par_emptyR :
     ∀ G₀ G₁ A,
@@ -2251,18 +2421,308 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   Unshelve. all: auto.
 Qed.
 
+    Lemma split_parallel_package_raw :
+      forall u A B,
+      parallel_package_raw (λ i : nat, par (A i) (B i)) u
+      = par (parallel_package_raw A u) (parallel_package_raw B u).
+    Proof.
+      intros.
+      induction u.
+      - reflexivity.
+      - simpl.
+        rewrite IHu.
+        rewrite <- par_assoc.
+        setoid_rewrite (par_commut (parallel_package_raw B u)).
+        2,3: apply ignore_Parable.
+        rewrite !par_assoc.
+        reflexivity.
+    Qed.
+
+    Lemma parallel_package_interchange_raw :
+      forall u A B,
+      (* forall {L I E}, *)
+        (* ValidPackage L I E (parallel_package_raw A u) -> *)
+        parallel_package_raw (fun i => A i ∘ B i) u =
+          parallel_package_raw A u ∘ parallel_package_raw B u.
+    Proof.
+      intros.
+      induction u.
+      - reflexivity.
+      - simpl.
+        rewrite IHu.
+        erewrite <- interchange ; [ | admit .. ].
+        1: reflexivity.
+    Admitted.
+
+    Lemma parallel_package_in_interchange_raw :
+      forall u n A B,
+      (* forall {L I E}, *)
+        (* ValidPackage L I E (parallel_package_raw A u) -> *)
+        forall (H_l : (n <= u)%nat),
+        parallel_package_in_raw (Ordinal (n:=u.+1) (m:=n) H_l) (fun i => A i ∘ B (nat_of_ord i)) =
+          parallel_package_in_raw (Ordinal (n:=u.+1) (m:=n) H_l) A ∘ parallel_package_raw B n.
+    Proof.
+      intros.
+      induction n0.
+      - reflexivity.
+      - simpl.
+        rewrite !parallel_package_in_raw_equation_2.
+        simpl.
+        rewrite IHn0.
+        erewrite <- interchange ; [ | admit .. ].
+        1: reflexivity.
+    Admitted.
+
+    Lemma trim_parallel_package :
+      forall {u} {E} (P : forall (i : nat), raw_package),
+        (forall i, trimmed (E i) (P i)) ->
+        trimmed (combined_interfaces E u) (parallel_package_raw (λ n0 : nat, P n0) u).
+    Proof.
+      intros.
+      induction u.
+      - now apply H.
+      - simpl.
+        apply trimmed_par.
+        + apply ignore_Parable.
+        + now apply IHu.
+        + now apply H.
+    Qed.
+
+  Lemma Advantage_parR_parallel :
+    ∀ G₀ G₁ G₁' A L₀ L₁ L₁' E₀ E₁ u,
+      ValidPackage L₀ Game_import E₀ G₀ →
+      (forall i, ValidPackage (L₁ i) Game_import (E₁ i) (G₁ i)) →
+      (forall i, ValidPackage (L₁' i) Game_import (E₁ i) (G₁' i)) →
+      (forall i, flat (E₁ i)) →
+      trimmed E₀ G₀ →
+      (forall i, trimmed (E₁ i) (G₁ i)) →
+      (forall i, trimmed (E₁ i) (G₁' i)) →
+      AdvantageE (par (parallel_package_raw G₁ u) G₀) (par (parallel_package_raw G₁' u) G₀) A =
+      AdvantageE (parallel_package_raw G₁ u) (parallel_package_raw G₁' u) (A ∘ par (parallel_package_raw (fun i => ID (E₁ i)) u) G₀).
+  Proof.
+    intros G₀ G₁ G₁' A L₀ L₁ L₁' E₀ E₁ u.
+    intros Va0 Va1 Va1' Fe0 Te0 Te1 Te1'.
+    replace (par (parallel_package_raw G₁ u) G₀) with ((par (parallel_package_raw (fun i => ID (E₁ i)) u) G₀) ∘ (par (parallel_package_raw G₁ u) (ID Game_import) )).
+    2:{
+      erewrite <- interchange.
+      2:{
+        refine (parallel_package_valid _ _ _ (λ i, ID (E₁ i)) _ u).
+        intros.
+        apply valid_ID.
+        apply Fe0.
+      }
+      2: apply Va0.
+      2: refine (parallel_package_valid _ _ _ (fun n => (G₁ n)) _ _).
+      2: apply valid_ID ; eapply flat_valid_package ; apply valid_empty_package.
+      2: refine (trim_parallel_package _ _) ; intros ; apply trimmed_ID.
+      2: easy.
+      2: apply ignore_Parable.
+      rewrite link_id.
+      2:{ unfold Game_import. rewrite -fset0E. discriminate. }
+      2: assumption.
+      rewrite <- parallel_package_interchange_raw.
+      f_equal.
+      f_equal.
+      apply functional_extensionality.
+      intros.
+      rewrite id_link.
+      1: reflexivity.
+      easy.
+    }
+    replace (par (parallel_package_raw G₁' u) G₀) with ((par (parallel_package_raw (fun i => ID (E₁ i)) u) G₀) ∘ (par (parallel_package_raw G₁' u) (ID Game_import))).
+    2:{
+      erewrite <- interchange.
+      2:{
+        refine (parallel_package_valid _ _ _ (λ i, ID (E₁ i)) _ u).
+        intros.
+        apply valid_ID.
+        apply Fe0.
+      }
+      2: apply Va0.
+      2: refine (parallel_package_valid _ _ _ (fun n => (G₁' n)) _ _).
+      2: apply valid_ID ; eapply flat_valid_package ; apply valid_empty_package.
+      2: refine (trim_parallel_package _ _) ; intros ; apply trimmed_ID.
+      2: easy.
+      2: apply ignore_Parable.
+      rewrite link_id.
+      2:{ unfold Game_import. rewrite -fset0E. discriminate. }
+      2: assumption.
+      rewrite <- parallel_package_interchange_raw.
+      f_equal.
+      f_equal.
+      apply functional_extensionality.
+      intros.
+      rewrite id_link.
+      1: reflexivity.
+      easy.
+    }
+    rewrite -Advantage_link.
+    unfold Game_import. rewrite -fset0E.
+    rewrite Advantage_par_emptyR.
+    reflexivity.
+    Unshelve. all: auto.
+  Qed.
+
+    Lemma advantage_helper :
+      forall {LA IA EA},
+      forall {LB IB EB},
+      forall {LK IK EK},
+      forall {A : bool -> raw_package}
+        {B : bool -> raw_package}
+        {K : bool -> raw_package},
+        fsubset IA EK ->
+        fsubset IB EK ->
+        fsubset IK [interface] ->
+        (forall b, ValidPackage LA IA EA (A b)) ->
+        (forall b, ValidPackage LB IB EB (B b)) ->
+        (forall b, ValidPackage LK IK EK (K b)) ->
+        (forall b, trimmed EA (A b)) ->
+        (forall b, trimmed EB (B b)) ->
+        (forall b, trimmed EK (K b)) ->
+        forall ε ν,
+          (forall Adv, (AdvantageE (A false ∘ K false) (A true ∘ K true) Adv <= ε)%R) ->
+          (forall Adv, (AdvantageE (B false ∘ K false) (B true ∘ K true) Adv <= ν)%R) ->
+        (forall Adv, (AdvantageE (par (A false) (B false) ∘ K false) (par (A true) (B true) ∘ K true) Adv <= ν + ε)%R).
+    Proof.
+      intros.
+      rewrite <- (package_split (K false)).
+      rewrite <- (package_split (K true)).
+      erewrite <- !interchange ; [ | try (easy || apply ignore_Parable) .. ].
+      2-5: eapply valid_package_inject_export ; [ | easy ] ; assumption.
+      eapply Order.le_trans ; [ eapply Advantage_triangle with (R := par (A false ∘ K false) (B true ∘ K true)) | ].
+      apply Num.Theory.lerD.
+      {
+        erewrite Advantage_par ;
+          [ | (eapply valid_link || eapply flat_valid_package || apply trimmed_link) ; try easy.. ].
+        2-4: eapply valid_package_inject_export ; [ | eapply valid_package_inject_import ; easy ] ; assumption.
+        apply H9.
+      }
+      {
+        erewrite Advantage_parR ;
+          [ | (eapply valid_link || eapply flat_valid_package || apply trimmed_link) ; try easy.. ].
+        2-4: eapply valid_package_inject_export ; [ | eapply valid_package_inject_import ; easy ] ; assumption.
+        apply H8.
+      }
+      Unshelve. all: apply false.
+    Qed.
+
+    Corollary advantage_helper0 :
+            forall {LA IA EA},
+      forall {LB IB EB},
+      forall {LK IK EK},
+      forall {A : bool -> raw_package}
+        {B : bool -> raw_package}
+        {K : bool -> raw_package},
+        fsubset IA EK ->
+        fsubset IB EK ->
+        fsubset IK [interface] ->
+        (forall b, ValidPackage LA IA EA (A b)) ->
+        (forall b, ValidPackage LB IB EB (B b)) ->
+        (forall b, ValidPackage LK IK EK (K b)) ->
+        (forall b, trimmed EA (A b)) ->
+        (forall b, trimmed EB (B b)) ->
+        (forall b, trimmed EK (K b)) ->
+        (forall Adv, (AdvantageE (A false ∘ K false) (A true ∘ K true) Adv <= 0)%R) ->
+        (forall Adv, (AdvantageE (B false ∘ K false) (B true ∘ K true) Adv <= 0)%R) ->
+        (forall Adv, (AdvantageE (par (A false) (B false) ∘ K false) (par (A true) (B true) ∘ K true) Adv <= 0)%R).
+    Proof. intros. rewrite <- (add0r 0%R). now rewrite advantage_helper. Qed.
+
+    Lemma link_par_right :
+      forall {LA IA EA},
+      forall {LB IB EB},
+      (* forall {LC IC EC}, *)
+      forall {A : raw_package}
+        {B : raw_package}
+        {C : raw_package},
+        fsubset IA EB ->
+        ValidPackage LA IA EA A ->
+        ValidPackage LB IB EB B ->
+        (* ValidPackage LC IC EC C -> *)
+        trimmed EA A ->
+        A ∘ par B C = A ∘ B.
+    Proof.
+      intros.
+      apply eq_fmap.
+      unfold link.
+      intro n. repeat rewrite ?mapmE.
+      destruct (A n) as [[S1 [T1 f1]]|] eqn:e. 2: reflexivity.
+      cbn. f_equal. f_equal. f_equal. extensionality x.
+      erewrite (code_link_par_left _ _ _ _ IA) ; [ reflexivity | | eapply valid_package_inject_export ; easy ].
+
+      eapply trimmed_valid_Some_in in e as hi ; [ | eassumption.. ].
+      eapply from_valid_package in H0.
+      specialize (H0 _ hi).
+      destruct H0 as [g [eg hg]].
+      rewrite e in eg.
+      noconf eg.
+      cbn in hg.
+      apply hg.
+    Qed.
+
+    Lemma advantage_helper2 :
+      forall {LA IA EA},
+      forall {LB IB EB},
+      forall {A : bool -> raw_package}
+        {B : bool -> raw_package}
+        {C : bool -> raw_package}
+        {K : bool -> raw_package},
+        fsubset IA EB ->
+        (forall b, ValidPackage LA IA EA (A b)) ->
+        (forall b, ValidPackage LB IB EB (B b)) ->
+        (forall b, trimmed EA (A b)) ->
+        (forall b, K b = par (B b) (C b)) ->
+        forall ε,
+        (forall Adv, (AdvantageE (A false ∘ B false) (A true ∘ B true) Adv <= ε)%R) ->
+        (forall Adv, (AdvantageE (A false ∘ K false) (A true ∘ K true) Adv <= ε)%R).
+    Proof.
+      intros.
+      subst.
+      rewrite !H3.
+      rewrite link_par_right ; [ | easy .. ].
+      rewrite link_par_right ; [ | easy .. ].
+      apply H4.
+    Qed.
+
   Section Gschnorr_x_zkp.
     Definition SCHNORR_ (i : nat) := (Bound_nat * 18 + i)%nat.
 
-    Definition schnorr_i_real i :
+    Program Definition schnorr_i_real i :
       package fset0
         [interface
-           #val #[SET_x i] : chSETFinp → chSETFout ;
+           #val #[GET_x i] : chGETFinp → chGETFout ;
            #val #[GET_gx i] : chGETinp → chGETout ;
            #val #[SET_zkp i] : schnorrOutput → chSETORout
         ]
-        [interface #val #[ SCHNORR_ i ] : 'unit → 'unit].
-    Admitted.
+        [interface #val #[ SCHNORR_ i ] : 'unit → 'unit] :=
+      [package
+         #def #[ SCHNORR_ i ] (_ : 'unit) : 'unit
+        {
+          #import {sig #[ GET_x i ] : chGETFinp → chGETFout }
+          as get_x ;;
+          #import {sig #[ GET_gx i ] : chGETinp → chGETout }
+          as get_gx ;;
+          #import {sig #[ SET_zkp i ] : chSETZKPinp → chSETZKPout }
+          as set_zkp ;;
+          h ← get_gx Datatypes.tt ;;
+          m ← get_x Datatypes.tt ;;
+          r ← sample (uniform #|'Z_q|) ;; let r := WitnessToField (otf r) in
+          let u := (g^+(FieldToWitness r))%g in
+          c ← is_state (f_hash (t_Group := HOGaFE.GroupAndField.OVN.v_G_t_Group)
+             (impl__into_vec
+                (unsize
+                   (box_new
+                      (array_from_list [(ret_both g); (ret_both h); (ret_both u)]))))) ;;
+          let z := (FieldToWitness c * FieldToWitness m + FieldToWitness r)%R in
+          set_zkp (u,c,WitnessToField z)
+        }
+      ].
+    Final Obligation.
+      intros.
+      ssprove_valid.
+      apply valid_scheme.
+      rewrite <- fset0E.
+      apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
+    Qed.
 
     Definition schnorr_i_ideal i :
       package fset0
@@ -2270,13 +2730,26 @@ Qed.
            #val #[GET_gx i] : chGETinp → chGETout ;
            #val #[SET_zkp i] : schnorrOutput → chSETORout
         ]
-        [interface #val #[ SCHNORR_ i ] : 'unit → 'unit].
-    Admitted.
+        [interface #val #[ SCHNORR_ i ] : 'unit → 'unit] :=
+      [package
+         #def #[ SCHNORR_ i ] (_ : 'unit) : 'unit
+        {
+          #import {sig #[ GET_gx i ] : chGETinp → chGETout }
+          as get_gx ;;
+          #import {sig #[ SET_zkp i ] : chSETZKPinp → chSETZKPout }
+          as set_zkp ;;
+          h ← get_gx Datatypes.tt ;;
+          z ← sample (uniform #|'Z_q|) ;; let z := WitnessToField (otf z) in
+          c ← sample (uniform #|'Z_q|) ;; let c := WitnessToField (otf c) in
+          let u := (g^+(FieldToWitness z) * (h : gT)^-(FieldToWitness c))%g in
+          set_zkp (u,c,z)
+        }
+      ].
 
     Definition schnorr_i i (b : bool) :
       package fset0
         [interface
-           #val #[SET_x i] : chSETFinp → chSETFout ;
+           #val #[GET_x i] : chGETFinp → chGETFout ;
            #val #[GET_gx i] : chGETinp → chGETout ;
            #val #[SET_zkp i] : schnorrOutput → chSETORout
         ]
@@ -2291,9 +2764,9 @@ Qed.
     Definition Gschnorr_i_raw i b :=
       schnorr_i i b
         ∘ (par
-             (KF_package (H_disj := H_disj_x i) (LOC_x i) (SET_x i) (GET_x i) b)
+             (KF_package (H_disj := H_disj_x i) (LOC_x i) (SET_x i) (GET_x i) true)
              (par
-                (K_package (H_disj := H_disj_gx i) (LOC_gx i) (SET_gx i) (GET_gx i) b)
+                (K_package (H_disj := H_disj_gx i) (LOC_gx i) (SET_gx i) (GET_gx i) false)
                 (Kzkp_package (H_disj := H_disj_zkp i) (LOC_zkp i) (SET_zkp i) (GET_zkp i) b))).
 
     Lemma Gschnorr_i_valid : forall i b,
@@ -2340,13 +2813,172 @@ Qed.
     Definition Gschnorr_x_zkp u : loc_GamePair (combined_interfaces (fun i => [interface #val #[ SCHNORR_ i ] : 'unit → 'unit]) u) :=
       fun b => {locpackage Gschnorr_x_zkp_raw u b #with Gschnorr_x_zkp_valid u b}.
 
+  Lemma Advantage_par_split :
+    ∀ G₀ G₀' G₁ G₁' A₀ A₁ L₀ L₁ L₁' E₀ E₁,
+      ValidPackage L₀ Game_import E₀ G₀ →
+      ValidPackage L₀ Game_import E₀ G₀' →
+      ValidPackage L₁ Game_import E₁ G₁ →
+      ValidPackage L₁' Game_import E₁ G₁' →
+      trimmed E₀ G₀ →
+      trimmed E₀ G₀' →
+      trimmed E₁ G₁ →
+      trimmed E₁ G₁' →
+      AdvantageE (par G₁ G₀) (par G₁' G₀') (par A₁ A₀) =
+      (AdvantageE G₁ G₁' A₁ + AdvantageE G₀ G₀' A₀)%R.
+  Proof.
+    intros.
+    admit.
+  Admitted.    
+
+    Lemma Advantage_parallel_package :
+      forall u (k : _) {L E} (P : forall (i : nat) (b : bool), package (L i) [interface] (E i)),
+      forall (A : nat -> raw_package),
+        (forall i, ValidPackage (L i) (E i) A_export (A i)) ->
+      (forall i, flat (E i)) ->
+      (forall i, (i <= u)%nat -> Advantage (P i) (A i) <= k)%R ->
+      (forall i b, trimmed (E i) (P i b)) ->
+      (Advantage (λ b : bool, parallel_package (P^~ b) u) (parallel_package_raw A u)
+       <= k *+ (u.+1))%R.
+    Proof.
+      intros.
+      generalize dependent A.
+      induction u ; intros.
+      - now eapply H1.
+      - rewrite Advantage_E.
+        simpl.
+        erewrite Advantage_par_split.
+        {
+          rewrite mulrSr.
+          apply Num.Theory.lerD.
+          2: now eapply H1. 
+          {
+            apply IHu.
+            - intros.
+              eapply H.
+            - now intros ; eapply H1.
+          }
+        }
+        * apply pack_valid.
+        * apply pack_valid.
+        * erewrite <- combined_interfaces_Game_import.
+          apply parallel_package_valid.
+          intros ; apply pack_valid.
+        * erewrite <- combined_interfaces_Game_import.
+          apply parallel_package_valid.
+          intros ; apply pack_valid.
+        * now apply H2.
+        * now apply H2.
+        * eapply (trim_parallel_package (u := u)) ; intros. apply H2.
+        * eapply (trim_parallel_package (u := u)) ; intros. apply H2.
+    Qed.
+
+    Corollary Advantage_parallel_package0 :
+      forall u {L E} (P : forall (i : nat) (b : bool), package (L i) [interface] (E i)),
+      forall (A : nat -> raw_package),
+        (forall i, ValidPackage (L i) (E i) A_export (A i)) ->
+      (forall i, flat (E i)) ->
+      (forall i, (i <= u)%nat -> Advantage (P i) (A i) <= 0)%R ->
+      (forall i b, trimmed (E i) (P i b)) ->
+      (Advantage (λ b : bool, parallel_package (P^~ b) u) (parallel_package_raw A u)
+       <= 0)%R.
+    Proof.
+      intros.
+      eapply Order.le_trans.
+      1: now eapply Advantage_parallel_package.
+      now rewrite mul0rn.
+    Qed.
+
     Lemma Gschnorr_x_zkp_advantage :
       forall u,
       ∀ (LA : {fset Location}) (A : raw_package),
-        ValidPackage LA (combined_interfaces (fun i => [interface #val #[SCHNORR_ i] : 'unit → 'unit ]) u) A_export A →
+        (forall i, ValidPackage (fset [:: ('option v_Z; LOC_x i)]
+     :|: (fset [:: ('option v_G; LOC_gx i)] :|: fset [:: ('option t_SchnorrZKPCommit; LOC_zkp i)])) ([interface #val #[SCHNORR_ i] : chSETBout → chSETBout ]) A_export A) →
         (Advantage (Gschnorr_x_zkp u) A <= 0)%R.
     Proof.
       intros.
+      unfold Gschnorr_x_zkp, locs_pack, pack, Gschnorr_x_zkp_raw.
+      rewrite <- (trivial_parallel_package_raw u A).
+      eapply Advantage_parallel_package0.
+      1: apply H.
+      1: intros ; solve_flat.
+      2:{ intros.
+          unfold Gschnorr_i_raw.
+          unfold schnorr_i.
+          unfold pack.
+          unfold schnorr_i_ideal.
+          destruct b ; solve_trimmed.
+          Unshelve.
+          all: apply trimmed_package_cons ; apply trimmed_empty_package.
+      }
+      intros.
+      unfold Gschnorr_i_raw.
+      unfold pack.
+      unfold schnorr_i.
+      unfold pack.
+
+      (* Ignore 'just' code *)
+      rewrite Advantage_E.
+
+      split_advantage (schnorr_i_ideal i
+      ∘ par (KF_package (H_disj := H_disj_x i) (LOC_x i) (SET_x i) (GET_x i)  true)
+          (par (K_package (H_disj := H_disj_gx i) (LOC_gx i) (SET_gx i) (GET_gx i) false)
+             (Kzkp_package (H_disj := H_disj_zkp i) (LOC_zkp i) (SET_zkp i) (GET_zkp i) false))).
+      {
+        split_advantage (pack Schnorr_ZKP.hacspec_run).
+        {
+          apply: eq_rel_perf_ind_ignore.
+          1: apply Gschnorr_i_valid.
+          1:{ admit. (* apply Schnorr_ZKP.hacspec_run. *) }
+          2:{
+            unfold eq_up_to_inv.
+            simplify_eq_rel inp_unit.
+
+             (* TODO: Use markus' formalization for Sigma protocol.. *)
+            admit.
+          }
+          all: admit.
+        }
+        split_advantage (pack Schnorr_ZKP.Schnorr.Sigma.RUN_interactive).
+        {
+          eapply Schnorr_ZKP.hacspec_vs_RUN_interactive.
+          - admit.
+          - admit.
+        }
+        admit.
+      }
+      {
+        epose (GK
+                 (A := t_SchnorrZKPCommit)
+                 (fun '(u,c,z) =>
+                    (g^+(otf u : 'Z_q) , (WitnessToField c) , WitnessToField z))
+                 (LOC_zkp i)
+                 (SET_zkp i)
+                 (GET_zkp i)).
+
+        split_advantage (pack (l false)) ; [ | split_advantage (pack (l true)) ] ; subst l.
+        2:{
+          apply AdvantageE_le_0.
+          eapply GK_advantage.
+          all: admit.
+        }
+        {
+          unfold GK.
+          unfold locs_pack, pack.
+          unfold GK_raw.
+          unfold Kzkp_package.
+
+          eapply (eq_rel_perf_ind_eq (E := [interface #val #[SET_zkp i] : schnorrOutput → chSETORout])).
+          1: admit.
+          1: admit.
+          2: admit.
+          2,3: admit.
+
+          simplify_eq_rel b.
+
+          admit.
+        }
+        admit.
+      }
     Admitted.
 
   End Gschnorr_x_zkp.
@@ -3023,6 +3655,203 @@ Qed.
 
   Section G_CDS.
     Definition OR (i : nat) := (Bound_nat * 23 + i)%nat.
+
+    Definition g_cds_i_real i :
+      package fset0
+        [interface
+           #val #[GET_x i] : chGETFinp → chGETFout ;
+           #val #[GET_gx i] : chGETinp → chGETout ;
+           #val #[GET_v i] : chGETBinp → chGETBout ;
+           #val #[SET_or i] : chSETORinp → chSETORout
+        ]
+        [interface
+           #val #[ OR i ] : 'unit → 'unit
+        ].
+      refine [package
+         #def #[ OR i ] (_ : 'unit) : 'unit
+         {
+           #import {sig #[ GET_x i ] : chGETFinp → chGETFout }
+           as get_x ;;
+           #import {sig #[ GET_gx i ] : chGETinp → chGETout }
+           as get_gx ;;
+           #import {sig #[ GET_v i ] : chGETBinp → chGETBout }
+           as get_v ;;
+           #import {sig #[ SET_or i ] : chSETORinp → chSETORout }
+           as set_or ;;
+           xi ← get_x Datatypes.tt ;;
+           h ← get_gx Datatypes.tt ;;
+           vi ← get_v Datatypes.tt ;;
+           let x := (g ^+ FieldToWitness xi) in
+           let h := (h : gT) in
+           let y := (h ^+ FieldToWitness xi * g ^+ (vi : bool))%g in
+           let m := FieldToWitness xi in
+           w ← sample uniform #|'Z_q| ;;
+           d ← sample uniform #|'Z_q| ;;
+           r ← sample uniform #|'Z_q| ;;
+           if vi
+           then
+             (
+               let r1 := r in
+               let d1 := d in
+
+               let a1 := (g ^+ (otf r1 : 'Z_q) * x ^+ (otf d1 : 'Z_q))%g in
+               let b1 := (h ^+ (otf r1 : 'Z_q) * y ^+ (otf d1 : 'Z_q))%g in
+
+               let a2 := (g ^+ (otf w : 'Z_q))%g in
+               let b2 := (h ^+ (otf w : 'Z_q))%g in
+
+               c ← is_state (f_hash (t_Group := HOGaFE.GroupAndField.OVN.v_G_t_Group)
+             (impl__into_vec
+                (unsize
+                   (box_new
+                      (array_from_list [(ret_both x)]))))) ;;
+               let c := FieldToWitness c in
+
+               let d2 := ( c - otf d)%R in
+               let r2 := (otf w - (m * d2))%R in
+
+               set_or (
+                   x, y,
+                   a1, b1, a2, b2,
+                   WitnessToField c ,
+                   WitnessToField (otf r1), WitnessToField (otf d), WitnessToField r2, WitnessToField d2))
+           else
+             (let r2 := r in
+              let d2 := d in
+
+              let a1 := (g ^+ (otf w : 'Z_q))%g in
+              let b1 := (h ^+ (otf w : 'Z_q))%g in
+
+              let a2 := (g ^+ (otf r2 : 'Z_q) * x ^+ (otf d2 : 'Z_q))%g in
+              let b2 := (h ^+ (otf r2 : 'Z_q) * (y * g^-1) ^+ (otf d2 : 'Z_q))%g in
+
+               c ← is_state (f_hash (t_Group := HOGaFE.GroupAndField.OVN.v_G_t_Group)
+             (impl__into_vec
+                (unsize
+                   (box_new
+                      (array_from_list [ret_both x; ret_both y; ret_both a1; ret_both b1; ret_both a2; ret_both b2]))))) ;;
+               let c := FieldToWitness c in
+
+               let d1 := (c - otf d)%R in
+               let r1 := (otf w - (m * d1))%R in
+
+              set_or (
+                   x, y,
+                   a1, b1, a2, b2,
+                   WitnessToField c ,
+                   WitnessToField r1, WitnessToField (otf d), WitnessToField (otf r2), WitnessToField (otf d2)))
+         }
+        ].
+      ssprove_valid.
+      - apply valid_scheme.
+        rewrite <- fset0E.
+        apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
+      - apply valid_scheme.
+        rewrite <- fset0E.
+        apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
+        Unshelve.
+        all: exact Zq_pos.
+    Defined.
+
+    Definition g_cds_i_ideal i :
+      package fset0
+        [interface
+           #val #[SET_or i] : chSETORinp → chSETORout
+        ]
+        [interface
+           #val #[ OR i ] : 'unit → 'unit
+        ]
+      :=
+      [package
+         #def #[ OR i ] (_ : 'unit) : 'unit
+         {
+           #import {sig #[ SET_or i ] : chSETORinp → chSETORout }
+           as set_cds ;;
+                       
+         ret ((x,y,
+                a1,b1,a2,b2,
+                WitnessToField (otf c),
+                WitnessToField d1,WitnessToField d2,WitnessToField r1,WitnessToField r2)
+             : t_OrZKPCommit)
+
+           z ← sample (uniform #|'Z_q|) ;; let z := WitnessToField (otf z) in
+           set_cds z
+         }
+      ].
+
+    Definition g_cds_i i (b : bool) :
+      package fset0
+        [interface
+           #val #[GET_x i] : chGETFinp → chGETFout ;
+           #val #[GET_gx i] : chGETinp → chGETout ;
+           #val #[GET_v i] : chGETBinp → chGETBout ;
+           #val #[SET_or i] : chSETORinp → chSETORout
+        ]
+        [interface
+           #val #[ OR i ] : 'unit → 'unit
+        ].
+    Proof.
+      refine (if b then _ else _).
+      - refine {package g_cds_i_ideal i #with valid_package_inject_import _ _ _ _ _ _ _}.
+        solve_in_fset.
+      - apply g_cds_i_real.
+    Qed.
+
+    Definition Gcds_i_raw i (b : bool) : raw_package :=
+      (g_cds_i i b)
+        ∘ (par
+             (K_package (H_disj := H_disj_vote i) (LOC_vote i) (SET_vote i) (GET_vote i) b)
+             (KF_package (H_disj := H_disj_cds i) (LOC_cds i) (SET_cds i) (GET_cds i) b)).
+
+    Lemma Gcds_i_valid : forall i b,
+        ValidPackage
+          (fset [:: ('option v_G; LOC_vote i)]
+             :|: fset [:: ('option v_Z; LOC_cds i)])
+          (fset [::])
+          [interface #val #[CDS_VOTE i] : chSETBout → chSETBout ]
+          (Gcds_i_raw i b).
+    Proof.
+      intros.
+      unfold Gcds_i_raw.
+      rewrite <- fset0U.
+      eapply valid_link ; [ apply pack_valid | .. ].
+
+      rewrite (fset_cons (_ i, _)).
+      rewrite fset1E.
+      rewrite <- (fsetUid [interface]).
+      apply valid_par ; [ apply ignore_Parable | eapply valid_package_inject_export ; [ | apply pack_valid] ; solve_in_fset | .. ].
+
+      eapply valid_package_inject_export ; [ | apply pack_valid] ; solve_in_fset.
+    Qed.
+
+    Lemma Gcds_valid :
+      ∀ (u : nat) (b : bool),
+    ValidPackage
+      (combined_interfaces
+           (fun i =>
+              (fset [:: ('option v_G; LOC_vote i)]
+             :|: fset [:: ('option v_Z; LOC_cds i)])) u)
+        [interface]
+        (combined_interfaces (λ i, [interface #val #[CDS_VOTE i] : chSETBout → chSETBout ]) u)
+        (parallel_package (fun i => {package Gcds_i_raw i b #with Gcds_i_valid i b}) u).
+    Proof.
+      intros.
+      setoid_rewrite <- (trivial_combined_interface _ [interface]).
+      apply pack_valid.
+    Qed.
+
+    Definition Gcds (u : nat) : loc_GamePair (combined_interfaces (λ i, [interface #val #[CDS_VOTE i] : chSETBout → chSETBout ]) u) :=
+      fun b => {locpackage (parallel_package (fun i => {package Gcds_i_raw i b #with Gcds_i_valid i b}) u) #with Gcds_valid u b}.
+
+    Lemma Gcds_advantage :
+      forall u,
+      ∀ (LA : {fset Location}) (A : raw_package),
+        ValidPackage LA (combined_interfaces (fun i => [interface #val #[CDS_VOTE i] : 'unit → 'unit ]) u) A_export A →
+        (Advantage (Gcds u) A <= 0)%R.
+    Proof.
+      intros.
+    Admitted.
+    
     (* fail. (* TODO *) *)
   End G_CDS.
 
@@ -3628,23 +4457,6 @@ Qed.
     Definition Govn (u : nat) : loc_GamePair [interface #val #[ OVN ] : 'unit → 'unit ] :=
       fun b => {locpackage Govn_raw u b #with Govn_valid u b}.
 
-    Lemma split_parallel_package_raw :
-      forall u A B,
-      parallel_package_raw (λ i : nat, par (A i) (B i)) u
-      = par (parallel_package_raw A u) (parallel_package_raw B u).
-    Proof.
-      intros.
-      induction u.
-      - reflexivity.
-      - simpl.
-        rewrite IHu.
-        rewrite <- par_assoc.
-        setoid_rewrite (par_commut (parallel_package_raw B u)).
-        2,3: apply ignore_Parable.
-        rewrite !par_assoc.
-        reflexivity.
-    Qed.
-
     Lemma pack_parallel_package :
       forall u {L I E} (f : forall (i : nat), package (L i) (I i) (E i)),
       pack (parallel_package f u)
@@ -3656,41 +4468,6 @@ Qed.
       pack (parallel_package_in index f)
       = parallel_package_in_raw index (fun i => pack (f i)).
     Proof. reflexivity. Qed.
-
-    Lemma parallel_package_interchange_raw :
-      forall u A B,
-      (* forall {L I E}, *)
-        (* ValidPackage L I E (parallel_package_raw A u) -> *)
-        parallel_package_raw (fun i => A i ∘ B i) u =
-          parallel_package_raw A u ∘ parallel_package_raw B u.
-    Proof.
-      intros.
-      induction u.
-      - reflexivity.
-      - simpl.
-        rewrite IHu.
-        erewrite <- interchange ; [ | admit .. ].
-        1: reflexivity.
-    Admitted.
-
-    Lemma parallel_package_in_interchange_raw :
-      forall u n A B,
-      (* forall {L I E}, *)
-        (* ValidPackage L I E (parallel_package_raw A u) -> *)
-        forall (H_l : (n <= u)%nat),
-        parallel_package_in_raw (Ordinal (n:=u.+1) (m:=n) H_l) (fun i => A i ∘ B (nat_of_ord i)) =
-          parallel_package_in_raw (Ordinal (n:=u.+1) (m:=n) H_l) A ∘ parallel_package_raw B n.
-    Proof.
-      intros.
-      induction n0.
-      - reflexivity.
-      - simpl.
-        rewrite !parallel_package_in_raw_equation_2.
-        simpl.
-        rewrite IHn0.
-        erewrite <- interchange ; [ | admit .. ].
-        1: reflexivity.
-    Admitted.
 
     Lemma split_parallel_package : forall (u : nat) {LA IA EA}
         (A : forall (i : nat), package (LA i) (IA i) (EA i))
@@ -3719,14 +4496,6 @@ Qed.
       reflexivity.
     Qed.
 
-    Lemma package_split :
-      forall p, p = par p p.
-    Proof.
-      intros.
-      unfold par.
-      now rewrite unionmI.
-    Qed.
-
     Lemma keyed_package :
       forall {LA EA},
       forall {LB EB},
@@ -3751,126 +4520,6 @@ Qed.
       rewrite link_assoc.
       now erewrite <- (interchange) ; [ .. | apply ignore_Parable] ; (reflexivity || eassumption || apply valid_ID, (flat_valid_package _ _ _ K _)).
       Unshelve. all: exact fset0.
-    Qed.
-
-    Lemma advantage_helper :
-      forall {LA IA EA},
-      forall {LB IB EB},
-      forall {LK IK EK},
-      forall {A : bool -> raw_package}
-        {B : bool -> raw_package}
-        {K : bool -> raw_package},
-        fsubset IA EK ->
-        fsubset IB EK ->
-        fsubset IK [interface] ->
-        (forall b, ValidPackage LA IA EA (A b)) ->
-        (forall b, ValidPackage LB IB EB (B b)) ->
-        (forall b, ValidPackage LK IK EK (K b)) ->
-        (forall b, trimmed EA (A b)) ->
-        (forall b, trimmed EB (B b)) ->
-        (forall b, trimmed EK (K b)) ->
-        forall ε ν,
-          (forall Adv, (AdvantageE (A false ∘ K false) (A true ∘ K true) Adv <= ε)%R) ->
-          (forall Adv, (AdvantageE (B false ∘ K false) (B true ∘ K true) Adv <= ν)%R) ->
-        (forall Adv, (AdvantageE (par (A false) (B false) ∘ K false) (par (A true) (B true) ∘ K true) Adv <= ν + ε)%R).
-    Proof.
-      intros.
-      rewrite (package_split (K false)).
-      rewrite (package_split (K true)).
-      erewrite <- !interchange ; [ | try (easy || apply ignore_Parable) .. ].
-      2-5: eapply valid_package_inject_export ; [ | easy ] ; assumption.
-      eapply Order.le_trans ; [ eapply Advantage_triangle with (R := par (A false ∘ K false) (B true ∘ K true)) | ].
-      apply Num.Theory.lerD.
-      {
-        erewrite Advantage_par ;
-          [ | (eapply valid_link || eapply flat_valid_package || apply trimmed_link) ; try easy.. ].
-        2-4: eapply valid_package_inject_export ; [ | eapply valid_package_inject_import ; easy ] ; assumption.
-        apply H9.
-      }
-      {
-        erewrite Advantage_parR ;
-          [ | (eapply valid_link || eapply flat_valid_package || apply trimmed_link) ; try easy.. ].
-        2-4: eapply valid_package_inject_export ; [ | eapply valid_package_inject_import ; easy ] ; assumption.
-        apply H8.
-      }
-      Unshelve. all: apply false.
-    Qed.
-
-    Corollary advantage_helper0 :
-            forall {LA IA EA},
-      forall {LB IB EB},
-      forall {LK IK EK},
-      forall {A : bool -> raw_package}
-        {B : bool -> raw_package}
-        {K : bool -> raw_package},
-        fsubset IA EK ->
-        fsubset IB EK ->
-        fsubset IK [interface] ->
-        (forall b, ValidPackage LA IA EA (A b)) ->
-        (forall b, ValidPackage LB IB EB (B b)) ->
-        (forall b, ValidPackage LK IK EK (K b)) ->
-        (forall b, trimmed EA (A b)) ->
-        (forall b, trimmed EB (B b)) ->
-        (forall b, trimmed EK (K b)) ->
-        (forall Adv, (AdvantageE (A false ∘ K false) (A true ∘ K true) Adv <= 0)%R) ->
-        (forall Adv, (AdvantageE (B false ∘ K false) (B true ∘ K true) Adv <= 0)%R) ->
-        (forall Adv, (AdvantageE (par (A false) (B false) ∘ K false) (par (A true) (B true) ∘ K true) Adv <= 0)%R).
-    Proof. intros. rewrite <- (add0r 0%R). now rewrite advantage_helper. Qed.
-
-    Lemma link_par_right :
-      forall {LA IA EA},
-      forall {LB IB EB},
-      (* forall {LC IC EC}, *)
-      forall {A : raw_package}
-        {B : raw_package}
-        {C : raw_package},
-        fsubset IA EB ->
-        ValidPackage LA IA EA A ->
-        ValidPackage LB IB EB B ->
-        (* ValidPackage LC IC EC C -> *)
-        trimmed EA A ->
-        A ∘ par B C = A ∘ B.
-    Proof.
-      intros.
-      apply eq_fmap.
-      unfold link.
-      intro n. repeat rewrite ?mapmE.
-      destruct (A n) as [[S1 [T1 f1]]|] eqn:e. 2: reflexivity.
-      cbn. f_equal. f_equal. f_equal. extensionality x.
-      erewrite (code_link_par_left _ _ _ _ IA) ; [ reflexivity | | eapply valid_package_inject_export ; easy ].
-
-      eapply trimmed_valid_Some_in in e as hi ; [ | eassumption.. ].
-      eapply from_valid_package in H0.
-      specialize (H0 _ hi).
-      destruct H0 as [g [eg hg]].
-      rewrite e in eg.
-      noconf eg.
-      cbn in hg.
-      apply hg.
-    Qed.
-
-    Lemma advantage_helper2 :
-      forall {LA IA EA},
-      forall {LB IB EB},
-      forall {A : bool -> raw_package}
-        {B : bool -> raw_package}
-        {C : bool -> raw_package}
-        {K : bool -> raw_package},
-        fsubset IA EB ->
-        (forall b, ValidPackage LA IA EA (A b)) ->
-        (forall b, ValidPackage LB IB EB (B b)) ->
-        (forall b, trimmed EA (A b)) ->
-        (forall b, K b = par (B b) (C b)) ->
-        forall ε,
-        (forall Adv, (AdvantageE (A false ∘ B false) (A true ∘ B true) Adv <= ε)%R) ->
-        (forall Adv, (AdvantageE (A false ∘ K false) (A true ∘ K true) Adv <= ε)%R).
-    Proof.
-      intros.
-      subst.
-      rewrite !H3.
-      rewrite link_par_right ; [ | easy .. ].
-      rewrite link_par_right ; [ | easy .. ].
-      apply H4.
     Qed.
 
     Lemma Govn_advantage :
