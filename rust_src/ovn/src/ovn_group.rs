@@ -247,7 +247,7 @@ pub struct RegisterParam<Z: Field> {
 // #[hax::receive(contract = "OVN", name = "register", parameter = "RegisterParam")]
 // #[cfg_attr(not(feature = "hax_compilation"), receive(contract = "OVN", name = "register", parameter = "RegisterParam"))]
 pub fn register_vote<G: Group, const n: usize, A: HasActions>(
-    ctx: impl HasReceiveContext,
+    ctx: &impl HasReceiveContext,
     state: OvnContractState<G, n>,
 ) -> Result<(A, OvnContractState<G, n>), ParseError> {
     let params: RegisterParam<G::Z> = ctx.parameter_cursor().get()?;
@@ -304,7 +304,7 @@ pub fn compute_group_element_for_vote<G: Group>(xi: G::Z, vote: bool, g_pow_yi: 
 // #[hax::receive(contract = "OVN", name = "commit_to_vote", parameter = "CastVoteParam")]
 // #[cfg_attr(not(feature = "hax_compilation"), receive(contract = "OVN", name = "commit_to_vote", parameter = "CastVoteParam"))]
 pub fn commit_to_vote<G: Group, const n: usize, A: HasActions>(
-    ctx: impl HasReceiveContext,
+    ctx: &impl HasReceiveContext,
     state: OvnContractState<G, n>,
 ) -> Result<(A, OvnContractState<G, n>), ParseError> {
     let params: CastVoteParam<G::Z> = ctx.parameter_cursor().get()?;
@@ -329,7 +329,7 @@ pub fn commit_to_vote<G: Group, const n: usize, A: HasActions>(
 // #[hax::receive(contract = "OVN", name = "cast_vote", parameter = "CastVoteParam")]
 // #[cfg_attr(not(feature = "hax_compilation"), receive(contract = "OVN", name = "cast_vote", parameter = "CastVoteParam"))]
 pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
-    ctx: impl HasReceiveContext,
+    ctx: &impl HasReceiveContext,
     state: OvnContractState<G, n>,
 ) -> Result<(A, OvnContractState<G, n>), ParseError> {
     let params: CastVoteParam<G::Z> = ctx.parameter_cursor().get()?;
