@@ -17,11 +17,11 @@ use concordium_std::*;
 
 /** Interface for field implementation */
 pub trait Field:
-    core::marker::Copy + PartialEq + Eq + Clone + Copy + concordium_std::Serialize
+    core::marker::Copy + PartialEq + Eq + Clone + Copy + concordium_std::Serialize + std::fmt::Debug
 {
     fn q() -> Self;
 
-    fn random_field_elem(random: u32) -> Self;
+    fn random_field_elem(random: u128) -> Self;
 
     fn field_zero() -> Self;
     fn field_one() -> Self;
@@ -35,12 +35,12 @@ pub trait Field:
 
 /** Interface for group implementation */
 pub trait Group:
-    core::marker::Copy + PartialEq + Eq + Clone + Copy + concordium_std::Serialize
+    core::marker::Copy + PartialEq + Eq + Clone + Copy + concordium_std::Serialize + std::fmt::Debug
 {
     type Z: Field;
 
     fn g() -> Self; // Generator (elemnent of group)
-
+    
     fn g_pow(x: Self::Z) -> Self;
     fn pow(g: Self, x: Self::Z) -> Self; // TODO: Link with q
     fn group_one() -> Self;
@@ -48,4 +48,16 @@ pub trait Group:
     fn group_inv(x: Self) -> Self;
 
     fn hash(x: Vec<Self>) -> Self::Z;
+}
+
+////////////////////////
+// Useful definitions //
+////////////////////////
+
+pub fn sub<Z: Field>(x: Z, y: Z) -> Z {
+    Z::add(x, Z::opp(y))
+}
+
+pub fn div<G: Group>(x: G, y: G) -> G {
+    G::prod(x, G::group_inv(y))
 }

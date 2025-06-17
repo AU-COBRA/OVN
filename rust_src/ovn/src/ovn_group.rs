@@ -8,18 +8,6 @@ use concordium_std_derive::*;
 
 pub use crate::ovn_traits::*;
 
-////////////////////////
-// Useful definitions //
-////////////////////////
-
-fn sub<Z: Field>(x: Z, y: Z) -> Z {
-    Z::add(x, Z::opp(y))
-}
-
-fn div<G: Group>(x: G, y: G) -> G {
-    G::prod(x, G::group_inv(y))
-}
-
 ////////////////////
 // Implementation //
 ////////////////////
@@ -273,18 +261,22 @@ pub struct CastVoteParam<Z: Field> {
     pub cvp_vote: bool,
 }
 
-pub fn compute_g_pow_yi<G: Group, const n: usize>(i: usize, xis: [G; n]) -> G {
+pub fn compute_g_pow_yi<G: Group, const n: usize>(i: usize, g_pow_xis: [G; n]) -> G {
     let mut prod1 = G::group_one();
     for j in 0..i {
-        prod1 = G::prod(prod1, xis[j]);
+        prod1 = G::prod(prod1, g_pow_xis[j]);
     }
 
     let mut prod2 = G::group_one();
     for j in (i + 1)..n {
-        prod2 = G::prod(prod2, xis[j]);
+        prod2 = G::prod(prod2, g_pow_xis[j]);
     }
 
     // implicitly: Y_i = g^y_i
+
+    // Equivalent product..
+    // assert!(prod1 != prod2);
+
     let g_pow_yi = div::<G>(prod1, prod2);
     g_pow_yi
 }

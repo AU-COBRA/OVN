@@ -22,6 +22,9 @@ path = "src/lib.rs"
 concordium-std = { git = "https://github.com/Concordium/concordium-rust-smart-contracts.git", rev="4d4b024b547a1f120f6d6951cbc409c94f8f146a" }
 concordium-std-derive = { git = "https://github.com/Concordium/concordium-rust-smart-contracts.git", rev="4d4b024b547a1f120f6d6951cbc409c94f8f146a" }
 
+au_curves = { git = "https://github.com/cryspen/libcrux", rev="2167e9f" } # version = "0.0.3-alpha.3", 
+# libcrux-curve25519 = { git = "https://github.com/cryspen/libcrux", rev="6ed6fa307b1a649c902a55dce4054aad1e9cfea8" } # version = "0.0.3-alpha.3", 
+
 quickcheck = "1"
 quickcheck_macros = "1"
 # bls12_381 = "0.8"

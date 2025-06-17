@@ -12,7 +12,7 @@ pub use crate::ovn_traits::*;
 // Impl for Z/89Z //
 ////////////////////
 
-#[derive(Clone, Copy, PartialEq, Eq, concordium_std::Serial, concordium_std::Deserial)]
+#[derive(Clone, Copy, PartialEq, Eq, concordium_std::Serial, concordium_std::Deserial, Debug)]
 pub struct z_89 { z_val : u8 }
 
 // impl hacspec_concordium::Deserial for z_89 {
@@ -74,7 +74,7 @@ impl Field for z_89 {
     fn q() -> Self {
         z_89{ z_val: 89u8}
     } // Prime order
-    fn random_field_elem(random: u32) -> Self {
+    fn random_field_elem(random: u128) -> Self {
         z_89{ z_val: random as u8 % (Self::q().z_val - 1) }
     }
 
@@ -104,7 +104,7 @@ impl Field for z_89 {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, concordium_std::Serial, concordium_std::Deserial)]
+#[derive(Clone, Copy, PartialEq, Eq, concordium_std::Serial, concordium_std::Deserial, Debug)]
 pub struct g_z_89 { g_val : u8 }
 
 // impl hacspec_concordium::Deserial for g_z_89 {
@@ -177,13 +177,13 @@ impl Group for g_z_89 {
     }
 
     fn group_inv(x: Self) -> Self {
-        for j in 0..89 {
+        for j in 0..z_89::q().z_val {
             let g_value = g_z_89 {g_val: j};
             if x * g_value == Self::group_one() {
                 return g_value;
             }
         }
-        assert!(false);
+        assert!(false,"{:?}",(x.g_val));
         return x;
     }
 

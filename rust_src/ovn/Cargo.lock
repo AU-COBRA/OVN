@@ -12,6 +12,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "au_curves"
+version = "0.1.0"
+source = "git+https://github.com/cryspen/libcrux?rev=2167e9f#2167e9fd99fda43cdd7e3997769c751b08d14290"
+
+[[package]]
 name = "cfg-if"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -84,6 +89,7 @@ dependencies = [
 name = "hacspec-ovn"
 version = "0.1.0"
 dependencies = [
+ "au_curves",
  "concordium-std",
  "concordium-std-derive",
  "quickcheck",
