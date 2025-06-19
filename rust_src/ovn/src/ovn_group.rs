@@ -2,23 +2,9 @@
 // use hax_lib::*;
 
 // #[exclude]
-use concordium_std::*;
-// #[exclude]
-use concordium_std_derive::*;
+use hacspec_concordium::*;
 
 pub use crate::ovn_traits::*;
-
-////////////////////////
-// Useful definitions //
-////////////////////////
-
-fn sub<Z: Field>(x: Z, y: Z) -> Z {
-    Z::add(x, Z::opp(y))
-}
-
-fn div<G: Group>(x: G, y: G) -> G {
-    G::prod(x, G::group_inv(y))
-}
 
 ////////////////////
 // Implementation //
@@ -158,7 +144,7 @@ pub fn zkp_one_out_of_two_validate<G: Group>(h: G, zkp: OrZKPCommit<G>) -> bool 
         zkp.or_zkp_b2,
     ]); // TODO: add i
 
-    (c == G::Z::add(zkp.or_zkp_d1, zkp.or_zkp_d2)
+    c == G::Z::add(zkp.or_zkp_d1, zkp.or_zkp_d2)
         && zkp.or_zkp_a1 == G::prod(G::g_pow(zkp.or_zkp_r1), G::pow(zkp.or_zkp_x, zkp.or_zkp_d1))
         && zkp.or_zkp_b1
             == G::prod(
@@ -170,7 +156,7 @@ pub fn zkp_one_out_of_two_validate<G: Group>(h: G, zkp: OrZKPCommit<G>) -> bool 
             == G::prod(
                 G::pow(h, zkp.or_zkp_r2),
                 G::pow(div::<G>(zkp.or_zkp_y, G::g()), zkp.or_zkp_d2),
-            ))
+            )
 }
 
 pub fn commit_to<G: Group>(g_pow_xi_yi_vi: G) -> G::Z {
@@ -182,7 +168,7 @@ pub fn check_commitment<G: Group>(g_pow_xi_yi_vi: G, commitment: G::Z) -> bool {
 }
 
 // #[hax::contract_state(contract = "OVN")]
-// #[cfg_attr(not(feature = "hax_compilation"), contract_state(contract = "OVN"))]
+#[cfg_attr(not(feature = "hax_compilation"), contract_state(contract = "OVN"))]
 #[derive(Serialize, SchemaType, Clone, Copy)]
 pub struct OvnContractState<G: Group, const n: usize> {
     pub g_pow_xis: [G; n],

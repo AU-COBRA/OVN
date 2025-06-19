@@ -9,7 +9,7 @@
 // use hax_lib_macros::*;
 
 // #[exclude]
-use concordium_std::*;
+use hacspec_concordium::*;
 
 ////////////
 // Traits //
@@ -17,7 +17,7 @@ use concordium_std::*;
 
 /** Interface for field implementation */
 pub trait Field:
-    core::marker::Copy + PartialEq + Eq + Clone + Copy + concordium_std::Serialize
+    core::marker::Copy + PartialEq + Eq + Clone + Copy + Serialize
 {
     fn q() -> Self;
 
@@ -35,7 +35,7 @@ pub trait Field:
 
 /** Interface for group implementation */
 pub trait Group:
-    core::marker::Copy + PartialEq + Eq + Clone + Copy + concordium_std::Serialize
+    core::marker::Copy + PartialEq + Eq + Clone + Copy + Serialize
 {
     type Z: Field;
 
@@ -48,4 +48,16 @@ pub trait Group:
     fn group_inv(x: Self) -> Self;
 
     fn hash(x: Vec<Self>) -> Self::Z;
+}
+
+////////////////////////
+// Useful definitions //
+////////////////////////
+
+pub fn sub<Z: Field>(x: Z, y: Z) -> Z {
+    Z::add(x, Z::opp(y))
+}
+
+pub fn div<G: Group>(x: G, y: G) -> G {
+    G::prod(x, G::group_inv(y))
 }
