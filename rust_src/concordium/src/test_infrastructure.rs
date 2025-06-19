@@ -49,22 +49,16 @@
 //!     }
 //! }
 //! ```
-#[cfg(not(feature = "hacspec"))]
 use crate::{constants::MAX_CONTRACT_STATE_SIZE, *};
 
-#[cfg(not(feature = "hacspec"))]
 #[cfg(not(feature = "std"))]
 use alloc::boxed::Box;
-#[cfg(not(feature = "hacspec"))]
 use convert::TryInto;
-#[cfg(not(feature = "hacspec"))]
 #[cfg(not(feature = "std"))]
 use core::{cmp, num};
-#[cfg(not(feature = "hacspec"))]
 #[cfg(feature = "std")]
 use std::{boxed::Box, cmp, num};
 
-#[cfg(not(feature = "hacspec"))]
 /// Placeholder for the context chain meta data.
 /// All the fields are optionally set and the getting an unset field will result
 /// in test failing.
@@ -79,7 +73,6 @@ pub struct ChainMetaTest {
     pub(crate) slot_time: Option<SlotTime>,
 }
 
-#[cfg(not(feature = "hacspec"))]
 /// Policy type used by init and receive contexts for testing.
 /// This type should not be used directly, but rather through
 /// its `HasPolicy` interface.
@@ -91,7 +84,6 @@ pub struct TestPolicy {
     policy:   OwnedPolicy,
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl TestPolicy {
     fn new(policy: OwnedPolicy) -> Self {
         Self {
@@ -101,7 +93,6 @@ impl TestPolicy {
     }
 }
 
-#[cfg(not(feature = "hacspec"))]
 /// Placeholder for the common data shared between the `InitContext` and
 /// `ReceiveContext`. This type is a technicality, see `InitContext` and
 /// `ReceiveContext` for the types to use.
@@ -120,7 +111,6 @@ pub struct CommonDataTest<'a> {
     pub(crate) policies:  Option<Vec<TestPolicy>>,
 }
 
-#[cfg(not(feature = "hacspec"))]
 /// Context used for testing. The type parameter C is used to determine whether
 /// this will be an init or receive context.
 #[derive(Default, Clone)]
@@ -187,10 +177,8 @@ pub struct ContextTest<'a, C> {
 ///     }
 /// }
 /// ```
-#[cfg(not(feature = "hacspec"))]
 pub type InitContextTest<'a> = ContextTest<'a, InitOnlyDataTest>;
 
-#[cfg(not(feature = "hacspec"))]
 #[derive(Default)]
 #[doc(hidden)]
 pub struct InitOnlyDataTest {
@@ -257,10 +245,8 @@ pub struct InitOnlyDataTest {
 ///     }
 /// }
 /// ```
-#[cfg(not(feature = "hacspec"))]
 pub type ReceiveContextTest<'a> = ContextTest<'a, ReceiveOnlyDataTest>;
 
-#[cfg(not(feature = "hacspec"))]
 #[derive(Default, Clone)]
 #[doc(hidden)]
 pub struct ReceiveOnlyDataTest {
@@ -271,7 +257,6 @@ pub struct ReceiveOnlyDataTest {
     pub(crate) owner:        Option<AccountAddress>,
 }
 
-#[cfg(not(feature = "hacspec"))]
 // Setters for testing-context
 impl ChainMetaTest {
     /// Create an `ChainMetaTest` where every field is unset, and getting any of
@@ -285,7 +270,6 @@ impl ChainMetaTest {
     }
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl<'a, C> ContextTest<'a, C> {
     /// Push a new sender policy to the context.
     /// When the first policy is pushed this will set the policy vector
@@ -322,7 +306,6 @@ impl<'a, C> ContextTest<'a, C> {
     }
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl<'a> InitContextTest<'a> {
     /// Create an `InitContextTest` where every field is unset, and getting any
     /// of the fields will result in [`fail!`](../macro.fail.html).
@@ -335,7 +318,6 @@ impl<'a> InitContextTest<'a> {
     }
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl<'a> ReceiveContextTest<'a> {
     /// Create a `ReceiveContextTest` where every field is unset, and getting
     /// any of the fields will result in [`fail!`](../macro.fail.html).
@@ -367,7 +349,6 @@ impl<'a> ReceiveContextTest<'a> {
     }
 }
 
-#[cfg(not(feature = "hacspec"))]
 // Error handling when unwrapping
 fn unwrap_ctx_field<A>(opt: Option<A>, name: &str) -> A {
     match opt {
@@ -380,13 +361,11 @@ fn unwrap_ctx_field<A>(opt: Option<A>, name: &str) -> A {
     }
 }
 
-#[cfg(not(feature = "hacspec"))]
 // Getters for testing-context
 impl HasChainMetadata for ChainMetaTest {
     fn slot_time(&self) -> SlotTime { unwrap_ctx_field(self.slot_time, "metadata.slot_time") }
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl HasPolicy for TestPolicy {
     fn identity_provider(&self) -> IdentityProvider { self.policy.identity_provider }
 
@@ -406,7 +385,6 @@ impl HasPolicy for TestPolicy {
     }
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl<'a, C> HasCommonData for ContextTest<'a, C> {
     type MetadataType = ChainMetaTest;
     type ParamType = Cursor<&'a [u8]>;
@@ -424,7 +402,6 @@ impl<'a, C> HasCommonData for ContextTest<'a, C> {
     }
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl<'a> HasInitContext for InitContextTest<'a> {
     type InitData = ();
 
@@ -435,7 +412,6 @@ impl<'a> HasInitContext for InitContextTest<'a> {
     }
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl<'a> HasReceiveContext for ReceiveContextTest<'a> {
     type ReceiveData = ();
 
@@ -454,19 +430,16 @@ impl<'a> HasReceiveContext for ReceiveContextTest<'a> {
     fn owner(&self) -> AccountAddress { unwrap_ctx_field(self.custom.owner, "owner") }
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl<'a> HasParameter for Cursor<&'a [u8]> {
     fn size(&self) -> u32 { self.data.len() as u32 }
 }
 
 /// A logger that simply accumulates all the logged items to be inspected at the
 /// end of execution.
-#[cfg(not(feature = "hacspec"))]
 pub struct LogRecorder {
     pub logs: Vec<Vec<u8>>,
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl HasLogger for LogRecorder {
     fn init() -> Self {
         Self {
@@ -487,7 +460,6 @@ impl HasLogger for LogRecorder {
     }
 }
 
-#[cfg(not(feature = "hacspec"))]
 /// An actions tree, used to provide a simpler presentation for testing.
 #[derive(Eq, PartialEq, Debug)]
 pub enum ActionsTree {
@@ -512,7 +484,6 @@ pub enum ActionsTree {
     },
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl HasActions for ActionsTree {
     fn accept() -> Self { ActionsTree::Accept }
 
@@ -552,7 +523,6 @@ impl HasActions for ActionsTree {
     }
 }
 
-#[cfg(not(feature = "hacspec"))]
 /// Reports back an error to the host when compiled to wasm
 /// Used internally, not meant to be called directly by contract writers
 #[doc(hidden)]
@@ -572,7 +542,6 @@ pub fn report_error(message: &str, filename: &str, line: u32, column: u32) {
     };
 }
 
-#[cfg(not(feature = "hacspec"))]
 /// Reports back an error to the host when compiled to wasm
 /// Used internally, not meant to be called directly by contract writers
 #[doc(hidden)]
@@ -581,21 +550,17 @@ pub fn report_error(_message: &str, _filename: &str, _line: u32, _column: u32) {
 
 /// Contract state for testing, mimicking the operations the scheduler allows,
 /// including the limit on the size of the maximum size of the contract state.
-#[cfg(not(feature = "hacspec"))]
 pub struct ContractStateTest<T> {
     pub cursor: Cursor<T>,
 }
 
-#[cfg(not(feature = "hacspec"))]
 /// A borrowed instantiation of `ContractStateTest`.
 pub type ContractStateTestBorrowed<'a> = ContractStateTest<&'a mut Vec<u8>>;
 
-#[cfg(not(feature = "hacspec"))]
 /// An owned variant that can be more convenient for testing since the type
 /// itself owns the data.
 pub type ContractStateTestOwned = ContractStateTest<Vec<u8>>;
 
-#[cfg(not(feature = "hacspec"))]
 #[derive(Debug, PartialEq, Eq)]
 /// An error that is raised when operating with `Seek`, `Write`, or `Read` trait
 /// methods of the `ContractStateTest` type.
@@ -610,12 +575,10 @@ pub enum ContractStateError {
     Default,
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl<T: convert::AsRef<[u8]>> Read for ContractStateTest<T> {
     fn read(&mut self, buf: &mut [u8]) -> ParseResult<usize> { self.cursor.read(buf) }
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl<T: convert::AsMut<Vec<u8>>> Write for ContractStateTest<T> {
     type Err = ContractStateError;
 
@@ -633,7 +596,6 @@ impl<T: convert::AsMut<Vec<u8>>> Write for ContractStateTest<T> {
     }
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl<T: AsMut<Vec<u8>> + AsMut<[u8]> + AsRef<[u8]>> HasContractState<ContractStateError>
     for ContractStateTest<T>
 {
@@ -678,17 +640,14 @@ impl<T: AsMut<Vec<u8>> + AsMut<[u8]> + AsRef<[u8]>> HasContractState<ContractSta
     }
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl Default for ContractStateError {
     fn default() -> Self { Self::Default }
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl From<num::TryFromIntError> for ContractStateError {
     fn from(_: num::TryFromIntError) -> Self { ContractStateError::Overflow }
 }
 
-#[cfg(not(feature = "hacspec"))]
 impl<T: AsRef<[u8]>> Seek for ContractStateTest<T> {
     type Err = ContractStateError;
 
@@ -743,7 +702,6 @@ impl<T: AsRef<[u8]>> Seek for ContractStateTest<T> {
     }
 }
 
-#[cfg(not(feature = "hacspec"))]
 #[cfg(test)]
 mod test {
     use concordium_contracts_common::{Read, Seek, SeekFrom, Write};

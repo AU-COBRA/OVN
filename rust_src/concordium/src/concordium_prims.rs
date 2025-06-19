@@ -1,12 +1,9 @@
-#![feature(register_tool)]
-#![register_tool(hax)]
-
 #[hax_lib_macros::exclude]
 extern crate hax_lib_macros;
 #[hax_lib_macros::exclude]
 use hax_lib_macros::*;
 
-#[exclude]
+// #[exclude]
 use crate::*;
 
 extern "C" {

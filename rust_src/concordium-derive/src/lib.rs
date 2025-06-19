@@ -183,7 +183,26 @@ fn init_worker(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream>
 	attach_error(syn::parse(item), "#[init] can only be applied to functions.")?;
 
     let fn_name = &ast.sig.ident;
+    let fn_out = match &ast.sig.output {
+        syn::ReturnType::Type(arrow, boxed_ty) => {
+            let ty : syn::Type = *boxed_ty.clone();
+            match ty {
+                syn::Type::Path(ty_path) => {
+                    let my_ty = &ty_path.path.segments[0].arguments;
+                    match my_ty {
+                        syn::PathArguments::AngleBracketed(abga) => {
+                            abga.args.first().unwrap().clone()
+                        },
+                        _ => panic!(),
+                    }
+                },
+                _ => panic!("Not correct format for ty {:?}", ty),
+            }
+        }
+        _ => panic!(),
+    };
     let rust_export_fn_name = format_ident!("export_{}", fn_name);
+    let rust_export_fn_generics = &ast.sig.generics;
     let wasm_export_fn_name = format!("init_{}", contract_name.value());
 
     if let Err(e) = ContractName::is_valid_contract_name(&wasm_export_fn_name) {
@@ -204,12 +223,13 @@ fn init_worker(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream>
 	required_args.push("state: ContractState");
 	quote! {
 	    #[export_name = #wasm_export_fn_name]
-	    pub extern "C" fn #rust_export_fn_name(#amount_ident: hacspec_concordium::Amount) -> i32 {
+	    pub extern "C" fn #rust_export_fn_name #rust_export_fn_generics (#amount_ident: hacspec_concordium::Amount) -> i32 {
 		use hacspec_concordium::{trap, ExternContext, InitContextExtern, ContractState};
 		#setup_fn_optional_args
 		let ctx = ExternContext::<InitContextExtern>::open(());
 		let mut state = ContractState::open(());
-		match #fn_name(&ctx, #(#fn_optional_args, )* &mut state) {
+                let tmp : InitResult<#fn_out> = #fn_name(&ctx, #(#fn_optional_args, )* &mut state);
+		match tmp {
 		    Ok(()) => 0,
 		    Err(reject) => {
 			let code = Reject::from(reject).error_code.get();
@@ -225,11 +245,12 @@ fn init_worker(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream>
     } else {
 	quote! {
 	    #[export_name = #wasm_export_fn_name]
-	    pub extern "C" fn #rust_export_fn_name(amount: hacspec_concordium::Amount) -> i32 {
+	    pub extern "C" fn #rust_export_fn_name #rust_export_fn_generics (amount: hacspec_concordium::Amount) -> i32 {
 		use hacspec_concordium::{trap, ExternContext, InitContextExtern, ContractState};
 		#setup_fn_optional_args
 		let ctx = ExternContext::<InitContextExtern>::open(());
-		match #fn_name(&ctx, #(#fn_optional_args),*) {
+                let tmp : InitResult<#fn_out> = #fn_name(&ctx, #(#fn_optional_args),*);
+		match tmp {
 		    Ok(state) => {
 			let mut state_bytes = ContractState::open(());
 			if state.serial(&mut state_bytes).is_err() {
@@ -385,8 +406,37 @@ fn receive_worker(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStre
 	attach_error(syn::parse(item), "#[receive] can only be applied to functions.")?;
 
     let fn_name = &ast.sig.ident;
+    let fn_out = match &ast.sig.output {
+        syn::ReturnType::Type(arrow, boxed_ty) => {
+            let ty : syn::Type = *boxed_ty.clone();
+            match ty {
+                syn::Type::Path(ty_path) => {
+                    let my_ty = &ty_path.path.segments[0].arguments;
+                    match my_ty {
+                        syn::PathArguments::AngleBracketed(abga) => {
+                            let tuple_type = abga.args.first().unwrap();
+                            match tuple_type {
+                                syn::GenericArgument::Type(syn::Type::Tuple(ty)) => {
+                                    let mut iter = ty.elems.clone().into_iter();
+                                    iter.next(); // Action type
+                                    iter.next().unwrap() // Our type
+                                },
+                                _ => panic!(),
+                            }
+                        },
+                        _ => panic!(),
+                    }
+                },
+                _ => panic!("Not correct format for ty {:?}", ty),
+            }
+        }
+        _ => panic!(),
+    };
     let rust_export_fn_name = format_ident!("export_{}", fn_name);
+    let rust_export_fn_generics = &ast.sig.generics;
     let wasm_export_fn_name = format!("{}.{}", contract_name.value(), name.value());
+
+    println!("FN out: {:?}", fn_out);
 
     // Validate the contract name independently to ensure that it doesn't contain a
     // '.' as this causes a subtle error when receive names are being split.
@@ -448,15 +498,16 @@ fn receive_worker(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStre
 
 	quote! {
 	    #[export_name = #wasm_export_fn_name]
-	    pub extern "C" fn #rust_export_fn_name(#amount_ident: hacspec_concordium::Amount) -> i32 {
+	    pub extern "C" fn #rust_export_fn_name #rust_export_fn_generics (#amount_ident: hacspec_concordium::Amount) -> i32 {
 		use hacspec_concordium::{SeekFrom, ContractState, Logger, trap};
 		#setup_fn_optional_args
 		let ctx = ExternContext::<ReceiveContextExtern>::open(());
 		let mut state_bytes = ContractState::open(());
 		if let Ok(mut state) = (&mut state_bytes).get() {
-		    let res : Result<(Action, _), _> = #fn_name(&ctx, #(#fn_optional_args, )* state);
+		    let res : Result<(Action, #fn_out), _> = #fn_name(&ctx, #(#fn_optional_args, )* state);
 		    match res {
 			Ok((act, state_res)) => {
+                            let temp : _ = state_res;
                             state = state_res;
 			    let res = state_bytes
 				.seek(SeekFrom::Start(0))
