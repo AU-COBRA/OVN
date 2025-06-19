@@ -1016,6 +1016,64 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   Qed.
   Fail Next Obligation.
 
+  Instance is_positive_n_Zq : Positive (is_pure n * #|'Z_q|).
+  Proof.
+    apply Positive_prod.
+    - apply n_pos.
+    - apply Zq_pos.
+  Qed.
+
+  Definition sample_of_pair : forall a b, 'Z_(S (S (a))+b) -> 'Z_a * 'Z_b.
+  Proof.
+    intros.
+    destruct X.
+    epose (inZp (m %% b) : 'Z_b).
+    epose (inZp (m / 2^b) : 'Z_a).
+    split ; assumption.
+  Defined.
+
+  Definition sample_of_square : forall a b, 'Z_(S (S a)*b) -> 'Z_((S a)*b) * 'Z_b.
+  Proof.
+    induction a ; intros.
+    - destruct X.
+      epose (inZp (m %% b) : 'Z_b).
+      epose (inZp (m / 2^b) : 'Z_b).
+      split.
+      + rewrite mul1n.
+        apply o.
+      + apply o0.
+    - rewrite mulSnr in X.
+      
+      
+  Definition seq_of_sample : forall n, 'Z_(n*q) -> nseq v_G n.
+  Proof.
+    intros.
+    
+    
+  
+  Program Definition GPowYiNotZero_mid i (* state *) :
+    package fset0
+      [interface]
+      [interface
+         #val #[ GPOWYINOTZERO ] : chGPowYiNotZeroInput → chGPowYiNotZeroOutput
+      ]
+    :=
+    [package
+        #def #[ GPOWYINOTZERO ] (_ : chGPowYiNotZeroInput) : chGPowYiNotZeroOutput
+        {
+          x ← sample uniform (is_pure n*#|'Z_q|) ;;
+          let x := seq_of_sample x in
+          temp ← is_state (compute_g_pow_yi (ret_both (i : int32)) (ret_both x)) ;;
+          ret (temp : v_G)
+        }
+    ].
+  Next Obligation.
+    intros.
+    ssprove_valid.
+    1: apply valid_scheme ; rewrite <- fset0E ; apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
+  Qed.
+  Fail Next Obligation.
+
   Program Definition GPowYiNotZero_ideal i state :
     package fset0
       [interface]
@@ -1056,18 +1114,20 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     intros.
     rewrite compute_g_pow_yi_equation_1.
     rewrite !let_both_equation_1.
+
     (* False statement .. *)
   Admitted.
 
   Lemma help :
     forall i state A LA,
       ValidPackage LA [interface #val #[GPOWYINOTZERO] : chGPowYiNotZeroInput → chGPowYiNotZeroOutput ] A_export A ->
-      (ϵ_GPOWYINOTZERO i state A = 0)%R.
+      (ϵ_GPOWYINOTZERO i state A <= 1/(1*+q))%R.
   Proof.
     intros.
     unfold ϵ_GPOWYINOTZERO.
     rewrite Advantage_E.
     unfold GPowYiNotZero_game, locs_pack.
+
 
     apply: eq_rel_perf_ind_eq. (* _ignore. *)
     (* 1: (apply fsubsetxx || solve_in_fset). *)
