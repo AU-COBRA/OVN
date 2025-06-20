@@ -31,3 +31,6 @@ rand = "0.8"
 
 [features]
 hax_compilation = []
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(hax)'] }

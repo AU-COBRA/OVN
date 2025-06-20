@@ -1,8 +1,9 @@
 // #[hax_lib::exclude]
 // use hax_lib::*;
 
-// #[exclude]
+#[hax_lib_macros::exclude]
 use hacspec_concordium::*;
+#[hax_lib_macros::exclude]
 use hacspec_concordium_derive::*;
 
 pub use crate::ovn_traits::*;
@@ -169,7 +170,7 @@ pub fn check_commitment<G: Group>(g_pow_xi_yi_vi: G, commitment: G::Z) -> bool {
 }
 
 #[hax_lib_macros::contract_state(contract = "OVN")]
-#[cfg_attr(hax, contract_state(contract = "OVN"))]
+#[cfg_attr(not(hax), contract_state(contract = "OVN"))]
 #[derive(Serialize, SchemaType, Clone, Copy)]
 pub struct OvnContractState<G: Group, const n: usize> {
     pub g_pow_xis: [G; n],
@@ -186,7 +187,7 @@ pub struct OvnContractState<G: Group, const n: usize> {
 }
 
 #[hax_lib_macros::init(contract = "OVN")]
-// #[init(contract = "OVN")]
+#[cfg_attr(not(hax), init(contract = "OVN"))]
 pub fn init_ovn_contract<G: Group, const n: usize>(_: &impl HasInitContext,
 ) -> InitResult<OvnContractState<G, n>> {
     Ok(OvnContractState::<G, n> {

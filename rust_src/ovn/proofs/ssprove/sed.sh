@@ -81,11 +81,11 @@ sed -i "s/commit_to_vote (ctx : both impl_574521470_)/commit_to_vote (ctx : both
 sed -i "s/register_vote (ctx : both impl_574521470_)/register_vote (ctx : both t_RegisterParam)/" extraction/Hacspec_ovn_Ovn_group.v
 sed -i "s/tally_votes (_ : both impl_574521470_)/tally_votes (_ : both t_TallyParameter)/" extraction/Hacspec_ovn_Ovn_group.v
 
-# Add instance (Should be done via attributes)
-sed -i -z "s/Equations cast_vote/(* Automatically generated outline, manually filled in *)\n  #[global] Program Instance t_CastVoteParam_t_HasReceiveContext : t_HasReceiveContext t_CastVoteParam 'unit :=\n    {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result t_CastVoteParam t_ParseError)) (tt, inl ctx)) : _)|}.\n  Fail Next Obligation.\n  #[global] Program Instance t_CastVoteParam_t_Sized : t_Sized t_CastVoteParam :=\n    fun x =>\n      x.\n  Fail Next Obligation.\n\nEquations cast_vote/g" extraction/Hacspec_ovn_Ovn_group.v
+# # Add instance (Should be done via attributes)
+# sed -i -z "s/Equations cast_vote/(* Automatically generated outline, manually filled in *)\n  #[global] Program Instance t_CastVoteParam_t_HasReceiveContext : t_HasReceiveContext t_CastVoteParam 'unit :=\n    {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result t_CastVoteParam t_ParseError)) (tt, inl ctx)) : _)|}.\n  Fail Next Obligation.\n  #[global] Program Instance t_CastVoteParam_t_Sized : t_Sized t_CastVoteParam :=\n    fun x =>\n      x.\n  Fail Next Obligation.\n\nEquations cast_vote/g" extraction/Hacspec_ovn_Ovn_group.v
 
 
-sed -i -z "s/Equations register_vote/(* Automatically generated outline, manually filled in *)\n#[global] Program Instance t_RegisterParam_t_HasReceiveContext : t_HasReceiveContext t_RegisterParam 'unit :=\n    {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result t_RegisterParam t_ParseError)) (tt, inl ctx)) : _)|}.\n  Fail Next Obligation.\n  #[global] Program Instance t_RegisterParam_t_Sized : t_Sized t_RegisterParam :=\n    fun x =>\n      x.\n  Fail Next Obligation.\n\nEquations register_vote/g" extraction/Hacspec_ovn_Ovn_group.v
+# sed -i -z "s/Equations register_vote/(* Automatically generated outline, manually filled in *)\n#[global] Program Instance t_RegisterParam_t_HasReceiveContext : t_HasReceiveContext t_RegisterParam 'unit :=\n    {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result t_RegisterParam t_ParseError)) (tt, inl ctx)) : _)|}.\n  Fail Next Obligation.\n  #[global] Program Instance t_RegisterParam_t_Sized : t_Sized t_RegisterParam :=\n    fun x =>\n      x.\n  Fail Next Obligation.\n\nEquations register_vote/g" extraction/Hacspec_ovn_Ovn_group.v
 
 
 
@@ -118,6 +118,10 @@ sed -i -z "s/not/negb/g" extraction/Hacspec_ovn_Ovn_group.v
 
 # Add Result_Ok to accumulator for foldi_both_list, incorrect type?
 sed -i "s/(ret_both (tt : 'unit)) in/(Result_Ok (ret_both (tt : 'unit))) in/g" extraction/Hacspec_ovn_Ovn_group.v
+
+# Remove extra
+sed -i "s/{n : both uint_size}//g" extraction/Hacspec_ovn_Ovn_group.v
+sed -i "s/Ctx/_/g" extraction/Hacspec_ovn_Ovn_group.v
 
 
 sed -i -z "s/Fail Next Obligation./Solve All Obligations with now intros ; destruct from_uint_size.\nFail Next Obligation./g" extraction/Hacspec_ovn_Ovn_group.v
