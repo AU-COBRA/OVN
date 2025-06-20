@@ -168,7 +168,8 @@ pub fn check_commitment<G: Group>(g_pow_xi_yi_vi: G, commitment: G::Z) -> bool {
     G::hash(vec![g_pow_xi_yi_vi]) == commitment
 }
 
-#[contract_state(contract = "OVN")]
+#[hax_lib_macros::contract_state(contract = "OVN")]
+#[cfg_attr(hax, contract_state(contract = "OVN"))]
 #[derive(Serialize, SchemaType, Clone, Copy)]
 pub struct OvnContractState<G: Group, const n: usize> {
     pub g_pow_xis: [G; n],
@@ -184,7 +185,8 @@ pub struct OvnContractState<G: Group, const n: usize> {
     pub round1: [bool; n],
 }
 
-#[init(contract = "OVN")]
+#[hax_lib_macros::init(contract = "OVN")]
+// #[init(contract = "OVN")]
 pub fn init_ovn_contract<G: Group, const n: usize>(_: &impl HasInitContext,
 ) -> InitResult<OvnContractState<G, n>> {
     Ok(OvnContractState::<G, n> {
@@ -229,7 +231,8 @@ pub struct RegisterParam<Z: Field> {
 }
 
 /** Primary function in round 1 */
-#[hacspec_concordium::receive(contract = "OVN", name = "register", parameter = "RegisterParam")]
+#[hax_lib_macros::receive(contract = "OVN", name = "register", parameter = "RegisterParam")]
+#[cfg_attr(not(hax), receive(contract = "OVN", name = "register", parameter = "RegisterParam"))]
 pub fn register_vote<G: Group, const n: usize, A: HasActions>(
     ctx: &impl HasReceiveContext,
     state: OvnContractState<G, n>,
@@ -285,7 +288,8 @@ pub fn compute_group_element_for_vote<G: Group>(xi: G::Z, vote: bool, g_pow_yi: 
 }
 
 /** Commitment before round 2 */
-#[hacspec_concordium::receive(contract = "OVN", name = "commit_to_vote", parameter = "CastVoteParam")]
+#[hax_lib_macros::receive(contract = "OVN", name = "commit_to_vote", parameter = "CastVoteParam")]
+#[cfg_attr(not(hax), receive(contract = "OVN", name = "commit_to_vote", parameter = "CastVoteParam"))]
 pub fn commit_to_vote<G: Group, const n: usize, A: HasActions>(
     ctx: &impl HasReceiveContext,
     state: OvnContractState<G, n>,
@@ -309,7 +313,8 @@ pub fn commit_to_vote<G: Group, const n: usize, A: HasActions>(
 }
 
 /** Primary function in round 2, also opens commitment */
-#[hacspec_concordium::receive(contract = "OVN", name = "cast_vote", parameter = "CastVoteParam")]
+#[hax_lib_macros::receive(contract = "OVN", name = "cast_vote", parameter = "CastVoteParam")]
+#[cfg_attr(not(hax), receive(contract = "OVN", name = "cast_vote", parameter = "CastVoteParam"))]
 pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
     ctx: &impl HasReceiveContext,
     state: OvnContractState<G, n>,
@@ -340,7 +345,8 @@ pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
 #[derive(Serialize, SchemaType)]
 pub struct TallyParameter {}
 
-#[hacspec_concordium::receive(contract = "OVN", name = "tally", parameter = "TallyParameter")]
+#[hax_lib_macros::receive(contract = "OVN", name = "tally", parameter = "TallyParameter")]
+#[cfg_attr(not(hax), receive(contract = "OVN", name = "tally", parameter = "TallyParameter"))]
 /** Anyone can tally the votes */
 pub fn tally_votes<G: Group, const n: usize, A: HasActions>(
     _: &impl HasReceiveContext,

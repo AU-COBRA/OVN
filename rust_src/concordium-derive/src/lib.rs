@@ -436,8 +436,6 @@ fn receive_worker(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStre
     let rust_export_fn_generics = &ast.sig.generics;
     let wasm_export_fn_name = format!("{}.{}", contract_name.value(), name.value());
 
-    println!("FN out: {:?}", fn_out);
-
     // Validate the contract name independently to ensure that it doesn't contain a
     // '.' as this causes a subtle error when receive names are being split.
     let contract_name_validation =
