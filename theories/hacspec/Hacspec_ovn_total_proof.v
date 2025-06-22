@@ -1514,7 +1514,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       ssprove_sync=> r.
       now apply r_ret.
     }
-  (* Qed. *) Fail Timeout 5 Qed. Admitted. (* 216.817 secs *)
+  Qed. (* Fail Timeout 5 Qed. Admitted. (* 216.817 secs *) *)
 
   (** DL_ *)
 
@@ -2792,7 +2792,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       rewrite !otf_fto.
       reflexivity.
     }
-  (* Qed. *) Fail Timeout 5 Qed. Admitted. (* 123.43 secs *)
+  Qed. (* Fail Timeout 5 Qed. Admitted. (* 123.43 secs *) *)
 
   Lemma all_step_advantage :
     forall state (i : nat),
@@ -3074,7 +3074,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret ((round_1, round_2) , round_3)
         }
     ].
-  Solve All Obligations with now intros ; apply nseq_n_pos, HOP.n_pos.
+  Solve All Obligations with intros ; apply nseq_n_pos, HOP.n_pos. (* now intros ; apply nseq_n_pos, HOP.n_pos. *)
   Next Obligation.
     fold chElement in *.
     intros.
@@ -3196,7 +3196,8 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
     repeat set (update_at_usize _ _ _).
     rewrite (hacspec_function_guarantees (fun x => array_index x _)).
-    rewrite <- hacspec_function_guarantees.
+    rewrite <- (hacspec_function_guarantees).
+    (* rewrite (hacspec_function_guarantees (fun x => n_seq_array_or_seq x _)). *)
 
     eassert (forall state (v : both (nseq_ _ (from_uint_size (is_pure n)))), is_pure (f_zkp_xis (Build_t_OvnContractState [ state ] ( f_round1 := v))) = is_pure (f_zkp_xis state)).
     {
@@ -3220,7 +3221,9 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     rewrite H14.
     clear H13 H14.
 
-    rewrite <- (hacspec_function_guarantees (fun x => array_index x _)).
+    (* rewrite <- (hacspec_function_guarantees (fun x => n_seq_array_or_seq x _)). *)
+    (* rewrite <- (hacspec_function_guarantees (fun x => array_index x _)). *)
+
     subst b0.
     replace (cast_int (ret_both i)) with (ret_both (i : int32)).
     2:{ apply both_eq.
@@ -3232,6 +3235,9 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     }
 
     set (f_zkp_xis _).
+    (* epose (strip_nseq_array_or_seq i). *)
+    (* rewrite <- e. *)
+
     setoid_rewrite (array_update_eq b0 (ret_both a) i i_lt_n).
     subst b0.
     simpl.
@@ -3780,7 +3786,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         rewrite <- conversion_is_true.
         destruct vi ; [ rewrite rmorph1 | rewrite rmorph0 ] ; reflexivity.
     }
-  (* Qed. *) Fail Timeout 5 Qed. Admitted. (* 319.394 secs *)
+  Qed. (* Fail Timeout 5 Qed. Admitted. (* 319.394 secs *) *)
 
   Lemma real_protocol_is_maximum_balloc_secrecy_hiding :
     forall state (i : nat),

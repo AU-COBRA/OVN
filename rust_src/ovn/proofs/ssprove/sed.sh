@@ -58,7 +58,7 @@ sed -i "s/[(][*] From Jasmin Require Import word. [*][)]/From SSProve.Crypt Requ
 # Notation v_Z := f_Z.
 # ```
 
-sed -i -z "s/Require Import Crate_Ovn_traits.\nExport Crate_Ovn_traits./From OVN Require Import Hacspec_ovn_Ovn_traits.\nExport Hacspec_ovn_Ovn_traits.\n\nModule Type HacspecOvnParameter.\n  (** Move arguments to context *)\n  Parameter (v_G : choice_type).\n\n  Parameter (v_G_t_Group : t_Group v_G).\n\n  Parameter (v_A : choice_type).\n  Parameter (v_A_t_Sized : t_Sized v_A).\n\n  Parameter (v_A_t_HasActions : t_HasActions v_A).\n\n  Parameter (n : both uint_size).\n  Parameter (n_pos : Positive (is_pure n)).\n\n  (* Extra from code *)\n  Parameter (v_G_t_Sized : t_Sized v_G).\n\n  Notation \"'v_Z'\" := f_Z : hacspec_scope.\nEnd HacspecOvnParameter.\n\nModule HacspecOvn (HOP : HacspecOvnParameter).\n  Include HOP.\n\n  Existing Instance v_G_t_Group.\n  Existing Instance v_A_t_Sized.\n  Existing Instance v_A_t_HasActions.\n  Existing Instance v_G_t_Sized.\n\n  (* TODO: Cannot find instance in hacspec lib? *)\n  Existing Instance copy.\n  Existing Instance partial_eq.\n  Existing Instance is_eq.\n  Existing Instance clone.\n  Existing Instance serialize.\n(** * Generated code *)\n/g" extraction/Hacspec_ovn_Ovn_group.v
+sed -i -z "s/Require Import Crate_Ovn_traits.\nExport Crate_Ovn_traits./From OVN Require Import Hacspec_ovn_Ovn_traits.\nExport Hacspec_ovn_Ovn_traits.\n\nNotation \" x \'.a[\' a \']\'\" := (array_index x (* (n_seq_array_or_seq x _) *) a) (at level 40).\n\nModule Type HacspecOvnParameter.\n  (** Move arguments to context *)\n  Parameter (v_G : choice_type).\n\n  Parameter (v_G_t_Group : t_Group v_G).\n\n  Parameter (v_A : choice_type).\n  Parameter (v_A_t_Sized : t_Sized v_A).\n\n  Parameter (v_A_t_HasActions : t_HasActions v_A).\n\n  Parameter (n : both uint_size).\n  Parameter (n_pos : Positive (is_pure n)).\n\n  (* Extra from code *)\n  Parameter (v_G_t_Sized : t_Sized v_G).\n\n  Notation \"'v_Z'\" := f_Z : hacspec_scope.\nEnd HacspecOvnParameter.\n\nModule HacspecOvn (HOP : HacspecOvnParameter).\n  Include HOP.\n\n  Existing Instance v_G_t_Group.\n  Existing Instance v_A_t_Sized.\n  Existing Instance v_A_t_HasActions.\n  Existing Instance v_G_t_Sized.\n\n  (* TODO: Cannot find instance in hacspec lib? *)\n  Existing Instance copy.\n  Existing Instance partial_eq.\n  Existing Instance is_eq.\n  Existing Instance clone.\n  Existing Instance serialize.\n(** * Generated code *)\n/g" extraction/Hacspec_ovn_Ovn_group.v
 
 # List of replacements or removed objects.
 #   (* {v_Z : _} `{ t_Sized v_Z} `{ t_Field v_Z} *)
@@ -124,8 +124,6 @@ sed -i "s/(ret_both (tt : 'unit)) in/(Result_Ok (ret_both (tt : 'unit))) in/g" e
 
 # Remove extra
 sed -i "s/{n : both uint_size}//g" extraction/Hacspec_ovn_Ovn_group.v
-sed -i "s/Ctx/_/g" extraction/Hacspec_ovn_Ovn_group.v
-
 
 sed -i -z "s/Fail Next Obligation./Solve All Obligations with now intros ; destruct from_uint_size.\nFail Next Obligation./g" extraction/Hacspec_ovn_Ovn_group.v
 

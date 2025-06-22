@@ -114,7 +114,7 @@ Module HacspecOvnGroupAndFieldPre (HOP : HacspecOvnParameter).
   #[local] Existing Instance partial_eq.
   #[local] Existing Instance is_eq.
   #[local] Existing Instance clone.
-  #[local] Existing Instance OVN.v_G_t_serialize.
+  #[local] Existing Instance serialize.
 
   HB.instance Definition _ : is_group_op both_v_G :=
     is_group_op.Build (both_v_G)
