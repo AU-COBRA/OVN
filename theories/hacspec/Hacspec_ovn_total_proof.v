@@ -196,14 +196,14 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
   (** Should be hax library definitions *)
 
-  Lemma array_update_eq : forall {A : choice_type} (b5 : both (nseq_ A (from_uint_size (is_pure n)))) b (i : int32),
-      (Z.to_nat (unsigned i) < (from_uint_size (is_pure n)))%coq_nat ->
+  Lemma array_update_eq2 : forall {n}, (Positive n) -> forall {A : choice_type} (b5 : both (nseq_ A n)) b (i : int32),
+      (Z.to_nat (unsigned i) < n)%coq_nat ->
       is_pure (array_index
                  (update_at_usize b5 (ret_both i) b)
                  (ret_both i)) =
         is_pure b.
   Proof.
-    intros A.
+    intros n ? A.
     intros.
 
     unfold update_at_usize at 1.
@@ -213,16 +213,9 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     simpl.
 
     simpl in *.
-    epose proof (wrepr_unsigned (is_pure HOP.n)).
-    epose HOP.n_pos.
-    rewrite <- (Z2Nat.id (unsigned (is_pure n))) in H0.
-    2: apply wunsigned_range.
-    rewrite <- H0 in p ; clear H0.
 
-    destruct (Z.to_nat (unsigned (is_pure n))).
+    destruct n.
     1: discriminate.
-
-    clear p.
 
 
     unfold Hacspec_Lib_Pre.array_upd.
@@ -245,22 +238,37 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       reflexivity.
 
       Unshelve.
-      2,3: apply /ltP ; apply H.
+      2,3: apply /ltP ; apply H0.
     }
     {
       contradiction.
     }
   Qed.
 
-  Lemma array_update_neq : forall {A : choice_type} (b5 : both (nseq_ A (from_uint_size (is_pure n)))) b (i x : int32),
+  Lemma array_update_eq : forall {A : choice_type} (b5 : both (nseq_ A (from_uint_size (is_pure n)))) b (i : int32),
       (Z.to_nat (unsigned i) < (from_uint_size (is_pure n)))%coq_nat ->
+      is_pure (array_index
+                 (update_at_usize b5 (ret_both i) b)
+                 (ret_both i)) =
+        is_pure b.
+  Proof.
+    intros A.
+    intros.
+
+    apply array_update_eq2.
+    1:{ apply n_pos. }
+    apply H.
+  Qed.
+
+  Lemma array_update_neq2 : forall {n}, (Positive n) -> forall {A : choice_type} (b5 : both (nseq_ A n)) b (i x : int32),
+      (Z.to_nat (unsigned i) < n)%coq_nat ->
       (Z.to_nat (unsigned x) <> Z.to_nat (unsigned i)) ->
       is_pure (array_index
                  (update_at_usize b5 (ret_both i) b)
                  (ret_both x)) =
         is_pure (array_index b5 (ret_both x)).
   Proof.
-    intros A.
+    intros n ? A.
     intros.
 
     unfold update_at_usize at 1.
@@ -269,18 +277,8 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     unfold lift2_both at 1 2 3.
     simpl.
 
-    simpl in *.
-    epose proof (wrepr_unsigned (is_pure HOP.n)).
-    epose HOP.n_pos.
-    rewrite <- (Z2Nat.id (unsigned (is_pure n))) in H1.
-    2: apply wunsigned_range.
-    rewrite <- H1 in p ; clear H1.
-
-    destruct (Z.to_nat (unsigned (is_pure n))).
+    destruct n.
     1: discriminate.
-
-    clear p.
-
 
     unfold Hacspec_Lib_Pre.array_upd.
     unfold array_upd_clause_1.
@@ -302,14 +300,28 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         symmetry.
         apply /eqP.
         red ; intros.
-        apply ord_ext in H1.
-        apply H0.
+        apply ord_ext in H2.
+        apply H1.
         easy.
       }
     }
     {
       contradiction.
     }
+  Qed.
+
+  Lemma array_update_neq : forall {A : choice_type} (b5 : both (nseq_ A (from_uint_size (is_pure n)))) b (i x : int32),
+      (Z.to_nat (unsigned i) < (from_uint_size (is_pure n)))%coq_nat ->
+      (Z.to_nat (unsigned x) <> Z.to_nat (unsigned i)) ->
+      is_pure (array_index
+                 (update_at_usize b5 (ret_both i) b)
+                 (ret_both x)) =
+        is_pure (array_index b5 (ret_both x)).
+  Proof.
+    intros.
+    apply array_update_neq2.
+    1: apply n_pos.
+    all: assumption.
   Qed.
 
   Lemma n_seq_array_or_seq_simpl : forall {A : choice_type} {n : nat} (b5 : both (nseq_ A n.+1)),
@@ -339,8 +351,95 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     - apply (n_seq_array_or_seq_simpl b5).
   Defined.
 
+  (* Lemma n_seq_array_or_seq_eq : forall {A : choice_type} (b5 : both (nseq_ A (from_uint_size (is_pure n)))) v, *)
+  (*     (n_seq_array_or_seq b5 n_pos) = b5. *)
+  (* Proof. *)
+  (*   intros. *)
+  (*   rewrite H. *)
+  (*   now rewrite n_seq_array_or_seq_simpl. *)
+  (* Qed. *)
+
   Lemma pos_pos : Positive (from_uint_size (is_pure n)).
   Proof. apply n_pos. Qed.
+
+  (* Lemma strip_nseq_array_or_seq : *)
+  (*   forall {WS : wsize} i b (b5 : both (nseq_ v_G (from_uint_size (is_pure n)))) x, *)
+  (*     is_pure (array_index (update_at_usize b5 (ret_both i) b) x) = *)
+  (* is_pure (array_index b5 x) -> *)
+  (*   is_pure *)
+  (*   (array_index *)
+  (*      (n_seq_array_or_seq (update_at_usize b5 (ret_both i) b) *)
+  (*         (HOGaFE.GroupAndField.OVN.compute_g_pow_yi_obligations_obligation_1 *)
+  (*            (update_at_usize b5 (ret_both i) b))) x) = *)
+  (* is_pure *)
+  (*   (array_index (WS := WS) *)
+  (*      (n_seq_array_or_seq b5 (HOGaFE.GroupAndField.OVN.compute_g_pow_yi_obligations_obligation_1 b5)) *)
+  (*      x). *)
+  (* Proof. *)
+  (*   intros ? ? ? ? ? H_some. *)
+
+  (*   epose proof (array_update_neq b5). *)
+  (*   epose proof (pos_pos). *)
+
+  (*   set (HOGaFE.GroupAndField.OVN.compute_g_pow_yi_obligations_obligation_1 _). *)
+  (*   set (HOGaFE.GroupAndField.OVN.compute_g_pow_yi_obligations_obligation_1 b5). *)
+  (*   assert (y0 = y). *)
+  (*   { *)
+  (*     subst y y0. *)
+  (*     unfold HOGaFE.GroupAndField.OVN.compute_g_pow_yi_obligations_obligation_1. *)
+  (*     cbn in *. *)
+  (*     cbn. *)
+  (*     clear -H0. *)
+  (*     destruct is_pure. *)
+  (*     cbn. *)
+  (*     destruct toword. *)
+  (*     - discriminate. *)
+  (*     - simpl in *. *)
+  (*       now destruct (Z.to_nat _). *)
+  (*     - discriminate. *)
+  (*   } *)
+  (*   rewrite H1. *)
+  (*   clear -H_some H H0. *)
+
+  (*   subst y. *)
+  (*   generalize dependent b5. *)
+  (*   set (from_uint_size (is_pure _)). *)
+  (*   simpl. *)
+  (*   intros. *)
+
+  (*   cbn in *. *)
+  (*   epose proof (n_seq_array_or_seq_simpl_pos b5 H0). *)
+
+  (*   set (update_at_usize _ _ _). *)
+  (*   subst y. *)
+
+  (*   generalize dependent (HOGaFE.GroupAndField.OVN.compute_g_pow_yi_obligations_obligation_1 b0). *)
+  (*   destruct (is_pure n). *)
+  (*   destruct toword. *)
+  (*   - discriminate. *)
+  (*   - intros. *)
+  (*     cbn in H0, b5, H, b0, y |- *. *)
+  (*     set (Z.to_nat _) in H1. *)
+  (*     cbn in n0. *)
+  (*     subst n0. *)
+
+  (*     destruct (Z.to_nat _). *)
+  (*     + discriminate. *)
+  (*     + hnf in *. *)
+
+  (*       rewrite <- (proof_irrelevance _ y _) in H1. *)
+  (*       rewrite H1. *)
+
+  (*       epose proof (n_seq_array_or_seq_simpl_pos b0 H0). *)
+  (*       hnf in H2. *)
+  (*       rewrite <- (proof_irrelevance _ y _) in H2. *)
+  (*       rewrite H2. *)
+  (*       clear H1 H2. *)
+  (*       subst b0. *)
+
+  (*       apply H_some. *)
+  (*   - discriminate. *)
+  (* Qed. *)
 
   Lemma compute_g_pow_yi_update_eq : forall (b5 : both (nseq_ v_G (from_uint_size (is_pure n)))) b (i : int32),
       (Z.to_nat (unsigned i) < from_uint_size (is_pure n))%coq_nat ->
@@ -377,7 +476,8 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       f_equal.
 
       rewrite hacspec_function_guarantees.
-      rewrite array_update_neq ; easy.
+      (* apply strip_nseq_array_or_seq. *)
+      now rewrite array_update_neq.
     }
 
     (* TODO: fold stuff *)
@@ -2692,7 +2792,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       rewrite !otf_fto.
       reflexivity.
     }
-  Qed. (* Fail Timeout 5 Qed. Admitted. (* 123.43 secs *) *)
+  (* Qed. *) Fail Timeout 5 Qed. Admitted. (* 123.43 secs *)
 
   Lemma all_step_advantage :
     forall state (i : nat),
@@ -3032,7 +3132,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     fold chElement.
 
     apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros xi ].
-    rewrite bind_rewrite.
+    rewrite (bind_rewrite v_G _ (g ^+ FieldToWitness (WitnessToField (otf xi)))).
     simpl.
 
     replace (Schnorr_ZKP.Schnorr.MyParam.R _ _) with true ; [ | symmetry ].
@@ -3047,7 +3147,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
     (* Round 1 / Register vote *)
     unfold register_vote at 1.
-
     rewrite bind_assoc.
     rewrite bind_assoc.
     rewrite bind_rewrite.
@@ -3056,11 +3155,13 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     simpl.
     rewrite bind_assoc.
 
+    (* STUCK .. *)
+
     apply somewhat_let_substitution.
     apply somewhat_substitution.
     rewrite bind_rewrite.
-
     apply somewhat_let_substitution.
+
     progress repeat replace (f_rp_zkp_random _) with (ret_both (WitnessToField (otf ri))) by now apply both_eq.
     progress repeat replace (f_rp_xi _) with (ret_both (WitnessToField (otf xi))) by now apply both_eq.
     progress repeat replace (f_rp_i _) with (ret_both (i : int32)) by now apply both_eq.
@@ -3679,7 +3780,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         rewrite <- conversion_is_true.
         destruct vi ; [ rewrite rmorph1 | rewrite rmorph0 ] ; reflexivity.
     }
-  Qed. (* Fail Timeout 5 Qed. Admitted. (* 319.394 secs *) *)
+  (* Qed. *) Fail Timeout 5 Qed. Admitted. (* 319.394 secs *)
 
   Lemma real_protocol_is_maximum_balloc_secrecy_hiding :
     forall state (i : nat),

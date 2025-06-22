@@ -1,3 +1,4 @@
+
 (* begin details: Imports *)
 From mathcomp Require Import all_ssreflect fingroup.fingroup ssreflect.
 Set Warnings "-notation-overridden,-ambiguous-paths".
@@ -105,10 +106,15 @@ Module HacspecOvnGroupAndFieldPre (HOP : HacspecOvnParameter).
   HB.instance Definition _ : is_eq_rel both_v_G :=
     is_eq_rel.Build (both_v_G) both_equivalence _ _ _.
 
-  #[local] Existing Instance OVN.v_G_t_Group_temp.
-  #[local] Existing Instance OVN.v_A_t_Sized_temp.
-  #[local] Existing Instance OVN.v_A_t_HasActions_temp.
-  #[local] Existing Instance OVN.v_G_t_Sized_temp.
+  #[local] Existing Instance OVN.v_G_t_Group.
+  #[local] Existing Instance OVN.v_A_t_Sized.
+  #[local] Existing Instance OVN.v_A_t_HasActions.
+  #[local] Existing Instance OVN.v_G_t_Sized.
+  #[local] Existing Instance copy.
+  #[local] Existing Instance partial_eq.
+  #[local] Existing Instance is_eq.
+  #[local] Existing Instance clone.
+  #[local] Existing Instance OVN.v_G_t_serialize.
 
   HB.instance Definition _ : is_group_op both_v_G :=
     is_group_op.Build (both_v_G)
@@ -116,6 +122,8 @@ Module HacspecOvnGroupAndFieldPre (HOP : HacspecOvnParameter).
       (f_group_inv)
       (f_group_one)
       (f_g).
+
+  (* Hint Resolve (@f_Z _ copy partial_eq is_eq clone serialize _). *)
 
   Definition both_Z : Type := both f_Z.
   Definition Z_type : Type := f_Z.
@@ -191,10 +199,15 @@ Module Type HacspecOvnGroupAndFieldExtra (HOP : HacspecOvnParameter) (HOGaFP : H
   (* Include GroupAndField. *)
   (* Export GroupAndField. *)
 
-  #[local] Existing Instance GroupAndField.OVN.v_G_t_Group_temp.
-  #[local] Existing Instance GroupAndField.OVN.v_A_t_Sized_temp.
-  #[local] Existing Instance GroupAndField.OVN.v_A_t_HasActions_temp.
-  #[local] Existing Instance GroupAndField.OVN.v_G_t_Sized_temp.
+  #[local] Existing Instance GroupAndField.OVN.v_G_t_Group.
+  #[local] Existing Instance GroupAndField.OVN.v_A_t_Sized.
+  #[local] Existing Instance GroupAndField.OVN.v_A_t_HasActions.
+  #[local] Existing Instance GroupAndField.OVN.v_G_t_Sized.
+  #[local] Existing Instance copy.
+  #[local] Existing Instance partial_eq.
+  #[local] Existing Instance is_eq.
+  #[local] Existing Instance clone.
+  #[local] Existing Instance serialize.
 
   (* Additional requirements and defintions *)
   Parameter pow_base : forall x, f_g_pow x ≈both f_pow f_g x. (* TODO: just have this as a definition *)
@@ -228,10 +241,15 @@ End FieldEquality.
 (* Make an instance of [GroupParam] such that we can use the Schnorr framework in SSProve *)
 Module HacspecGroupParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldParameter HOP) (HOGaFE : HacspecOvnGroupAndFieldExtra HOP HOGaFP) <: GroupParam.
 
-  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Group_temp.
-  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_Sized_temp.
-  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_HasActions_temp.
-  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Sized_temp.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Group.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_Sized.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_HasActions.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Sized.
+  #[local] Existing Instance copy.
+  #[local] Existing Instance partial_eq.
+  #[local] Existing Instance is_eq.
+  #[local] Existing Instance clone.
+  #[local] Existing Instance serialize.
 
   (* The finite group type is the ovn group *)
   Definition gT : finGroupType := HOGaFE.GroupAndField.v_G_is_group.
@@ -325,10 +343,15 @@ Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOv
     reflexivity.
   Qed.
 
-  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Group_temp.
-  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_Sized_temp.
-  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_HasActions_temp.
-  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Sized_temp.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Group.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_Sized.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_HasActions.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Sized.
+  #[local] Existing Instance copy.
+  #[local] Existing Instance partial_eq.
+  #[local] Existing Instance is_eq.
+  #[local] Existing Instance clone.
+  #[local] Existing Instance serialize.
 
   Theorem generator_is_not_one : f_group_one ≈both f_g -> False.
   Proof.
@@ -530,10 +553,15 @@ Module Type HacspecGroupParamAxiom (HOP : HacspecOvnParameter) (HOGaFP : Hacspec
   (* Include GaFP. *)
   (* Export GaFP. *)
 
-  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Group_temp.
-  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_Sized_temp.
-  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_HasActions_temp.
-  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Sized_temp.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Group.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_Sized.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_A_t_HasActions.
+  #[local] Existing Instance HOGaFE.GroupAndField.OVN.v_G_t_Sized.
+  #[local] Existing Instance copy.
+  #[local] Existing Instance partial_eq.
+  #[local] Existing Instance is_eq.
+  #[local] Existing Instance clone.
+  #[local] Existing Instance serialize.
 
   (* Parameter pow_witness_to_field : *)
 
