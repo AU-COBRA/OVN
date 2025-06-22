@@ -24,7 +24,7 @@ Import choice.Choice.Exports.
 
 Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
 
-Require Import Hacspec_ovn_Ovn_traits.
+From OVN Require Import Hacspec_ovn_Ovn_traits.
 Export Hacspec_ovn_Ovn_traits.
 
 Module Type HacspecOvnParameter.
@@ -64,11 +64,23 @@ Module HacspecOvn (HOP : HacspecOvnParameter).
 (** * Generated code *)
 
 
+Equations sub (x : both v_Z) (y : both v_Z) : both v_Z :=
+  sub x y  :=
+    f_add x (f_opp y) : both v_Z.
+Solve All Obligations with now intros ; destruct from_uint_size.
+Fail Next Obligation.
+
 Equations compute_group_element_for_vote (xi : both f_Z) (vote : both 'bool) (g_pow_yi : both v_G) : both v_G :=
   compute_group_element_for_vote xi vote g_pow_yi  :=
     f_prod (f_pow g_pow_yi xi) (f_g_pow (ifb vote
     then f_field_one
     else f_field_zero)) : both v_G.
+Solve All Obligations with now intros ; destruct from_uint_size.
+Fail Next Obligation.
+
+Equations div (x : both v_G) (y : both v_G) : both v_G :=
+  div x y  :=
+    f_prod x (f_group_inv y) : both v_G.
 Solve All Obligations with now intros ; destruct from_uint_size.
 Fail Next Obligation.
 
@@ -488,15 +500,6 @@ Fail Next Obligation.
 Definition receive_OVN_cast_vote (ctx : both t_CastVoteParam) (st : both state_OVN) : both (t_Result ((v_A × state_OVN)) (t_ParseError)) :=
   cast_vote ctx st.
 
-(* #[global] Program Instance t_CastVoteParam_t_HasReceiveContext : t_HasReceiveContext t_CastVoteParam 'unit := *)
-(*   {| f_get := (fun  {_ : _} => (solve_lift (@ret_both (t_ParamType × t_Result _ t_ParseError)) (tt, inr tt)) : _)|}. *)
-(* Solve All Obligations with now intros ; destruct from_uint_size. *)
-(* Fail Next Obligation. *)
-(* #[global] Program Instance t_CastVoteParam_t_Sized : t_Sized t_CastVoteParam := *)
-(*   fun x => *)
-(*     x. *)
-(* Solve All Obligations with now intros ; destruct from_uint_size. *)
-(* Fail Next Obligation. *)
 Equations commit_to_vote (ctx : both t_CastVoteParam) (state : both (t_OvnContractState)) : both (t_Result (v_A × t_OvnContractState) t_ParseError) :=
   commit_to_vote ctx state  :=
     run (letb '(_,out) := f_get (f_parameter_cursor ctx) in
@@ -535,7 +538,7 @@ From Hacspec Require Import ConCertLib.
 Export ConCertLib.
 Definition init_OVN (chain : Chain) (ctx : ContractCallContext) (st : state_OVN) : ResultMonad.result state_OVN t_ParseError :=
   ResultMonad.Ok st.
-Equations init_ovn_contract {v_G : _}  {impl_108907986_ : _} `{ t_Sized v_G} `{ t_Sized impl_108907986_} `{ t_Group v_G} `{ t_HasInitContext impl_108907986_ 'unit} (_ : both impl_108907986_) : both (t_Result (t_OvnContractState) t_Reject) :=
+Equations init_ovn_contract (_ : both 'unit) : both (t_Result (t_OvnContractState) t_Reject) :=
   init_ovn_contract _  :=
     Result_Ok (Build_t_OvnContractState (f_g_pow_xis := repeat f_group_one n) (f_zkp_xis := repeat (Build_t_SchnorrZKPCommit (f_schnorr_zkp_u := f_group_one) (f_schnorr_zkp_z := f_field_zero) (f_schnorr_zkp_c := f_field_zero)) n) (f_commit_vis := repeat f_field_zero n) (f_g_pow_xi_yi_vis := repeat f_group_one n) (f_zkp_vis := repeat (Build_t_OrZKPCommit (f_or_zkp_x := f_group_one) (f_or_zkp_y := f_group_one) (f_or_zkp_a1 := f_group_one) (f_or_zkp_b1 := f_group_one) (f_or_zkp_a2 := f_group_one) (f_or_zkp_b2 := f_group_one) (f_or_zkp_c := f_field_zero) (f_or_zkp_d1 := f_field_zero) (f_or_zkp_d2 := f_field_zero) (f_or_zkp_r1 := f_field_zero) (f_or_zkp_r2 := f_field_zero)) n) (f_tally := ret_both (0 : int32)) (f_round1 := repeat (ret_both (false : 'bool)) n)) : both (t_Result (t_OvnContractState) t_Reject).
 Solve All Obligations with now intros ; destruct from_uint_size.
@@ -624,7 +627,8 @@ Fail Next Obligation.
     x.
 Solve All Obligations with now intros ; destruct from_uint_size.
 Fail Next Obligation.
-#[global] Instance state_OVN_t_HasActions : t_HasActions state_OVN. Admitted.
+#[global] Program Instance state_OVN_t_HasActions : t_HasActions state_OVN :=
+  _ (Build_t_OvnContractState (f_g_pow_xis := repeat f_group_one n) (f_zkp_xis := repeat (Build_t_SchnorrZKPCommit (f_schnorr_zkp_u := f_group_one) (f_schnorr_zkp_z := f_field_zero) (f_schnorr_zkp_c := f_field_zero)) n) (f_commit_vis := repeat f_field_zero n) (f_g_pow_xi_yi_vis := repeat f_group_one n) (f_zkp_vis := repeat (Build_t_OrZKPCommit (f_or_zkp_x := f_group_one) (f_or_zkp_y := f_group_one) (f_or_zkp_a1 := f_group_one) (f_or_zkp_b1 := f_group_one) (f_or_zkp_a2 := f_group_one) (f_or_zkp_b2 := f_group_one) (f_or_zkp_c := f_field_zero) (f_or_zkp_d1 := f_field_zero) (f_or_zkp_d2 := f_field_zero) (f_or_zkp_r1 := f_field_zero) (f_or_zkp_r2 := f_field_zero)) n) (f_tally := ret_both (0 : int32)) (f_round1 := repeat (ret_both (false : 'bool)) n)).
 Solve All Obligations with now intros ; destruct from_uint_size.
 Fail Next Obligation.
 Equations receive_OVN (chain : Chain) (ctx : ContractCallContext) (st : state_OVN) (msg : Datatypes.option Msg_OVN) : ResultMonad.result (state_OVN * list ActionBody) t_ParseError :=

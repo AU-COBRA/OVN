@@ -58,7 +58,7 @@ sed -i "s/[(][*] From Jasmin Require Import word. [*][)]/From SSProve.Crypt Requ
 # Notation v_Z := f_Z.
 # ```
 
-sed -i -z "s/Require Import Crate_Ovn_traits.\nExport Crate_Ovn_traits./Require Import Hacspec_ovn_Ovn_traits.\nExport Hacspec_ovn_Ovn_traits.\n\nModule Type HacspecOvnParameter.\n  (** Move arguments to context *)\n  Parameter (v_G : choice_type).\n\n  Parameter (v_G_t_Group : t_Group v_G).\n\n  Parameter (v_A : choice_type).\n  Parameter (v_A_t_Sized : t_Sized v_A).\n\n  Parameter (v_A_t_HasActions : t_HasActions v_A).\n\n  Parameter (n : both uint_size).\n  Parameter (n_pos : Positive (is_pure n)).\n\n  (* Extra from code *)\n  Parameter (v_G_t_Sized : t_Sized v_G).\n\n  Notation \"'v_Z'\" := f_Z : hacspec_scope.\nEnd HacspecOvnParameter.\n\nModule HacspecOvn (HOP : HacspecOvnParameter).\n  Include HOP.\n\n  Existing Instance v_G_t_Group.\n  Existing Instance v_A_t_Sized.\n  Existing Instance v_A_t_HasActions.\n  Existing Instance v_G_t_Sized.\n\n  (* TODO: Cannot find instance in hacspec lib? *)\n  Existing Instance copy.\n  Existing Instance partial_eq.\n  Existing Instance is_eq.\n  Existing Instance clone.\n  Existing Instance serialize.\n(** * Generated code *)\n/g" extraction/Hacspec_ovn_Ovn_group.v
+sed -i -z "s/Require Import Crate_Ovn_traits.\nExport Crate_Ovn_traits./From OVN Require Import Hacspec_ovn_Ovn_traits.\nExport Hacspec_ovn_Ovn_traits.\n\nModule Type HacspecOvnParameter.\n  (** Move arguments to context *)\n  Parameter (v_G : choice_type).\n\n  Parameter (v_G_t_Group : t_Group v_G).\n\n  Parameter (v_A : choice_type).\n  Parameter (v_A_t_Sized : t_Sized v_A).\n\n  Parameter (v_A_t_HasActions : t_HasActions v_A).\n\n  Parameter (n : both uint_size).\n  Parameter (n_pos : Positive (is_pure n)).\n\n  (* Extra from code *)\n  Parameter (v_G_t_Sized : t_Sized v_G).\n\n  Notation \"'v_Z'\" := f_Z : hacspec_scope.\nEnd HacspecOvnParameter.\n\nModule HacspecOvn (HOP : HacspecOvnParameter).\n  Include HOP.\n\n  Existing Instance v_G_t_Group.\n  Existing Instance v_A_t_Sized.\n  Existing Instance v_A_t_HasActions.\n  Existing Instance v_G_t_Sized.\n\n  (* TODO: Cannot find instance in hacspec lib? *)\n  Existing Instance copy.\n  Existing Instance partial_eq.\n  Existing Instance is_eq.\n  Existing Instance clone.\n  Existing Instance serialize.\n(** * Generated code *)\n/g" extraction/Hacspec_ovn_Ovn_group.v
 
 # List of replacements or removed objects.
 #   (* {v_Z : _} `{ t_Sized v_Z} `{ t_Field v_Z} *)
@@ -74,6 +74,10 @@ sed -i "s/ {v_G : _} {n : both uint_size} \`{ t_Sized v_G} \`{ t_Group v_G}//g" 
 #   (* t_OvnContractState v_G (both uint_size) *)
 sed -i "s/t_OvnContractState v_G (both uint_size)/t_OvnContractState/g" extraction/Hacspec_ovn_Ovn_group.v
 #   (*  {v_G : _} {n : both uint_size} {v_A : _} {impl_574521470_ : _} `{ t_Sized v_G} `{ t_Sized v_A} `{ t_Sized impl_574521470_} `{ t_Group v_G} `{ t_HasActions v_A} `{ t_HasReceiveContext impl_574521470_ 'unit} *)
+sed -i "s/ {v_G : _} {n : both uint_size} {impl_108907986_ : _} \`{ t_Sized v_G} \`{ t_Sized impl_108907986_} \`{ t_Group v_G} \`{ t_HasInitContext impl_108907986_ 'unit}//g" extraction/Hacspec_ovn_Ovn_group.v
+#   (* {v_G : _}  {impl_108907986_ : _} `{ t_Sized v_G} `{ t_Sized impl_108907986_} `{ t_Group v_G} `{ t_HasInitContext impl_108907986_ 'unit} *)
+sed -i "s/impl_108907986_/'unit/g" extraction/Hacspec_ovn_Ovn_group.v
+#   (* impl_108907986_ *)
 sed -i "s/ {v_G : _} {n : both uint_size} {v_A : _} {impl_574521470_ : _} \`{ t_Sized v_G} \`{ t_Sized v_A} \`{ t_Sized impl_574521470_} \`{ t_Group v_G} \`{ t_HasActions v_A} \`{ t_HasReceiveContext impl_574521470_ 'unit}//g" extraction/Hacspec_ovn_Ovn_group.v
 #   (* impl_574521470_ -> t_CastVoteParam or t_RegisterParam or t_TallyParameter *)
 sed -i "s/cast_vote (ctx : both impl_574521470_)/cast_vote (ctx : both t_CastVoteParam)/" extraction/Hacspec_ovn_Ovn_group.v
@@ -83,7 +87,6 @@ sed -i "s/tally_votes (_ : both impl_574521470_)/tally_votes (_ : both t_TallyPa
 
 # # Add instance (Should be done via attributes)
 # sed -i -z "s/Equations cast_vote/(* Automatically generated outline, manually filled in *)\n  #[global] Program Instance t_CastVoteParam_t_HasReceiveContext : t_HasReceiveContext t_CastVoteParam 'unit :=\n    {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result t_CastVoteParam t_ParseError)) (tt, inl ctx)) : _)|}.\n  Fail Next Obligation.\n  #[global] Program Instance t_CastVoteParam_t_Sized : t_Sized t_CastVoteParam :=\n    fun x =>\n      x.\n  Fail Next Obligation.\n\nEquations cast_vote/g" extraction/Hacspec_ovn_Ovn_group.v
-
 
 # sed -i -z "s/Equations register_vote/(* Automatically generated outline, manually filled in *)\n#[global] Program Instance t_RegisterParam_t_HasReceiveContext : t_HasReceiveContext t_RegisterParam 'unit :=\n    {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result t_RegisterParam t_ParseError)) (tt, inl ctx)) : _)|}.\n  Fail Next Obligation.\n  #[global] Program Instance t_RegisterParam_t_Sized : t_Sized t_RegisterParam :=\n    fun x =>\n      x.\n  Fail Next Obligation.\n\nEquations register_vote/g" extraction/Hacspec_ovn_Ovn_group.v
 
@@ -125,5 +128,7 @@ sed -i "s/Ctx/_/g" extraction/Hacspec_ovn_Ovn_group.v
 
 
 sed -i -z "s/Fail Next Obligation./Solve All Obligations with now intros ; destruct from_uint_size.\nFail Next Obligation./g" extraction/Hacspec_ovn_Ovn_group.v
+
+sed -i -z "s/Admitted/_ (Build_t_OvnContractState (f_g_pow_xis := repeat f_group_one n) (f_zkp_xis := repeat (Build_t_SchnorrZKPCommit (f_schnorr_zkp_u := f_group_one) (f_schnorr_zkp_z := f_field_zero) (f_schnorr_zkp_c := f_field_zero)) n) (f_commit_vis := repeat f_field_zero n) (f_g_pow_xi_yi_vis := repeat f_group_one n) (f_zkp_vis := repeat (Build_t_OrZKPCommit (f_or_zkp_x := f_group_one) (f_or_zkp_y := f_group_one) (f_or_zkp_a1 := f_group_one) (f_or_zkp_b1 := f_group_one) (f_or_zkp_a2 := f_group_one) (f_or_zkp_b2 := f_group_one) (f_or_zkp_c := f_field_zero) (f_or_zkp_d1 := f_field_zero) (f_or_zkp_d2 := f_field_zero) (f_or_zkp_r1 := f_field_zero) (f_or_zkp_r2 := f_field_zero)) n) (f_tally := ret_both (0 : int32)) (f_round1 := repeat (ret_both (false : 'bool)) n))/g" extraction/Hacspec_ovn_Ovn_group.v
 
 echo "End HacspecOvn." >> extraction/Hacspec_ovn_Ovn_group.v

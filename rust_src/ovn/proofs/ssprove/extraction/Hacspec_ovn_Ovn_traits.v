@@ -54,13 +54,3 @@ Class t_Group (v_Self : _) `{ t_Copy v_Self} `{ t_PartialEq v_Self v_Self} `{ t_
   f_group_inv : (both v_Self -> both v_Self) ;
   f_hash : (both (t_Vec v_Self t_Global) -> both f_Z) ;
 }.
-
-Equations div {v_G : _} `{ t_Sized v_G} `{ t_Group v_G} (x : both v_G) (y : both v_G) : both v_G :=
-  div x y  :=
-    f_prod x (f_group_inv y) : both v_G.
-Fail Next Obligation.
-
-Equations sub {v_Z : _} `{ t_Sized v_Z} `{ t_Field v_Z} (x : both v_Z) (y : both v_Z) : both v_Z :=
-  sub x y  :=
-    f_add x (f_opp y) : both v_Z.
-Fail Next Obligation.

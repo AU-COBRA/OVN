@@ -39,15 +39,3 @@ pub trait Group:
 
     fn hash(x: Vec<Self>) -> Self::Z;
 }
-
-////////////////////////
-// Useful definitions //
-////////////////////////
-
-pub fn sub<Z: Field>(x: Z, y: Z) -> Z {
-    Z::add(x, Z::opp(y))
-}
-
-pub fn div<G: Group>(x: G, y: G) -> G {
-    G::prod(x, G::group_inv(y))
-}
