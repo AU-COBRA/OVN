@@ -11,7 +11,7 @@ pub trait Field:
 {
     fn q() -> Self;
 
-    fn random_field_elem(random: u32) -> Self;
+    fn random_field_elem(random: u128) -> Self;
 
     fn field_zero() -> Self;
     fn field_one() -> Self;
