@@ -1,8 +1,8 @@
 
 // #[exclude]
-use concordium_std::*;
+use hacspec_concordium::*;
 // #[exclude]
-use concordium_std_derive::*;
+use hacspec_concordium_derive::*;
 
 #[cfg(test)]
 extern crate quickcheck;
@@ -131,7 +131,7 @@ pub fn sum_to_zero_z18446744073709551557() {
 //     sum_to_zero::<Group_curve, 55>()
 // }
 
-#[derive(Copy, Clone, concordium_std::Serial, concordium_std::Deserial)]
+#[derive(Copy, Clone, hacspec_concordium::Serial, hacspec_concordium::Deserial)]
 pub struct ElemOfEach<G : Group> {
     i : u32,
     z : G::Z,
@@ -144,7 +144,7 @@ pub fn test_params_of_group<
     A: HasActions,
     >() {
     // Setup the context
-    let mut ctx = concordium_std::test_infrastructure::ReceiveContextTest::empty();
+    let mut ctx = hacspec_concordium::test_infrastructure::ReceiveContextTest::empty();
     let parameter = ElemOfEach::<G> {
         i: random(),
         z: G::Z::random_field_elem(random()),
@@ -164,7 +164,7 @@ pub fn test_params_of_group<
 
 #[test]
 pub fn test_params_of_group_z89() {
-    test_params_of_group::<g_z_89, concordium_std::test_infrastructure::ActionsTree>()
+    test_params_of_group::<g_z_89, hacspec_concordium::test_infrastructure::ActionsTree>()
 }
 
 // #[test]
@@ -187,7 +187,8 @@ pub fn test_correctness<G: Group, const n: usize, A: HasActions>(
     // Setup the context
     let mut ctx : test_infrastructure::ContextTest<_> = test_infrastructure::ReceiveContextTest::empty();
 
-    let mut state: OvnContractState<G, n> = init_ovn_contract().unwrap();
+    let init_ctx : test_infrastructure::ContextTest<_> = test_infrastructure::InitContextTest::empty();
+    let mut state: OvnContractState<G, n> = init_ovn_contract(&init_ctx).unwrap();
 
     for i in 0..n {
         let parameter = RegisterParam::<G::Z> {
@@ -197,7 +198,7 @@ pub fn test_correctness<G: Group, const n: usize, A: HasActions>(
         };
         let parameter_bytes = to_bytes(&parameter);
         let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
-        ctx.set_parameter(pb);
+        ctx = ctx.set_parameter(pb);
         (_, state) =
             register_vote::<G, n, A>(&ctx, state)
                 .unwrap();
@@ -214,7 +215,7 @@ pub fn test_correctness<G: Group, const n: usize, A: HasActions>(
         };
         let parameter_bytes = to_bytes(&parameter);
         let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
-        ctx.set_parameter(pb);
+        ctx = ctx.set_parameter(pb);
         (_, state) =
             commit_to_vote::<G, n, A>(&ctx, state)
                 .unwrap();
@@ -231,16 +232,16 @@ pub fn test_correctness<G: Group, const n: usize, A: HasActions>(
         };
         let parameter_bytes = to_bytes(&parameter);
         let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
-        ctx.set_parameter(pb);
+        ctx = ctx.set_parameter(pb);
         (_, state) =
             cast_vote::<G, n, A>(&ctx, state).unwrap();
     }
 
     let parameter = TallyParameter {};
     let parameter_bytes = to_bytes(&parameter);
-    ctx.set_parameter(&parameter_bytes);
+    ctx = ctx.set_parameter(&parameter_bytes);
 
-    (_, state) = tally_votes::<G, n, A>(ctx, state).unwrap();
+    (_, state) = tally_votes::<G, n, A>(&ctx, state).unwrap();
 
     let mut count = 0u32;
     for v in votes {
@@ -279,7 +280,7 @@ fn randomized_full_test<G: Group, const n: usize>() -> bool {
         cvp_zkp_random_ds2[i] = G::Z::random_field_elem(random());
     }
 
-    test_correctness::<G, n, concordium_std::test_infrastructure::ActionsTree>(
+    test_correctness::<G, n, hacspec_concordium::test_infrastructure::ActionsTree>(
         votes,
         xis,
         rp_zkp_randoms,
@@ -334,7 +335,8 @@ pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
     let mut ctx : test_infrastructure::ContextTest<_> = test_infrastructure::ReceiveContextTest::empty();
     let mut did_leak = false;
 
-    let mut state: OvnContractState<G, n> = init_ovn_contract().unwrap();
+    let init_ctx : test_infrastructure::ContextTest<_> = test_infrastructure::InitContextTest::empty();
+    let mut state: OvnContractState<G, n> = init_ovn_contract(&init_ctx).unwrap();
 
     for i in 0..n-1 {
         let parameter = RegisterParam::<G::Z> {
@@ -344,7 +346,7 @@ pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
         };
         let parameter_bytes = to_bytes(&parameter);
         let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
-        ctx.set_parameter(pb);
+        ctx = ctx.set_parameter(pb);
         (_, state) =
             register_vote::<G, n, A>(&ctx, state)
                 .unwrap();
@@ -381,7 +383,7 @@ pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
         };
         let parameter_bytes = to_bytes(&parameter);
         let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
-        ctx.set_parameter(pb);
+        ctx = ctx.set_parameter(pb);
         (_, state) =
             register_vote::<G, n, A>(&ctx, state)
                 .unwrap();
@@ -398,7 +400,7 @@ pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
         };
         let parameter_bytes = to_bytes(&parameter);
         let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
-        ctx.set_parameter(pb);
+        ctx = ctx.set_parameter(pb);
         (_, state) =
             commit_to_vote::<G, n, A>(&ctx, state)
                 .unwrap();
@@ -415,7 +417,7 @@ pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
         };
         let parameter_bytes = to_bytes(&parameter);
         let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
-        ctx.set_parameter(pb);
+        ctx = ctx.set_parameter(pb);
         (_, state) =
             cast_vote::<G, n, A>(&ctx, state).unwrap();
     }
@@ -434,9 +436,9 @@ pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
 
     let parameter = TallyParameter {};
     let parameter_bytes = to_bytes(&parameter);
-    ctx.set_parameter(&parameter_bytes);
+    ctx = ctx.set_parameter(&parameter_bytes);
 
-    (_, state) = tally_votes::<G, n, A>(ctx, state).unwrap();
+    (_, state) = tally_votes::<G, n, A>(&ctx, state).unwrap();
 
     let mut count = 0u32;
     for v in votes {
@@ -478,7 +480,7 @@ fn full_attack_test<G: Group, const n: usize, const order: u128>() -> bool {
 
     let target = random::<usize>() % n;
 
-    test_attack_g_pow_yi_zero::<G, n, concordium_std::test_infrastructure::ActionsTree>(
+    test_attack_g_pow_yi_zero::<G, n, hacspec_concordium::test_infrastructure::ActionsTree>(
         votes,
         xis,
         rp_zkp_randoms,
@@ -526,7 +528,8 @@ pub fn test_attack_2_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
     let mut ctx : test_infrastructure::ContextTest<_> = test_infrastructure::ReceiveContextTest::empty();
     let mut did_leak = false;
 
-    let mut state: OvnContractState<G, n> = init_ovn_contract().unwrap();
+    let init_ctx : test_infrastructure::ContextTest<_> = test_infrastructure::InitContextTest::empty();
+    let mut state: OvnContractState<G, n> = init_ovn_contract(&init_ctx).unwrap();
 
     for i in 0..n-1 {
         let parameter = RegisterParam::<G::Z> {
@@ -536,7 +539,7 @@ pub fn test_attack_2_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
         };
         let parameter_bytes = to_bytes(&parameter);
         let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
-        ctx.set_parameter(pb);
+        ctx = ctx.set_parameter(pb);
         (_, state) =
             register_vote::<G, n, A>(&ctx, state)
                 .unwrap();
@@ -581,7 +584,7 @@ pub fn test_attack_2_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
             };
             let parameter_bytes = to_bytes(&parameter);
             let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
-            ctx.set_parameter(pb);
+            ctx = ctx.set_parameter(pb);
             (_, state) =
                 register_vote::<G, n, A>(&ctx, state)
                 .unwrap();
@@ -600,7 +603,7 @@ pub fn test_attack_2_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
         };
         let parameter_bytes = to_bytes(&parameter);
         let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
-        ctx.set_parameter(pb);
+        ctx = ctx.set_parameter(pb);
         (_, state) =
             commit_to_vote::<G, n, A>(&ctx, state)
                 .unwrap();
@@ -617,7 +620,7 @@ pub fn test_attack_2_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
         };
         let parameter_bytes = to_bytes(&parameter);
         let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
-        ctx.set_parameter(pb);
+        ctx = ctx.set_parameter(pb);
         (_, state) =
             cast_vote::<G, n, A>(&ctx, state).unwrap();
     }
@@ -636,9 +639,9 @@ pub fn test_attack_2_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
 
     let parameter = TallyParameter {};
     let parameter_bytes = to_bytes(&parameter);
-    ctx.set_parameter(&parameter_bytes);
+    ctx = ctx.set_parameter(&parameter_bytes);
 
-    (_, state) = tally_votes::<G, n, A>(ctx, state).unwrap();
+    (_, state) = tally_votes::<G, n, A>(&ctx, state).unwrap();
 
     let mut count = 0u32;
     for v in votes {
@@ -678,9 +681,7 @@ fn full_attack_2_test<G: Group, const n: usize, const order: u128>() -> bool {
         cvp_zkp_random_ds2[i] = G::Z::random_field_elem(random());
     }
 
-    let target = random::<usize>() % n;
-
-    test_attack_2_g_pow_yi_zero::<G, n, concordium_std::test_infrastructure::ActionsTree>(
+    test_attack_2_g_pow_yi_zero::<G, n, hacspec_concordium::test_infrastructure::ActionsTree>(
         votes,
         xis,
         rp_zkp_randoms,
@@ -698,16 +699,12 @@ fn full_attack_2_test<G: Group, const n: usize, const order: u128>() -> bool {
 fn test_attack_2_g_pow_yi_zero_z89() {
     QuickCheck::new()
         .tests(100)
-        .quickcheck(full_attack_test::<g_z_89, 55, 89u128> as fn() -> bool)
+        .quickcheck(full_attack_2_test::<g_z_89, 55, 89u128> as fn() -> bool)
 }
 
 #[test]
 fn test_attack_2_g_pow_yi_zero_z18446744073709551557() {
     QuickCheck::new()
         .tests(100)
-        .quickcheck(full_attack_test::<g_z_18446744073709551557, 555, 18446744073709551557u128> as fn() -> bool)
+        .quickcheck(full_attack_2_test::<g_z_18446744073709551557, 555, 18446744073709551557u128> as fn() -> bool)
 }
-
-
-
-
