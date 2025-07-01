@@ -1,0 +1,36 @@
+(library
+ (name lib)
+ (modules lib)
+ (wrapped false)
+ (libraries
+  hax_engine
+  fstar_backend
+  coq_backend
+  ssprove_backend
+  easycrypt_backend
+  proverif_backend
+  logs
+  core)
+ (preprocess
+  (pps
+   ppx_yojson_conv
+   ppx_deriving.show
+   ppx_deriving.eq
+   ppx_matches
+   ppx_string)))
+
+(executable
+ (public_name hax-engine)
+ (name native_driver)
+ (modules native_driver)
+ (libraries lib))
+
+; The following line is commented: by default, we don't want to
+; generate javascript.
+
+; (include dune-js)
+
+(env
+ (_
+  (flags
+   (:standard -g -warn-error -A -warn-error +8 -w -33))))

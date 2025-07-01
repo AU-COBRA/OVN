@@ -62,7 +62,7 @@ Instance t_z_89_t_Serialize : t_Serialize t_z_89_ := _.
 
 #[global] Program Instance t_z_89__t_Field : t_Field t_z_89_ :=
   let f_q := solve_lift (Build_t_z_89_ (f_z_val := ret_both (89 : int8))) : both t_z_89_ in
-  let f_random_field_elem := fun  (random : both int32) => solve_lift (Build_t_z_89_ (f_z_val := (cast_int (WS2 := _) random) .% ((f_z_val f_q) .- (ret_both (1 : int8))))) : both t_z_89_ in
+  let f_random_field_elem := fun  (random : both int128) => solve_lift (Build_t_z_89_ (f_z_val := (cast_int (WS2 := _) random) .% ((f_z_val f_q) .- (ret_both (1 : int8))))) : both t_z_89_ in
   let f_field_zero := solve_lift (Build_t_z_89_ (f_z_val := ret_both (0 : int8))) : both t_z_89_ in
   let f_field_one := solve_lift (Build_t_z_89_ (f_z_val := ret_both (1 : int8))) : both t_z_89_ in
   let f_add := fun  (x : both t_z_89_) (y : both t_z_89_) => letb q___ := (f_z_val f_q) .- (ret_both (1 : int8)) in

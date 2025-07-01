@@ -1,0 +1,34 @@
+[package]
+name = "hax-frontend-exporter"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+edition.workspace = true
+repository.workspace = true
+readme.workspace = true
+description = "Provides mirrors of the algebraic data types used in the Rust compilers, removing indirections and inlining various pieces of information."
+
+[package.metadata.rust-analyzer]
+rustc_private=true
+
+[dependencies]
+hax-adt-into.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+itertools.workspace = true
+hax-frontend-exporter-options.workspace = true
+tracing.workspace = true
+paste = "1.0.11"
+extension-traits = "1.0.1"
+lazy_static = "1.4.0"
+bincode.workspace = true
+
+[features]
+default = ["rustc"]
+extract_names_mode = []
+# Enables the conversion bridges from rustc types (and AST) to the
+# ones defined in this crate. Enabling `rustc` adds a dependency to
+# `librustc_driver`.
+rustc = []

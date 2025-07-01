@@ -1,0 +1,87 @@
+(library
+ (public_name hax-engine)
+ (name hax_engine)
+ (libraries
+  yojson
+  non_empty_list
+  pprint
+  ppx_deriving_yojson.runtime
+  cmdliner
+  fstar_surface_ast
+  base
+  core
+  logs
+  re
+  ocamlgraph)
+ (preprocessor_deps
+  ; `ppx_inline` is used on the `Subtype` module, thus we need it at PPX time
+  (file subtype.ml)
+  (source_tree phases))
+ (preprocess
+  (pps
+   ppx_yojson_conv
+   ppx_sexp_conv
+   ppx_compare
+   ppx_hash
+   ppx_deriving.show
+   ppx_deriving.eq
+   ppx_string
+   ppx_inline
+   ppx_phases_index
+   ppx_generate_features
+   ppx_functor_application
+   ppx_enumerate
+   ppx_matches)))
+
+(include_subdirs unqualified)
+
+(rule
+ (alias universe-hash)
+ (target universe-hash)
+ (deps
+  (:universe_hash ../utils/universe-hash.sh)
+  (universe))
+ (action
+  (with-stdout-to
+   universe-hash
+   (run bash %{universe_hash}))))
+
+(rule
+ (target ast_visitors.ml)
+ (deps
+  (:ast ast.ml))
+ (action
+  (with-stdout-to
+   ast_visitors.ml
+   (with-stdin-from
+    %{ast}
+    (run generate_visitors)))))
+
+(rule
+ (target concrete_ident_generated.ml)
+ (deps
+  (alias universe-hash)
+  (env_var HAX_ENGINE_NAMES_EXTRACT_BINARY))
+ (action
+  (with-stdout-to
+   concrete_ident_generated.ml
+   (run %{env:HAX_ENGINE_NAMES_EXTRACT_BINARY=hax-engine-names-extract}))))
+
+(rule
+ (target types.ml)
+ (deps
+  (alias universe-hash)
+  (env_var HAX_JSON_SCHEMA_EXPORTER_BINARY)
+  (:ocaml_of_json_schema
+   ../utils/ocaml_of_json_schema/ocaml_of_json_schema.js))
+ (action
+  (with-stdout-to
+   types.ml
+   (pipe-stdout
+    (run %{env:HAX_JSON_SCHEMA_EXPORTER_BINARY=hax-export-json-schemas})
+    (run node %{ocaml_of_json_schema} - -)))))
+
+(env
+ (_
+  (flags
+   (:standard -g -warn-error "+A" -w "-17-30-56-32"))))

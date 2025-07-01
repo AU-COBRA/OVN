@@ -1,0 +1,31 @@
+[package]
+name = "hax-driver"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+edition.workspace = true
+repository.workspace = true
+readme.workspace = true
+description = "The custom rustc driver used by hax."
+
+[package.metadata.rust-analyzer]
+rustc_private = true
+
+[[bin]]
+path = "src/driver.rs"
+name = "driver-hax-frontend-exporter"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+clap.workspace = true
+colored.workspace = true
+hax-frontend-exporter = {workspace = true, features = ["rustc"]}
+hax-types = {workspace = true, features = ["rustc"]}
+hax-frontend-exporter-options.workspace = true
+hax-lib-macros-types.workspace = true
+itertools.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-tree.workspace = true

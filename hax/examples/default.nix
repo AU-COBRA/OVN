@@ -1,0 +1,50 @@
+{
+  craneLib,
+  stdenv,
+  lib,
+  hax,
+  fstar,
+  hacl-star,
+  hax-env,
+  jq,
+}: let
+  matches = re: path: !builtins.isNull (builtins.match re path);
+  commonArgs = {
+    version = "0.0.1";
+    src = lib.cleanSourceWith {
+      src = craneLib.path ./..;
+      filter = path: type:
+        # We include only certain files. FStar files under the example
+        # directory are listed out.
+        (   matches ".*(Makefile|.*[.](rs|toml|lock|diff|fsti?))$" path
+        && !matches ".*examples/.*[.]fsti?$" path
+        ) || ("directory" == type);
+    };
+    doCheck = false;
+    cargoVendorDir = craneLib.vendorMultipleCargoDeps {
+      cargoLockList = [
+        ./Cargo.lock
+        ../Cargo.lock
+      ];
+    };
+  };
+  cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+in
+  craneLib.mkCargoDerivation (commonArgs
+    // {
+      inherit cargoArtifacts;
+      pname = "hax-examples";
+      doCheck = false;
+      buildPhaseCargoCommand = ''
+        cd examples
+        eval $(hax-env)
+        export CACHE_DIR=$(mktemp -d)
+        export HINT_DIR=$(mktemp -d)
+        export SHELL=${stdenv.shell}
+        make clean # Should be a no-op (see `filter` above)
+        # Need to inject `HAX_VANILLA_RUSTC=never` because of #472
+        sed -i "s/make -C limited-order-book/HAX_VANILLA_RUSTC=never make -C limited-order-book/g" Makefile
+        make
+      '';
+      buildInputs = [hax hax-env fstar jq];
+    })

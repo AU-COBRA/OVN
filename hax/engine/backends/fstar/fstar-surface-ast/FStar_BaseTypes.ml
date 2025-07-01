@@ -1,0 +1,10 @@
+type char   = FStar_Char.char[@@deriving yojson,show]
+type float  = Base.Float.t
+type double = Base.Float.t
+type byte   = Base.Int.t
+type int8   = Stdint.Int8.t
+type uint8  = Stdint.Uint8.t
+type int16   = Stdint.Int16.t
+type uint16  = Stdint.Uint16.t
+type int32  = Stdint.Int32.t
+type int64  = Stdint.Int64.t

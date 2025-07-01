@@ -1,0 +1,18 @@
+(library
+ (name hacspeclib_macro_parser)
+ (package hax-engine)
+ (libraries yojson angstrom)
+ (preprocess
+  (pps
+   ppx_yojson_conv
+   ppx_sexp_conv
+   ppx_compare
+   ppx_hash
+   ppx_deriving.show
+   ppx_deriving.eq
+   ppx_matches)))
+
+(env
+ (_
+  (flags
+   (:standard -warn-error "-A+8" -w "-17-7-30-56-32"))))

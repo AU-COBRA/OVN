@@ -1,0 +1,12 @@
+(library
+ (name fstar_surface_ast)
+ (package hax-engine)
+ (libraries batteries stdint ppxlib menhirLib pprint base)
+ (wrapped false)
+ (preprocess
+  (pps ppx_deriving.show ppx_deriving_yojson sedlex.ppx)))
+
+(env
+ (_
+  (flags
+   (:standard -warn-error -A -warn-error +8))))

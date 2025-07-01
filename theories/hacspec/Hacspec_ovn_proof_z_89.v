@@ -86,6 +86,8 @@ Module OVN_Z89 <: HacspecOvnParameter.
   Definition v_A_t_HasActions : t_HasActions v_A := {| f_accept := ret_both tt |}.
 
   Definition n : both uint_size := ret_both 55.
+  Instance n_pos : Positive (is_pure n).
+  Proof. easy. Qed.
 
   Definition v_G_t_Sized : t_Sized v_G := id.
 End OVN_Z89.
@@ -97,331 +99,531 @@ Module OVN_GroupAndFieldParameter_Z89 <: HacspecOvnGroupAndFieldParameter OVN_Z8
   From mathcomp Require Import ring.
   From mathcomp Require Import zify.
 
+  Print HacspecOvnGroupAndFieldPre_both_v_G__canonical__Hacspec_ovn_group_and_field_group_op.
+  Goal True.
+    epose HacspecOvnGroupAndFieldPre_both_v_G__canonical__Hacspec_ovn_group_and_field_group_op.
+    destruct t.
+    destruct class.
+    destruct Hacspec_ovn_group_and_field_is_group_op_mixin.
+    epose HacspecOvnGroupAndFieldPre_both_v_G__canonical__Hacspec_ovn_group_and_field_eqR.
+    destruct t.
+    destruct class.
+    destruct Hacspec_ovn_group_and_field_is_eq_rel_mixin.
+    reflexivity.
+  Qed.
+
+  (* Lemma (forall (x y z : both int8), (x .* y .* z) = (x .* (y .* z))). *)
+  (*     { *)
+  (*       clear -H_assoc_through_bind ; intros. *)
+
+  (*       unfold ".*" at 1. *)
+  (*       unfold lift2_both at 1. *)
+  (*       simpl. *)
+
+  (*       unfold ".*" at 1. *)
+  (*       unfold lift2_both at 1. *)
+  (*       simpl. *)
+
+  (*       unfold ".*" at 1. *)
+  (*       unfold lift2_both at 1. *)
+  (*       simpl. *)
+
+  (*       unfold ".*" at 1. *)
+  (*       unfold lift2_both at 1. *)
+  (*       simpl. *)
+
+  (*       rewrite H_assoc_through_bind ; [ reflexivity | ]. *)
+  (*       clear ; intros. *)
+  (*       unfold Hacspec_Lib_Pre.int_mul. *)
+
+  (*       now rewrite mulwA. *)
+  (*     } *)
+
+  (* Any both type has a setoid lowering structure, as we have pointwise equality on [is_pure] *)
+  
+  (* HB.instance Definition _ : is_setoid_lower both_v_G := *)
+  (*   is_setoid_lower.Build both_v_G v_G_type (fun x => is_pure x) ret_both ret_both_is_pure_cancel (fun x => erefl)  (fun x y H => proj1 both_equivalence_is_pure_eq H)  (fun x y H => both_eq_fun_ext _ _ _). *)
+
+  (* Any both type has a setoid lowering structure, as we have pointwise equality on [is_pure] *)
+  HB.instance Definition _ : is_setoid_lower both_v_G :=
+    is_setoid_lower.Build both_v_G v_G_type (fun x => is_pure x) ret_both ret_both_is_pure_cancel (fun x => erefl)  (fun x y H => proj1 both_equivalence_is_pure_eq H)  (fun x y H => both_eq_fun_ext _ _ _).
+
+  HB.instance Definition _ : setoid_lower.axioms_ both_v_G := _.
+  (* Lemma setoid_lower : lower_rel. *)
+  (* Proof. *)
+  (*   destruct HB_unnamed_factory_8. *)
+  (*   refine {| *)
+  (*       setoid_lower.sort := both_v_G ; *)
+  (*       setoid_lower.class := *)
+  (*         {| *)
+  (*           setoid_lower.Hacspec_ovn_group_and_field_is_eq_rel_mixin := _ ; *)
+  (*           setoid_lower.Hacspec_ovn_group_and_field_is_setoid_lower_mixin := HB_unnamed_factory_8 *)
+  (*         |} *)
+  (*     |}. *)
+  (* Qed. *)
+
+  (* Lemma associative_f_prod : forall (A : choice_type), associative (fun (x y : A) => is_pure (lift2_both f_prod)). *)
+  (* Proof. *)
+  (*   intros x y z. *)
+  (*   unfold f_prod. *)
+  (*   cbn. *)
+  (*   repeat unfold f_z_val at 1 *)
+  (*   ;repeat unfold let_both at 1 *)
+  (*   ;repeat unfold Build_t_z_89_ at 1. *)
+  (*   rewrite !Build_t_g_z_89__equation_1. *)
+  (*   cbn. *)
+  (*   reflexivity. *)
+
+  Lemma associative_through_bind :
+    forall {A}
+      (x : both A) (y : both A) (z : both A) (f : A -> A -> A),
+      (associative f) ->
+      (bind_both
+         (bind_both x (λ x', bind_both y (fun y' => ret_both (f x' y'))))
+         (λ xy', bind_both z (fun z' => ret_both (f xy' z')))) =
+        (bind_both x (λ x', bind_both
+                              (bind_both y (λ y', bind_both z (fun z' => ret_both (f y' z'))))
+                              (fun yz' => ret_both (f x' yz')))).
+  Proof.
+    intros.
+    apply both_eq.
+    unfold bind_both ; simpl.
+    unfold bind_raw_both ; simpl.
+    rewrite H.
+    f_equal.
+    repeat setoid_rewrite bind_assoc.
+    repeat setoid_rewrite bind_rewrite.
+    setoid_rewrite H.
+    reflexivity.
+  Qed.
+
+  Lemma associative_lift : forall {A : choice_type} {op : A -> A -> A},
+      associative op ->
+      associative (@lift2_both A A A op).
+  Proof.
+    intros A op H x y z.
+
+    (* unfold ".*" at 1. *)
+    unfold lift2_both at 1.
+    simpl.
+
+    (* unfold ".*" at 1. *)
+    unfold lift2_both at 1.
+    simpl.
+
+    (* unfold ".*" at 1. *)
+    unfold lift2_both at 1.
+    simpl.
+
+    (* unfold ".*" at 1. *)
+    unfold lift2_both at 1.
+    simpl.
+
+    now rewrite associative_through_bind ; [ reflexivity | ].
+  Qed.
+
+  Lemma lift_assoc_to_setoid : forall {A : choice_type} (op : A -> A -> A),
+      associative op ->
+      setoid_associative (eq_relation := both_equivalence) (lift2_both op).
+  Proof.
+    intros.
+    intros x y z.
+    apply both_equivalence_is_pure_eq.
+    rewrite (associative_lift H).
+    reflexivity.
+  Qed.
+
+  Lemma translate_assoc_setoid : forall {A : choice_type} {op1 op2 : both A -> both A -> both A},
+      (forall x y, op1 x y ≈both op2 x y) ->
+      setoid_associative (eq_relation := both_equivalence) op1 ->
+      setoid_associative (eq_relation := both_equivalence) op2.
+  Proof.
+    intros.
+    intros x y z.
+
+    rewrite <- H.
+    rewrite (both_eq_fun_ext) ; [ | rewrite <- H ; reflexivity ].
+    rewrite H0.
+    rewrite H.
+    rewrite (both_eq_fun_ext (fun x => op2 x _)) ; [ | rewrite H ; reflexivity ].
+    reflexivity.
+  Qed.
+
+  Lemma mulA : forall {WS : wsize}, associative (int_mul (WS := WS)).
+  Proof.
+    intros WS.
+    unfold int_mul at 1.
+    apply associative_lift.
+    apply mulwA.
+  Qed.
+
+  Definition int_op_mod {WS1 WS2} (op : both (Hacspec_Lib_Pre.int WS2) -> both (Hacspec_Lib_Pre.int WS2) -> both (Hacspec_Lib_Pre.int WS2)) (q x y : both (Hacspec_Lib_Pre.int WS1)) : both (Hacspec_Lib_Pre.int WS1) :=
+    cast_int (WS2 := WS1) (int_mod (op (cast_int (WS2 := WS2) (int_mod x q)) (cast_int (WS2 := WS2) (int_mod y q))) (cast_int (WS2 := WS2) q)).
+
+  Definition cast_word {WS1} WS2 (x : 'word WS1) : 'word WS2 := wrepr WS2 (wunsigned x).
+
+  Definition int_op_mod_pure
+    {WS1 WS2}
+    (op : (Hacspec_Lib_Pre.int WS2) -> (Hacspec_Lib_Pre.int WS2) -> (Hacspec_Lib_Pre.int WS2))
+    (q x y : Hacspec_Lib_Pre.int WS1) : Hacspec_Lib_Pre.int WS1 :=
+    cast_word WS1
+      (wmod (op (cast_word WS2 (wmod x q)) (cast_word WS2 (wmod y q))) (cast_word WS2 q)).
+
+  Lemma small_word : forall x q, mkword q (x mod modulus q) = mkword q x.
+  Proof.
+    intros.
+    apply word_ext.
+    rewrite Zmod_mod.
+    reflexivity.
+  Qed.
+
+  Lemma cast_wordI : forall WS1 WS2 (x : 'word WS1), cast_word WS2 (cast_word WS2 x) = cast_word WS2 x.
+  Proof.
+    intros.
+    unfold cast_word.
+    now rewrite wrepr_unsigned.
+  Qed.
+
+  Lemma cast_word0 : forall WS (x : 'word WS), cast_word WS x = x.
+  Proof.
+    intros.
+    unfold cast_word.
+    now rewrite wrepr_unsigned.
+  Qed.
+
+  Lemma modulus_ltS :
+    forall b,
+      modulus b < modulus b.+1.
+  Proof.
+    intros.
+    rewrite <- addn1.
+    rewrite modulusD.
+    now apply Z.lt_mul_diag_r.
+  Qed.
+  
+  Lemma modulus_lt :
+    forall a b,
+      (a < b)%nat ->
+      modulus a < modulus b.
+  Proof.
+    intros.
+    induction b.
+    - now destruct a.
+    - destruct (a == b) eqn:a_is_b.
+      + move /eqP: a_is_b => a_is_b.
+        subst.
+        apply modulus_ltS.
+      + etransitivity.
+        1: apply IHb ; Lia.lia.
+        clear.
+        apply modulus_ltS.
+  Qed.
+
+  Lemma modulus_le :
+    forall a b,
+      (a <= b)%nat ->
+      modulus a <= modulus b.
+  Proof.
+    intros.
+    destruct (a == b) eqn:a_is_b.
+    + move /eqP: a_is_b => a_is_b.
+      now subst.
+    + pose (modulus_lt a b).
+      Lia.lia.
+  Qed.
+
+  Lemma cast_word_small : forall (WS1 WS2 : wsize) (x : 'word WS1), (WS1 <= WS2)%nat -> unsigned (cast_word WS2 x) = unsigned x.
+  Proof.
+    intros.
+    unfold cast_word.
+    simpl.
+    cbn.
+    rewrite Zmod_small.
+    2:{
+      split ; [ apply wunsigned_range | ].
+      eapply Z.lt_le_trans.
+      1: apply wunsigned_range.
+      unfold wbase.
+      now apply modulus_le.
+    }
+    reflexivity.
+  Qed.
+
+  Lemma is_word : forall {WS} (y : 'word WS), (0 <= toword y < modulus WS).
+  Proof.
+    intros ? y.
+    now move /andP: (isword_word y) => [/lezP ? /ltzP ?].
+  Qed.
+
+  Lemma cast_mod_op :
+    forall {WS1 WS2 : wsize} {q : both (Hacspec_Lib_Pre.int WS1)}
+      {op1}
+      (op2 : (Hacspec_Lib_Pre.int WS2) -> (Hacspec_Lib_Pre.int WS2) -> (Hacspec_Lib_Pre.int WS2)),
+      (forall (x y : both (Hacspec_Lib_Pre.int WS1)),
+          is_pure (lift2_both (int_op_mod_pure (WS2 := WS2) op2 (is_pure q)) x y) = is_pure (int_op_mod op1 q x y)) ->
+      (forall (x y : Z),
+          (0 <= x * y < modulus WS2) ->
+          toword (op2 (wrepr WS2 (x mod toword (is_pure (both_prog q))))
+             (wrepr WS2 (y mod toword (is_pure (both_prog q))))) mod toword (is_pure (both_prog q))
+          = toword (op2 (wrepr WS2 x) (wrepr WS2 y)) mod toword (is_pure (both_prog q))
+      ) ->
+      (0 < toword (is_pure q) < modulus WS1) ->
+      associative op2 ->
+      (WS1 < WS2)%nat ->
+      (forall (x y : 'word WS1),
+          toword (op2 (wrepr WS2 (toword x mod toword (is_pure (both_prog q))))
+       (wrepr WS2 (toword y mod toword (is_pure (both_prog q))))) < modulus WS2 / toword (is_pure (both_prog q))) ->
+      setoid_associative (eq_relation := both_equivalence) (int_op_mod (WS1 := WS1) (WS2 := WS2) op1 q).
+  Proof.
+    intros.
+    refine (translate_assoc_setoid _ (lift_assoc_to_setoid (A := @Hacspec_Lib_Pre.int WS1) (int_op_mod_pure op2 (is_pure q)) _)) ; [ now intros ; apply both_equivalence_is_pure_eq | ].
+    unfold int_op_mod_pure.
+    unfold Hacspec_Lib_Pre.int_mod.
+    unfold wrepr.
+    intros x y z.
+    cbn.
+    Set Printing Coercions.
+    f_equal.
+    f_equal.
+    (* rewrite !cast_wordI. *)
+    (* rewrite !cast_word0. *)
+    unfold cast_word at 3.
+    unfold unsigned.
+    unfold mkword.
+    cbn.
+    unfold cast_word.
+    cbn.
+
+    repeat (rewrite (Zmod_small _ (modulus WS1)) ;
+            [
+            | split ; [ now apply Z_mod_lt | ] ;
+              eapply Z.lt_le_trans ; [ now apply Z_mod_lt |] ;
+              (lia || (transitivity (modulus WS1) ; [ | now apply modulus_le ] ; lia))
+                ..
+           ]).
+
+    repeat (rewrite (Zmod_small (toword (is_pure (both_prog q))) (modulus _)) ;
+            [
+            | split ; [ easy | ]
+              ; eapply Z.lt_le_trans ; [ apply H1 |]
+              ; now apply modulus_le
+                ..
+           ]).
+
+    repeat (rewrite (Zmod_small (_ mod toword (is_pure (both_prog q))) (modulus _)) ;
+     [
+     | split ; [ now apply Z_mod_lt | ] ;
+       eapply Z.lt_le_trans ; [ now apply Z_mod_lt |] ;
+       (lia || (transitivity (modulus WS1) ; [ | now apply modulus_le ] ; lia))
+         ..
+           ]).
+
+    rewrite !Zmod_mod.
+
+    set (x' := wrepr WS2 (toword x)).
+    set (x'' := wrepr WS2 (toword x mod _)).
+    set (y' := wrepr WS2 (toword y mod _)).
+    set (z' := wrepr WS2 (toword z)).
+    set (z'' := wrepr WS2 (toword z mod _)).
+    set (q' := toword (is_pure (both_prog q))).
+
+    unfold x'' at 1.
+    rewrite <- (Zmod_mod (toword x)).
+    rewrite (H0 _ _).
+    2:{
+      split.
+      1: apply Z.mul_nonneg_nonneg ; (now apply is_word || now apply Z_mod_lt).
+      eapply (Z.lt_le_trans _ ( _ * _)).
+      1:{
+        apply Z.mul_lt_mono_nonneg.
+        2:{
+          now apply Z_mod_lt.
+          (* eapply Z.lt_trans ; [ now apply Z_mod_lt | ]. *)
+          (* apply H1. *)
+        }
+        3: apply H4.
+        all: (now apply is_word || now apply Z_mod_lt).
+      }
+      cbn.
+      eapply Z.le_trans.
+      1: now apply Z.mul_div_le.
+      easy.
+      (* rewrite <- modulusD. *)
+      (* apply modulus_le. *)
+      (* now destruct WS1 , WS2. *)
+    }
+
+    fold x''.
+    rewrite !wrepr_unsigned.
+    rewrite H2.
+
+    unfold z'' at 2.
+    rewrite <- (Zmod_mod (toword z)).
+    rewrite (H0 _ _).
+    2:{
+      split.
+      1: apply Z.mul_nonneg_nonneg ; (now apply is_word || now apply Z_mod_lt).
+      eapply (Z.lt_le_trans _ ( _ * _)).
+      1:{
+        apply Z.mul_lt_mono_nonneg.
+        4:{
+          now apply Z_mod_lt.
+          (* eapply Z.lt_trans ; [ now apply Z_mod_lt | ]. *)
+          (* apply H1. *)
+        }
+        2: apply H4.
+        all: (now apply is_word || now apply Z_mod_lt).
+      }
+      cbn.
+      rewrite Z.mul_comm.
+      eapply Z.le_trans.
+      1: now apply Z.mul_div_le.
+      easy.
+    }
+
+    fold z''.
+    rewrite !wrepr_unsigned.
+    reflexivity.
+  Qed.
+
+  Definition int_mul_mod {WS1 WS2} q (x y : both (Hacspec_Lib_Pre.int WS1)) : both (Hacspec_Lib_Pre.int WS1) :=
+    int_op_mod (WS1 := WS1) (WS2 := WS2) (int_mul) q x y.
+    (* cast_int (WS2 := WS1) (int_mod (WS := WS2) (int_mul (WS := WS2) (cast_int (WS2 := WS2) x) (cast_int(WS2 := WS2)  y)) q). *)
+
+  Definition int_mul_mod_pure {WS1 WS2} q (x y : @Hacspec_Lib_Pre.int WS1)
+    : Hacspec_Lib_Pre.int WS1 :=
+    int_op_mod_pure (WS1 := WS1) (WS2 := WS2) (@mul_word _) q x y.
+
+  Lemma mul_modA : forall {WS1 : wsize} {WS2 : wsize} (q : both (Hacspec_Lib_Pre.int WS1)),
+      (1 < toword (is_pure q) < modulus WS1)%Z ->
+      (WS1 < WS2)%N ->
+      (modulus WS1 * modulus WS1 <= modulus WS2) ->
+      (toword (is_pure (both_prog q)) * toword (is_pure (both_prog q)) <=
+         modulus WS2 / toword (is_pure (both_prog q))) ->
+      setoid_associative (eq_relation := both_equivalence) (int_mul_mod (WS1 := WS1) (WS2 := WS2) q).
+  Proof.
+    intros.
+    refine (cast_mod_op (op1 := int_mul) (@mul_word _) _ _ _ _ _ _).
+    - reflexivity.
+    - intros.
+      cbn.
+      rewrite <- !Zmult_mod.
+      rewrite (Zmod_small _ (modulus _)).
+      2:{
+        split.
+        1: apply Z.mul_nonneg_nonneg ; now apply Z_mod_lt.
+        eapply (Z.lt_le_trans _ ( _ * _)).
+        1:{
+          apply Z.mul_lt_mono_nonneg.
+          1,3:  now apply Z_mod_lt.
+          1,2: eapply Z.lt_trans ; [ now apply Z_mod_lt | ] ; apply H.
+        }
+        assumption.
+      }
+      rewrite <- !Zmult_mod.
+      now rewrite (Zmod_small _ (modulus _)).
+    - lia.
+    - apply mulwA.
+    - assumption.
+    - intros.
+      cbn.
+      rewrite <- !Zmult_mod.
+      assert (toword x mod toword (is_pure (both_prog q)) * (toword y mod toword (is_pure (both_prog q))) <
+  modulus WS2 / toword (is_pure (both_prog q))).
+      2:{
+        rewrite Zmod_small.
+        1: assumption.
+        split.
+        2:{
+          eapply Z.lt_trans.
+          1: apply H3.
+          apply Z.div_lt.
+          2: lia.
+          1: now destruct WS2.
+        }
+        apply Z.mul_nonneg_nonneg ; now apply Z_mod_lt.
+      }
+      {
+        eapply (Z.lt_le_trans _ ( _ * _)).
+        1:{
+          apply Z.mul_lt_mono_nonneg.
+          1,3: now apply Z_mod_lt.
+          1,2: now apply Z_mod_lt.
+        }
+        assumption.
+      }
+  Qed.
+
   Lemma both_group_properties :
     is_setoid_group_properties.axioms_ (both_v_G)
       (group_op.class HacspecOvnGroupAndFieldPre_both_v_G__canonical__Hacspec_ovn_group_and_field_group_op)
       (eqR.class HacspecOvnGroupAndFieldPre_both_v_G__canonical__Hacspec_ovn_group_and_field_eqR).
   Proof.
     constructor.
-    - intros x y z.
+    - set (op := sg_prod) ; replace op with f_prod by reflexivity ; clear op.
+      intros x y z. simpl in x, y, z.
+      admit.
+    - cbn.
+      set (op := sg_prod) ; replace op with f_prod by reflexivity ; clear op.
       cbn.
-      (* repeat unfold f_z_val at 1. *)
-      (* repeat unfold let_both at 1. *)
-      (* repeat unfold Build_t_g_z_89_ at 1. *)
-
-      apply (both_eq_fun_ext (fun x => solve_lift bind_both x _)).
-      apply (both_eq_fun_ext).
-      apply (both_eq_fun_ext (fun x => solve_lift bind_both x _)).
-
+      intros x.
+      cbn.
       repeat unfold let_both at 1.
-
-      assert (
-          H_assoc_through_bind :
-          forall {A}
-            (x : both A) (y : both A) (z : both A) (f : A -> A -> A),
-            (forall (x y z : A), f (f x y) z = f x (f y z)) ->
-            (bind_both (bind_both x (λ x', bind_both y (fun y' => ret_both (f x' y')))) (λ xy', bind_both z (fun z' => ret_both (f xy' z')))) =
-              (bind_both x (λ x', bind_both (bind_both y (λ y', bind_both z (fun z' => ret_both (f y' z')))) (fun yz' => ret_both (f x' yz'))))).
-      {
-        clear ; intros.
-        apply both_eq.
-        unfold bind_both ; simpl.
-        unfold bind_raw_both ; simpl.
-        rewrite H.
-        f_equal.
-        repeat setoid_rewrite bind_assoc.
-        repeat setoid_rewrite bind_rewrite.
-        setoid_rewrite H.
-        reflexivity.
-      }
-
-      assert (forall (x y z : both int8), (x .* y .* z) = (x .* (y .* z))).
-      {
-        clear -H_assoc_through_bind ; intros.
-
-        unfold ".*" at 1.
-        unfold lift2_both at 1.
-        simpl.
-
-        unfold ".*" at 1.
-        unfold lift2_both at 1.
-        simpl.
-
-        unfold ".*" at 1.
-        unfold lift2_both at 1.
-        simpl.
-
-        unfold ".*" at 1.
-        unfold lift2_both at 1.
-        simpl.
-
-        rewrite H_assoc_through_bind ; [ reflexivity | ].
-        clear ; intros.
-        unfold Hacspec_Lib_Pre.int_mul.
-        now rewrite mulwA.
-      }
-
-      assert (forall a b : both int8, ((cast_int a .* cast_int b) .% (ret_both (modulus U8)) : both int16) = cast_int (a .* b)).
-      {
-        clear -H_assoc_through_bind ; intros.
-        repeat unfold cast_int at 1.
-        repeat unfold lift1_both at 1.
-        repeat unfold ".*" at 1.
-        repeat unfold ".%" at 1.
-        repeat unfold lift2_both at 1.
-
-
-        apply both_eq.
-        cbn ; unfold bind_raw_both ; cbn.
-        assert (
-            (Hacspec_Lib_Pre.int_mod (Hacspec_Lib_Pre.int_mul (wrepr U16 (toword x)) (wrepr U16 (toword x0)))
-        (Z_to_int (modulus (nat_of_wsize U8)))) = (wrepr U16 (toword (Hacspec_Lib_Pre.int_mul x x0)))).
-        {
-          unfold Hacspec_Lib_Pre.int_mul.
-          unfold Hacspec_Lib_Pre.int_mod.
-          unfold mul_word.
-          rewrite !urepr_word.
-          setoid_rewrite <- wrepr_mul.
-          rewrite <- wrepr_unsigned.
-          rewrite wunsigned_repr.
-          rewrite wunsigned_repr.
-          f_equal.
-
-          rewrite <- Znumtheory.Zmod_div_mod.
-          1:{
-            symmetry.
-            rewrite <- Zmod_small with (n := modulus U16).
-            1:{
-              reflexivity.
-            }
-            split ; [ | eapply Z.lt_trans ] ; now apply (Z.mod_pos_bound).
-          }
-          1,2: easy.
-          simpl.
-          replace (modulus nat15.+1) with (modulus U8 * modulus U8) by reflexivity.
-          apply Z.divide_factor_l.
-        }
-        (* rewrite H. *)
-        f_equal.
-        2:{
-        repeat setoid_rewrite bind_assoc.
-        repeat setoid_rewrite bind_rewrite.
-        Set Printing Coercions.
-        unfold Hacspec_Lib_Pre.int_mul.
-        unfold mul_word.
-        setoid_rewrite H.
-
-        setoid_rewrite
-      }
-
-      rewrite both_equivalence_is_pure_eq.
-      rewrite hacspec_function_guarantees2.
-      symmetry.
-      rewrite hacspec_function_guarantees2.
-      symmetry.
-      rewrite <- both_equivalence_is_pure_eq.
-
-      set (f_z_val (solve_lift Build_t_z_89_)).
-
-      unfold cast_int at 1.
-      unfold lift1_both at 1.
-      unfold bind_both.
-      simpl.
-
-      unfold cast_int at 1.
-      unfold lift1_both at 1.
-      unfold bind_both.
-      simpl.
-
-      unfold Build_t_g_z_89_ at 1 2.
-
-      unfold ".%" at 2.
-      unfold lift2_both at 1.
-      simpl.
-
-      unfold f_g_val at 2.
-      simpl.
-      unfold cast_int at 1.
-      unfold lift1_both at 1.
-      simpl.
-
-      unfold ".%" at 2.
-      unfold lift2_both at 1.
-      simpl.
-
-      unfold Hacspec_Lib_Pre.int_mod.
-      unfold unsigned.
-      rewrite !urepr_word.
-
-
-
-      rewrite both_equivalence_is_pure_eq.
-
-
-
-
+      repeat unfold Build_t_g_z_89_ at 1.
+      apply both_equivalence_is_pure_eq.
       cbn.
-
-      unfold ".*" at 2.
-      unfold lift2_both at 1.
-      simpl.
-
-      unfold cast_int at 1.
-      unfold lift1_both at 1.
-      simpl.
-
-      unfold cast_int at 1.
-      unfold lift1_both at 1.
-      simpl.
-
-      unfold cast_int at 1.
-      unfold lift1_both at 1.
-      simpl.
-
-      unfold ".*" at 1.
-      unfold lift2_both at 1.
-      simpl.
-
-      unfold Hacspec_Lib_Pre.int_mul.
-      unfold unsigned.
-      unfold mul_word.
-      rewrite !urepr_word.
-
-
-
-      setoid_rewrite <- wrepr_mul.
-
-      (* set (_ mod _). *)
-      (* set (_ * _) in z0. *)
-      (* pattern z1 in z0. *)
-      (* set (fun _ => _) in z0. *)
-      (* subst z0 z1. *)
-
-      rewrite <- !Zmult_mod_distr_l.
-      simpl.
-      rewrite <- !Zmult_mod_distr_r.
-      simpl.
-
-
-      rewrite <- !Zmult_mod_distr_r.
-
-      rewrite Zmod_small.
-
-      set (_ mod _) at 5.
-      replace (is_pure b mod nat15.+1) with (is_pure b).
-
-      rewrite <- Zmult_mod.
-      rewrite <- Zmult_mod.
-
-      rewrite !Zmod_small ; [ | admit.. ].
-      setoid_rewrite <- wmulE.
-
-      unfold cast_int at 1.
-      unfold lift1_both at 1.
-      simpl.
+      unfold f_g_val at 1.
+      cbn.
+      Misc.push_down_sides.
+      cbn.
+      repeat unfold ".%" at 1.
       unfold Hacspec_Lib_Pre.int_mod.
-      unfold unsigned.
-      rewrite !urepr_word.
-
-      unfold cast_int at 1.
-      unfold lift1_both at 1.
-      simpl.
-      unfold Hacspec_Lib_Pre.int_mod.
-      unfold unsigned.
-      rewrite !urepr_word.
-
-      unfold ".*" at 1.
-      unfold lift2_both at 1.
-      simpl.
-
-      unfold Hacspec_Lib_Pre.int_mul.
-      unfold mul_word.
-
-      rewrite both_equivalence_is_pure_eq.
-      simpl.
-
-      setoid_rewrite <- wmulE.
-
-      {
-        symmetry.
-        simpl.
-
-        unfold cast_int at 1.
-        unfold lift1_both at 1.
-        unfold bind_both.
-        simpl.
-
-        unfold f_g_val at 1.
-        simpl.
-        unfold cast_int at 1.
-        unfold lift1_both at 1.
-        simpl.
-
-        unfold ".%" at 1.
-        unfold lift2_both at 1.
-        simpl.
-
-        unfold Hacspec_Lib_Pre.int_mod.
-        unfold unsigned.
-        rewrite !urepr_word.
-
-        cbn.
-
-        unfold ".*" at 1.
-        unfold lift2_both at 1.
-        simpl.
-
-        unfold cast_int at 1.
-        unfold lift1_both at 1.
-        simpl.
-        unfold Hacspec_Lib_Pre.int_mod.
-        unfold unsigned.
-
-        unfold bind_both at 1.
-        unfold bind_raw_both at 1.
-        simpl.
-
-        unfold ".%" at 1.
-        unfold lift2_both at 1.
-        simpl.
-
-        unfold Hacspec_Lib_Pre.int_mul.
-        unfold mul_word.
-
-        rewrite !Zmod_small ; [ | admit.. ].
-
-        unfold unsigned.
-        rewrite !urepr_word.
-        simpl.
-
-        unfold cast_int at 1.
-        unfold lift1_both at 1.
-        simpl.
-        unfold Hacspec_Lib_Pre.int_mod.
-        unfold unsigned.
-
-        rewrite !Zmod_small ; [ | admit.. ].
-
-        unfold cast_int at 1.
-        unfold lift1_both at 1.
-        simpl.
-        unfold Hacspec_Lib_Pre.int_mod.
-        unfold unsigned.
-
-        rewrite !urepr_word.
-        rewrite !wrepr_mul.
-
-        rewrite mulrA.
-
-        reflexivity.
-      }
-  Qed.
+      cbn.
+      repeat unfold lift2_both at 1.
+      cbn.
+      admit.
+  Admitted.
 
 
   (* A proof of the field laws *)
-  Parameter both_field_properties : is_setoid_field_properties.axioms_ (GroupAndFieldPre.both_Z) (field_op.class GroupAndFieldPre.HacspecOvnGroupAndFieldPre_both_Z__canonical__Hacspec_ovn_group_and_field_field_op) (eqR.class GroupAndFieldPre.HacspecOvnGroupAndFieldPre_both_Z__canonical__Hacspec_ovn_group_and_field_eqR).
+  Lemma both_field_properties : is_setoid_field_properties.axioms_ (GroupAndFieldPre.both_Z) (field_op.class GroupAndFieldPre.HacspecOvnGroupAndFieldPre_both_Z__canonical__Hacspec_ovn_group_and_field_field_op) (eqR.class GroupAndFieldPre.HacspecOvnGroupAndFieldPre_both_Z__canonical__Hacspec_ovn_group_and_field_eqR).
+  Proof.
+    constructor.
+    - (* intros x y z ; simpl in x , y , z. *)
+      refine (translate_assoc_setoid _ _).
+      1:{
+        intros.
+        cbn.
+        apply both_equivalence_is_pure_eq.
+        repeat unfold let_both at 1.
+        cbn.
+        instantiate (1 := fun x y => (((x .% @ret_both uint8 88)
+                                      .+ (y .% @ret_both uint8 88))
+                                     .% @ret_both uint8 88)).
+        reflexivity.
+      }
+
+      refine (translate_assoc_setoid _ _).
+      1:{
+        instantiate (1 := ((fun x y => ret_both (wmod (Hacspec_Lib_Pre.int_add (wmod (is_pure x : t_z_89_) 88) (wmod (is_pure y : t_z_89_) 88)) 88 : t_z_89_)))).
+        intros.
+        cbn.
+        apply both_equivalence_is_pure_eq.
+        reflexivity.
+      }
+
+      intros x y z.
+      
+      apply both_equivalence_is_pure_eq.
+      set (n0 := 88%nat).
+      remember n0.
+      cbn.
+
+      admit.
+  Admitted.
+
 End OVN_GroupAndFieldParameter_Z89.
-e
+
 Module Ovn_GroupAndFieldExtra_Z89 : HacspecOvnGroupAndFieldExtra OVN_Z89 OVN_GroupAndFieldParameter_Z89.
   Module GroupAndField := HacspecOvnGroupAndField OVN_Z89 OVN_GroupAndFieldParameter_Z89.
   Include GroupAndField.
@@ -432,13 +634,11 @@ Module Ovn_GroupAndFieldExtra_Z89 : HacspecOvnGroupAndFieldExtra OVN_Z89 OVN_Gro
   Proof.
     intros.
 
-    cbn.
+    (* cbn. *)
+    unfold t_g_z_89__t_Group.
     unfold f_g_pow.
-    unfold GroupAndField.GroupAndFieldPre.OVN.v_G_t_Group_temp.
-    unfold GroupAndField.GroupAndFieldPre.OVN.v_G_t_Group.
-    Transparent OVN_Z89.v_G_t_Group.
-    unfold OVN_Z89.v_G_t_Group.
-    simpl.
+    unfold f_pow.
+    reflexivity.
   Qed.
   (* Instance f_Z_t_Field' : t_Field f_Z := _. *)
 
