@@ -26,7 +26,7 @@ Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
 
 Class t_Field (v_Self : _) `{ t_Copy v_Self} `{ t_PartialEq v_Self v_Self} `{ t_Eq v_Self} `{ t_Clone v_Self} `{ t_Serialize v_Self} := {
   f_q : (both v_Self) ;
-  f_random_field_elem : (both int32 -> both v_Self) ;
+  f_random_field_elem : (both int128 -> both v_Self) ;
   f_field_zero : (both v_Self) ;
   f_field_one : (both v_Self) ;
   f_add : (both v_Self -> both v_Self -> both v_Self) ;

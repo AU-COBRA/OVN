@@ -27,6 +27,8 @@ Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
 From OVN Require Import Hacspec_ovn_Ovn_traits.
 Export Hacspec_ovn_Ovn_traits.
 
+Notation " x '.a[' a ']'" := (array_index x (* (n_seq_array_or_seq x _) *) a) (at level 40).
+
 Module Type HacspecOvnParameter.
   (** Move arguments to context *)
   Parameter (v_G : choice_type).
@@ -476,7 +478,7 @@ Definition state_OVN : choice_type :=
   t_OvnContractState.
 
 #[global] Program Instance t_CastVoteParam_t_HasReceiveContext : t_HasReceiveContext t_CastVoteParam 'unit :=
-  {| f_get := (fun  {_ : _} => (solve_lift (@ret_both (t_ParamType × t_Result _ t_ParseError)) (tt, inr tt)) : _)|}.
+  {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result t_CastVoteParam t_ParseError)) (tt, inl ctx)) : _)|}.
 Solve All Obligations with now intros ; destruct from_uint_size.
 Fail Next Obligation.
 #[global] Program Instance t_CastVoteParam_t_Sized : t_Sized t_CastVoteParam :=
@@ -545,7 +547,7 @@ Solve All Obligations with now intros ; destruct from_uint_size.
 Fail Next Obligation.
 
 #[global] Program Instance t_RegisterParam_t_HasReceiveContext : t_HasReceiveContext t_RegisterParam 'unit :=
-  {| f_get := (fun  {_ : _} => (solve_lift (@ret_both (t_ParamType × t_Result _ t_ParseError)) (tt, inr tt)) : _)|}.
+  {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result t_RegisterParam t_ParseError)) (tt, inl ctx)) : _)|}.
 Solve All Obligations with now intros ; destruct from_uint_size.
 Fail Next Obligation.
 #[global] Program Instance t_RegisterParam_t_Sized : t_Sized t_RegisterParam :=
@@ -570,7 +572,7 @@ Definition receive_OVN_register (ctx : both t_RegisterParam) (st : both state_OV
   register_vote ctx st.
 
 #[global] Program Instance t_TallyParameter_t_HasReceiveContext : t_HasReceiveContext t_TallyParameter 'unit :=
-  {| f_get := (fun  {_ : _} => (solve_lift (@ret_both (t_ParamType × t_Result _ t_ParseError)) (tt, inr tt)) : _)|}.
+  {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result t_TallyParameter t_ParseError)) (tt, inl ctx)) : _)|}.
 Solve All Obligations with now intros ; destruct from_uint_size.
 Fail Next Obligation.
 #[global] Program Instance t_TallyParameter_t_Sized : t_Sized t_TallyParameter :=
@@ -619,7 +621,7 @@ Inductive Msg_OVN : Type :=
 | msg_OVN_register : t_RegisterParam -> Msg_OVN
 | msg_OVN_tally : t_TallyParameter -> Msg_OVN.
 #[global] Program Instance state_OVN_t_HasReceiveContext : t_HasReceiveContext state_OVN 'unit :=
-  {| f_get := (fun  (_ : _) => (solve_lift (@ret_both (t_ParamType × t_Result _ t_ParseError)) (tt, inr tt)) : _)|}.
+  {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result state_OVN t_ParseError)) (tt, inl ctx)) : _)|}.
 Solve All Obligations with now intros ; destruct from_uint_size.
 Fail Next Obligation.
 #[global] Program Instance state_OVN_t_Sized : t_Sized state_OVN :=
