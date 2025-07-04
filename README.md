@@ -15,8 +15,8 @@ The proofs can be checked with
 make
 ```
 
-## Hax
-Currently using https://github.com/cmester0/hax/tree/ssprove_backend_lib for code extraction to Rocq (SSProve and ConCert)
+## Hax embedding
+Used for code extraction to Rocq (SSProve and ConCert)
 
 To regenerate the embedded Hax code `Hacspec_ovn.v` (and Hacspec_`ovn_Ovn_traits.v`) file(s) do:
 ```
@@ -28,6 +28,19 @@ cd proofs/ssprove
 ./sed.sh
 ```
 Then the new (fixed) files will be in `rust_src/ovn/proofs/ssprove/extraction/`.
+
+## Documentation
+Coqdoc can be generate with `make html`, the generated documentation will be in the `docs` directory.
+
+## Project structure
+|  |  |
+|-----|-----|
+| [theories/hacspec](/theories/hacspec/) | OVN formalization |
+| TODO: describe each file in theories/hacspec folder | |
+| [theories/ssprove](/theories/ssprove/) | SSP formalization of Schnorr |
+| [rust_src/ovn](/rust_src/ovn/) | OVN implementation in Rust/Hax |
+| [hax](/hax/) | A fork of the [Hax framework](https://github.com/cryspen/hax) containing modifications for smart contract integration |
+| [docs](/docs/) | Directory containing coqdoc documentation after calling `make html` |
 
 ## Opam switch
 ```
