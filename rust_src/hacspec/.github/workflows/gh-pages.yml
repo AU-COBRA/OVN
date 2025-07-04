@@ -1,0 +1,29 @@
+name: Deploy Docs
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  rustdoc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hecrj/setup-rust-action@master
+      - uses: actions/checkout@master
+      - name: Build docs
+        run: |
+          rustup toolchain install nightly-2022-07-04
+          cargo +nightly-2022-07-04 doc --all-features
+          touch target/doc/.nojekyll
+          cat > target/doc/index.html <<EOF
+          <!doctype html>
+          <html><head>
+            <meta http-equiv="refresh" content="0; URL='hacspec/index.html'" />
+          </head></html>
+          EOF
+      - name: Deploy to Github Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: target/doc

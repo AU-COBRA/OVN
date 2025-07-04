@@ -5,7 +5,6 @@ version = 3
 [[package]]
 name = "abstract_integers"
 version = "0.1.5"
-source = "git+https://github.com/cmester0/hacspec.git?rev=592be755752c96787360504af277f452addc1ccb#592be755752c96787360504af277f452addc1ccb"
 dependencies = [
  "num",
  "num-bigint",
@@ -45,9 +44,9 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "bumpalo"
-version = "3.18.1"
+version = "3.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "793db76d6187cd04dff33004d8e6c9cc4e05cd330500379d2394209271b4aeee"
+checksum = "46c5e41b57b8bba42a04676d81cb89e9ee8e859a1a66f80a5a72e1cb76b34d43"
 
 [[package]]
 name = "cast"
@@ -221,7 +220,6 @@ dependencies = [
 [[package]]
 name = "hacspec-lib"
 version = "0.1.0-beta.1"
-source = "git+https://github.com/cmester0/hacspec.git?rev=592be755752c96787360504af277f452addc1ccb#592be755752c96787360504af277f452addc1ccb"
 dependencies = [
  "abstract_integers",
  "num",
@@ -454,7 +452,7 @@ checksum = "f71ee38b42f8459a88d3362be6f9b841ad2d5421844f61eb1c59c11bff3ac14a"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.103",
+ "syn 2.0.104",
 ]
 
 [[package]]
@@ -569,7 +567,6 @@ dependencies = [
 [[package]]
 name = "secret_integers"
 version = "0.1.7"
-source = "git+https://github.com/cmester0/hacspec.git?rev=592be755752c96787360504af277f452addc1ccb#592be755752c96787360504af277f452addc1ccb"
 
 [[package]]
 name = "serde"
@@ -598,7 +595,7 @@ checksum = "5b0276cf7f2c73365f7157c8123c21cd9a50fbbd844757af28ca1f5925fc2a00"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.103",
+ "syn 2.0.104",
 ]
 
 [[package]]
@@ -626,9 +623,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.103"
+version = "2.0.104"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4307e30089d6fd6aff212f2da3a1f9e32f3223b1f010fb09b7c95f90f3ca1e8"
+checksum = "17b6f705963418cdb9927482fa304bc562ece2fdd4f616084c50b7023b435a40"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -704,7 +701,7 @@ dependencies = [
  "log",
  "proc-macro2",
  "quote",
- "syn 2.0.103",
+ "syn 2.0.104",
  "wasm-bindgen-shared",
 ]
 
@@ -726,7 +723,7 @@ checksum = "8ae87ea40c9f689fc23f209965b6fb8a99ad69aeeb0231408be24920604395de"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.103",
+ "syn 2.0.104",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
@@ -883,5 +880,5 @@ checksum = "9ecf5b4cc5364572d7f4c329661bcc82724222973f2cab6f050a4e5c22f75181"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.103",
+ "syn 2.0.104",
 ]

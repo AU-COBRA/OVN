@@ -1,8 +1,4 @@
-
-// #[exclude]
 use hacspec_concordium::*;
-// #[exclude]
-use hacspec_concordium_derive::*;
 
 #[cfg(test)]
 extern crate quickcheck;
@@ -14,7 +10,7 @@ extern crate quickcheck_macros;
 use quickcheck::*;
 
 pub use hacspec_ovn::ovn_group::*;
-// pub use hacspec_ovn::ovn_secp256k1::*;
+pub use hacspec_ovn::ovn_secp256k1::*;
 pub use hacspec_ovn::ovn_z89::*;
 pub use hacspec_ovn::ovn_z18446744073709551557::*;
 use rand::random;
@@ -46,12 +42,12 @@ pub fn schnorr_zkp_z_18446744073709551557_correctness() {
         .quickcheck(schnorr_zkp_correctness::<g_z_18446744073709551557> as fn(u128, u128) -> bool)
 }
 
-// #[test]
-// pub fn schorr_zkp_secp256k1_correctness() {
-//     QuickCheck::new()
-//         .tests(10)
-//         .quickcheck(schnorr_zkp_correctness::<Group_curve> as fn(u128, u128) -> bool)
-// }
+#[test]
+pub fn schorr_zkp_secp256k1_correctness() {
+    QuickCheck::new()
+        .tests(10)
+        .quickcheck(schnorr_zkp_correctness::<Group_curve> as fn(u128, u128) -> bool)
+}
 
 #[cfg(test)]
 pub fn or_zkp_correctness<G: Group>(
@@ -89,13 +85,13 @@ pub fn or_zkp_correctness_z18446744073709551557() {
         .quickcheck(or_zkp_correctness::<g_z_18446744073709551557> as fn(u128, u128, u128, u128, u128, bool) -> bool)
 }
 
-// #[test]
-// // TODO: Fix inverse opeation, should make this test parse
-// pub fn or_zkp_secp256k1_correctness() {
-//     QuickCheck::new().tests(10).quickcheck(
-//         or_zkp_correctness::<Group_curve> as fn(u128, u128, u128, u128, u128, bool) -> bool,
-//     )
-// }
+#[test]
+// TODO: Fix inverse opeation, should make this test parse
+pub fn or_zkp_secp256k1_correctness() {
+    QuickCheck::new().tests(10).quickcheck(
+        or_zkp_correctness::<Group_curve> as fn(u128, u128, u128, u128, u128, bool) -> bool,
+    )
+}
 
 #[cfg(test)]
 pub fn sum_to_zero<G: Group, const n: usize>() {
@@ -126,10 +122,10 @@ pub fn sum_to_zero_z18446744073709551557() {
     sum_to_zero::<g_z_18446744073709551557, 555>()
 }
 
-// #[test]
-// pub fn sum_to_zero_secp256k1() {
-//     sum_to_zero::<Group_curve, 55>()
-// }
+#[test]
+pub fn sum_to_zero_secp256k1() {
+    sum_to_zero::<Group_curve, 55>()
+}
 
 #[derive(Copy, Clone, hacspec_concordium::Serial, hacspec_concordium::Deserial)]
 pub struct ElemOfEach<G : Group> {
@@ -167,10 +163,10 @@ pub fn test_params_of_group_z89() {
     test_params_of_group::<g_z_89, hacspec_concordium::test_infrastructure::ActionsTree>()
 }
 
-// #[test]
-// pub fn test_params_of_group_secp256k1() {
-//     test_params_of_group::<Group_curve, hacspec_concordium::test_infrastructure::ActionsTree>()
-// }
+#[test]
+pub fn test_params_of_group_secp256k1() {
+    test_params_of_group::<Group_curve, hacspec_concordium::test_infrastructure::ActionsTree>()
+}
 
 #[cfg(test)]
 pub fn test_correctness<G: Group, const n: usize, A: HasActions>(
@@ -309,13 +305,13 @@ fn test_full_z18446744073709551557() {
         .quickcheck(randomized_full_test::<g_z_18446744073709551557, 555> as fn() -> bool)
 }
 
-// // #[concordium_test]
-// #[test]
-// fn test_full_secp256k1() {
-//     QuickCheck::new()
-//         .tests(1)
-//         .quickcheck(randomized_full_test::<Group_curve, 15> as fn() -> bool)
-// }
+// #[concordium_test]
+#[test]
+fn test_full_secp256k1() {
+    QuickCheck::new()
+        .tests(1)
+        .quickcheck(randomized_full_test::<Group_curve, 15> as fn() -> bool)
+}
 
 #[cfg(test)]
 pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
