@@ -509,8 +509,8 @@ Equations commit_to_vote (ctx : both t_CastVoteParam) (state : both (t_OvnContra
     Result_Ok (letb _ := foldi_both_list (f_into_iter (Build_t_Range (f_start := ret_both (0 : uint_size)) (f_end := n))) (fun i =>
       ssp (fun _ =>
         ifb orb (negb (schnorr_zkp_validate ((f_g_pow_xis state).a[i]) ((f_zkp_xis state).a[i]))) (negb ((f_round1 state).a[i]))
-        then letm[choice_typeMonad.result_bind_code (t_Result (v_A × t_OvnContractState) t_ParseError)] hoist2 := v_Break (Result_Err _) in
-        ControlFlow_Continue (never_to_any hoist2)
+        then letm[choice_typeMonad.result_bind_code (t_Result (v_A × t_OvnContractState) t_ParseError)] hoist26 := v_Break (Result_Err _) in
+        ControlFlow_Continue (never_to_any hoist26)
         else ControlFlow_Continue (ret_both (tt : 'unit)) : (both _))) (Result_Ok (ret_both (tt : 'unit))) in
     letb g_pow_yi := compute_g_pow_yi (cast_int (WS2 := U32) (f_cvp_i params)) (f_g_pow_xis state) in
     letb g_pow_xi_yi_vi := compute_group_element_for_vote (f_cvp_xi params) (f_cvp_vote params) g_pow_yi in
@@ -586,12 +586,12 @@ Equations tally_votes (_ : both t_TallyParameter) (state : both (t_OvnContractSt
       ssp (fun _ =>
         letb g_pow_yi := compute_g_pow_yi i (f_g_pow_xis state) in
         letm[choice_typeMonad.result_bind_code (t_Result (v_A × t_OvnContractState) t_ParseError)] _ := ControlFlow_Continue (ifb negb (zkp_one_out_of_two_validate g_pow_yi ((f_zkp_vis state).a[i]))
-        then letm[choice_typeMonad.result_bind_code (t_Result (v_A × t_OvnContractState) t_ParseError)] hoist3 := v_Break (Result_Err _) in
-        ControlFlow_Continue (never_to_any hoist3)
+        then letm[choice_typeMonad.result_bind_code (t_Result (v_A × t_OvnContractState) t_ParseError)] hoist27 := v_Break (Result_Err _) in
+        ControlFlow_Continue (never_to_any hoist27)
         else ControlFlow_Continue (ret_both (tt : 'unit))) in
         ifb negb (check_commitment ((f_g_pow_xi_yi_vis state).a[i]) ((f_commit_vis state).a[i]))
-        then letm[choice_typeMonad.result_bind_code (t_Result (v_A × t_OvnContractState) t_ParseError)] hoist4 := v_Break (Result_Err _) in
-        ControlFlow_Continue (never_to_any hoist4)
+        then letm[choice_typeMonad.result_bind_code (t_Result (v_A × t_OvnContractState) t_ParseError)] hoist28 := v_Break (Result_Err _) in
+        ControlFlow_Continue (never_to_any hoist28)
         else ControlFlow_Continue (ret_both (tt : 'unit)) : (both _))) (Result_Ok (ret_both (tt : 'unit))) in
     letb vote_result := f_group_one in
     letb vote_result := foldi_both_list (f_into_iter (f_g_pow_xi_yi_vis state)) (fun g_pow_vote =>

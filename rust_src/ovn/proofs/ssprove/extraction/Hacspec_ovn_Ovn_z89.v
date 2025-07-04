@@ -110,8 +110,8 @@ Hint Unfold t_z_89__t_Neg.
   let f_field_zero := fun  (_ : both 'unit) => Build_t_C_z_89_ (f_z_val := ret_both (0 : int8)) : both t_z_89_ in
   let f_field_one := fun  (_ : both 'unit) => Build_t_C_z_89_ (f_z_val := ret_both (1 : int8)) : both t_z_89_ in
   let f_inv := fun  (x : both t_z_89_) => run (letb _ := assert (ret_both (false : 'bool)) in
-  letm[choice_typeMonad.result_bind_code t_z_89_] hoist6 := ControlFlow_Break x in
-  ControlFlow_Continue (never_to_any hoist6)) : both t_z_89_ in
+  letm[choice_typeMonad.result_bind_code t_z_89_] hoist31 := ControlFlow_Break x in
+  ControlFlow_Continue (never_to_any hoist31)) : both t_z_89_ in
   let f_add := fun  (x : both t_z_89_) (y : both t_z_89_) => x .+ y : both t_z_89_ in
   let f_opp := fun  (x : both t_z_89_) => f_neg x : both t_z_89_ in
   let f_mul := fun  (x : both t_z_89_) (y : both t_z_89_) => x .* y : both t_z_89_ in
@@ -156,14 +156,14 @@ Hint Unfold t_g_z_89__t_Mul.
     ssp (fun _ =>
       letb g_value := Build_t_C_g_z_89_ (f_g_val := j) in
       ifb (x .* g_value) =.? f_group_one
-      then letm[choice_typeMonad.result_bind_code t_g_z_89_] hoist7 := ControlFlow_Break g_value in
-      ControlFlow_Continue (never_to_any hoist7)
+      then letm[choice_typeMonad.result_bind_code t_g_z_89_] hoist32 := ControlFlow_Break g_value in
+      ControlFlow_Continue (never_to_any hoist32)
       else ControlFlow_Continue (ret_both (tt : 'unit)) : (both (t_ControlFlow t_g_z_89_ 'unit)))) (ret_both (tt : 'unit)) in
   letb _ := ifb not (ret_both (false : 'bool))
   then never_to_any (panic_fmt (impl_2__new_v1 (array_from_list [ret_both ( : chString)]) (array_from_list [impl_1__new_debug (f_g_val x)])))
   else ret_both (tt : 'unit) in
-  letm[choice_typeMonad.result_bind_code t_g_z_89_] hoist8 := ControlFlow_Break x in
-  ControlFlow_Continue (never_to_any hoist8)) : both t_g_z_89_ in
+  letm[choice_typeMonad.result_bind_code t_g_z_89_] hoist33 := ControlFlow_Break x in
+  ControlFlow_Continue (never_to_any hoist33)) : both t_g_z_89_ in
   let f_prod := fun  (x : both t_g_z_89_) (y : both t_g_z_89_) => x .* y : both t_g_z_89_ in
   {| f_Z := (@f_Z);
   f_g := (@f_g);

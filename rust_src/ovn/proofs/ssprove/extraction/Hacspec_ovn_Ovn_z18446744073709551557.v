@@ -110,8 +110,8 @@ Hint Unfold t_z_18446744073709551557_t_Neg.
   let f_field_zero := fun  (_ : both 'unit) => Build_t_C_z_18446744073709551557 (f_z_val := ret_both (0 : int64)) : both t_z_18446744073709551557 in
   let f_field_one := fun  (_ : both 'unit) => Build_t_C_z_18446744073709551557 (f_z_val := ret_both (1 : int64)) : both t_z_18446744073709551557 in
   let f_inv := fun  (x : both t_z_18446744073709551557) => run (letb _ := assert (ret_both (false : 'bool)) in
-  letm[choice_typeMonad.result_bind_code t_z_18446744073709551557] hoist5 := ControlFlow_Break x in
-  ControlFlow_Continue (never_to_any hoist5)) : both t_z_18446744073709551557 in
+  letm[choice_typeMonad.result_bind_code t_z_18446744073709551557] hoist30 := ControlFlow_Break x in
+  ControlFlow_Continue (never_to_any hoist30)) : both t_z_18446744073709551557 in
   let f_add := fun  (x : both t_z_18446744073709551557) (y : both t_z_18446744073709551557) => x .+ y : both t_z_18446744073709551557 in
   let f_opp := fun  (x : both t_z_18446744073709551557) => f_neg x : both t_z_18446744073709551557 in
   let f_mul := fun  (x : both t_z_18446744073709551557) (y : both t_z_18446744073709551557) => x .* y : both t_z_18446744073709551557 in
