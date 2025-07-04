@@ -1,17 +1,35 @@
 # OVN
 Verified implementation of the Open Vote Network protocol
 
-# Hax
+## Checking the proofs
+To set up an opam switch with all the project dependencies do:
+```
+opam switch create ./ 4.14.1
+eval $(opam env)
+opam repo add rocq-released https://rocq-prover.org/opam/released
+opam install --locked --deps-only ./coq-ovn.opam
+```
+
+The proofs can be checked with
+```
+make
+```
+
+## Hax
 Currently using https://github.com/cmester0/hax/tree/ssprove_backend_lib for code extraction to Rocq (SSProve and ConCert)
 
-To regenerate `Hacspec_ovn.v` (and Hacspec_`ovn_Ovn_traits.v`) file(s) do:
+To regenerate the embedded Hax code `Hacspec_ovn.v` (and Hacspec_`ovn_Ovn_traits.v`) file(s) do:
 ```
+cd hax
+./setup.sh
+cd ../rust_src/ovn
 cargo hax into ssprove
+cd proofs/ssprove
+./sed.sh
 ```
-in `rust_src/ovn/` and then call `./sed.sh` in `rust_src/ovn/proofs/ssprove`.
 Then the new (fixed) files will be in `rust_src/ovn/proofs/ssprove/extraction/`.
 
-# Opam switch
+## Opam switch
 ```
 # Name                      # Installed    # Synopsis
 angstrom                    0.16.1         Parser combinators built for speed and memory-efficiency
