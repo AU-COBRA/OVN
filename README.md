@@ -199,3 +199,13 @@ variantslib                 v0.16.0        Part of Jane Street's Core library
 yojson                      2.2.2          Yojson is an optimized parsing and printing library for the JSON format
 zarith                      1.14           Implements arithmetic and logical operations over arbitrary-precision integers
 ```
+
+## Extraction
+```
+opam switch create ovn 4.14.1
+opam pin coq 8.20.1
+opam pin coq-certicoq git+https://github.com/womeier/certicoq.git#33a62f58d92ea0a321b62349fb305486be7ace74
+opam pin coq-concert git+https://github.com/AU-COBRA/ConCert.git#d06ca907c91cb46480d2e94e3666b84341c320fe
+opam install coq-ssprove.0.2.4 coq-mathcomp-zify
+opam install ./hax/coq-hacspec-ssprove.opam
+```
