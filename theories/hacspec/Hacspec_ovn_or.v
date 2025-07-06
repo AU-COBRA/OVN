@@ -902,7 +902,8 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
     eapply Order.le_trans ; [ eapply (Advantage_triangle _ _ RUN_interactive _) | ].
     rewrite (run_interactive_shvzk Simulator_locs (fun x => {code r ← sample uniform #|Challenge| ;; Simulate x r }) LA A H H0).
     rewrite GRing.addr0.
-    now rewrite hacspec_vs_RUN_interactive.
+    rewrite hacspec_vs_RUN_interactive. 2: assumption.
+    apply Order.ge_refl.
   Qed.
 
   (* Simulator correctness *)

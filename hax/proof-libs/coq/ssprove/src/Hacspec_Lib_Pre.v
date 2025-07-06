@@ -1345,8 +1345,7 @@ Proof.
   intros.
   rewrite <- (rev_involutive l).
   induction (rev l).
-  - unfold seq_len_nat, seq_from_list, fmap_of_seq, mkfmapfp.
-    now rewrite <- fset0E.
+  - reflexivity.
   - simpl.
     rewrite seq_from_list_cat.
     rewrite seq.size_cat.
@@ -1487,8 +1486,7 @@ Proof.
   intros.
   rewrite <- (seq.revK t).
   induction (seq.rev t).
-  - unfold seq_len_nat, seq_from_list, fmap_of_seq, mkfmapfp.
-    now rewrite <- fset0E.
+  - reflexivity.
   - simpl.
     rewrite seq.rev_cons.
     set (h := seq.rev l) at 1 ; rewrite <- IHl ; subst h. clear IHl.

@@ -82,7 +82,7 @@ install_ocaml_engine() {
     (
         set -x
         opam uninstall hax-engine || true
-        opam install --yes ./engine
+        opam install ./engine
     )
 }
 
