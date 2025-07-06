@@ -17,17 +17,17 @@ depends: [
   "dune" {>= "3.8"}
   "base" {>= "0.16.2"}
   "coq-stdpp"
-  "coq-mathcomp-word" {>= "3.0"}
+  "coq-mathcomp-word" {>= "3.2"}
   "coq-mathcomp-zify" {>= "1.5.0+2.0+8.16"}
   "coq-concert" {= "dev"}
-  "coq" {>= "8.20.0"}
+  "coq" {>= "9.0.0"}
   "coq-ssprove" {= "0.2.4"}
   "coq-hacspec-ssprove" {= "dev"}
 ]
 
 pin-depends: [
-  ["coq-concert.dev" "git+https://github.com/AU-COBRA/ConCert.git#d06ca907c91cb46480d2e94e3666b84341c320fe"]
-  ["coq-hacspec-ssprove.dev" "git+https://github.com/4ever2/hax.git#91ed59ff8062da635746afb7c68be422ba27be03"]
+  ["coq-concert.dev" "git+https://github.com/AU-COBRA/ConCert.git#10768763dd8fc64e7d01181e79d88f0e6b972c0b"]
+  ["coq-hacspec-ssprove.dev" "git+https://github.com/4ever2/hax.git#ssprove_backend_lib"]
 ]
 
 build: [
