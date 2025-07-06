@@ -19,6 +19,7 @@
 	(coq-mathcomp-word (>= "3.0"))
 	(coq-mathcomp-zify (>= "1.5.0+2.0+8.16"))
 	(coq-concert (= "dev"))
+	(coq-extructures (<= "0.4.0"))
 	(coq (>= "8.18.0"))
         )
  (tags
