@@ -1339,13 +1339,26 @@ Proof.
   easy.
 Qed.
 
+Lemma seq_from_list_empty : forall A,
+  seq_from_list A [] = emptym.
+Proof.
+  intros.
+  apply eq_fmap.
+  intros i.
+  unfold seq_from_list.
+  rewrite fmap_of_seqE.
+  apply seq.nth_nil.
+Qed.
+
 Theorem seq_from_list_size : forall A l,
     seq.size l = seq_len_nat (seq_from_list A l).
 Proof.
   intros.
   rewrite <- (rev_involutive l).
   induction (rev l).
-  - reflexivity.
+  - cbn.
+    rewrite seq_from_list_empty.
+    reflexivity.
   - simpl.
     rewrite seq_from_list_cat.
     rewrite seq.size_cat.
@@ -1486,7 +1499,8 @@ Proof.
   intros.
   rewrite <- (seq.revK t).
   induction (seq.rev t).
-  - reflexivity.
+  - rewrite seq_from_list_empty.
+    reflexivity.
   - simpl.
     rewrite seq.rev_cons.
     set (h := seq.rev l) at 1 ; rewrite <- IHl ; subst h. clear IHl.
@@ -2344,6 +2358,8 @@ Proof.
   destruct fmval.
   + reflexivity.
   + cbn.
+    unfold Ord.lt.
+    cbn.
     destruct negb eqn:O_p.
     * reflexivity.
     * apply ssrbool.negbFE in O_p.
