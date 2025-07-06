@@ -15,6 +15,7 @@ The proofs can be checked with
 ```
 make
 ```
+This can take a while (10+ minutes) and requires 12+ GB of memory.
 
 ## Hax embedding
 Used for code extraction to Rocq (SSProve and ConCert)
