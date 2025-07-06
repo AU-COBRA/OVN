@@ -81,30 +81,10 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
   Include HGPA.
 
-  From OVN Require Import OVN.
-
-  Module OVN_GroupParam <: OVN.GroupParam.
-
-    Definition n : nat := is_pure HOP.n.
-    Lemma n_pos : Positive n. Proof. apply HOP.n_pos. Qed.
-
-    Include HGPA.GaFP.HacspecGroup.
-  End OVN_GroupParam.
-
-  Module OVN_Param <: OVNParam.
+  Module OVN_Param.
     Definition N : nat := is_pure HOP.n.
     Lemma N_pos : Positive N. Proof. apply HOP.n_pos. Qed.
   End OVN_Param.
-
-  Module OVN_proofs := OVN OVN_GroupParam OVN_Param.
-
-  Module OVN_or <: OVN_proofs.CDSParams.
-    Include OR_ZKP.proof_args.MyParam.
-    Definition State : finType := 'unit.
-    Instance State_pos : Positive #|State| := eq_ind_r [eta Positive] (erefl : Positive 1) card_unit.
-  End OVN_or.
-
-  Module OVN_old_proofs := OVN_proofs.OVN OVN_or OR_ZKP.proof_args.MyAlg.
 
   Import HOGaFE.GroupAndField.OVN.
   (* Import HOGaFE.GroupAndField. *)
