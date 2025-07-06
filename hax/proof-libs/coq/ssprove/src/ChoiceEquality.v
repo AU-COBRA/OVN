@@ -236,7 +236,7 @@ Section Both_helper.
   Program Definition both_ret_valid {A : choice_type} (x : A) : ValidBoth (both_ret x) :=
     {| is_valid_code := valid_ret _ _ _ ; is_valid_both := both_valid_ret _ |}
     .
-  Fail Next Obligation.
+  Fail Final Obligation.
 
 End Both_helper.
 
@@ -249,7 +249,7 @@ Program Definition ret_both {A : choice_type} (x : A) : both A :=
                       |} ;
     p_eq := fun P => r_ret _ _ _ _ _ ;
   |}.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Ltac pattern_both Hx Hf Hg :=
   (match goal with
@@ -349,7 +349,7 @@ Program Definition bind_both {A B} (c : both A) (k : A -> both B) : both B :=
     both_prog := bind_raw_both (both_prog c) (fun x => both_prog (k x)) ;
     both_prog_valid := valid_bind_both A B c k (both_prog_valid c) (fun x => both_prog_valid (k x)) ;
   |}.
-Next Obligation.
+Final Obligation.
   intros.
   let x := fresh in
   let y := fresh in
@@ -405,7 +405,7 @@ Equations lift1_both {A B : choice_type} (f : A -> B) (x : both A) : both B
   :=
   lift1_both f x := bind_both x (fun x' => solve_lift (ret_both (f x'))).
 Solve All Obligations with intros ; solve_in_fset.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations lift2_both {A B C : choice_type} (f : A -> B -> C) (x : both A) (y : both B)
   : both C
@@ -415,14 +415,14 @@ Equations lift2_both {A B C : choice_type} (f : A -> B -> C) (x : both A) (y : b
     bind_both y (fun y' =>
     solve_lift (ret_both (f x' y')))).
 Solve All Obligations with intros ; solve_in_fset.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations lift3_both {A B C D : choice_type} (f : A -> B -> C -> D) (x : both A) (y : both B) (z : both C)
   : both D :=
   lift3_both f x y z :=
   bind_both x (fun x' => lift_both (lift2_both (f x') y z)).
 Solve All Obligations with intros ; solve_in_fset.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Definition choice_type_size (ce : choice_type) : nat.
 Proof.
@@ -474,7 +474,7 @@ Equations prod_both {ceA ceB : choice_type} (a : both ceA) (b : both ceB) : both
     bind_both b (fun b' =>
                    solve_lift (ret_both ((a', b') : _ × _)))).
 Solve All Obligations with intros ; solve_in_fset.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Notation "'prod_b' ( a , b )" := (prod_both a b) : hacspec_scope.
 Notation "'prod_b' ( a , b , .. , c )" := (prod_both .. (prod_both a b) .. c) : hacspec_scope.
@@ -846,7 +846,7 @@ Equations prod_to_prod {A B} (x : both (A × B)) : (both A * both B) :=
   (bind_both x (fun x' => solve_lift (ret_both (fst x'))) ,
    bind_both x (fun x' => solve_lift (ret_both (snd x')))).
 Solve All Obligations with intros ; solve_in_fset.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations let_both {A B} (x : both A) (f : both A -> both B) : both B :=
   let_both x f := f x.
@@ -906,7 +906,7 @@ Equations lift_n {A B} (n : nat) (z : both A) (f : prod_to_prod_n_ty n (both) A 
   lift_n n z f :=
   (bind_both z (fun z' => f (prod_to_prod_n n (solve_lift (ret_both z'))))).
 Solve All Obligations with intros ; solve_in_fset.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Notation "'letb' ' '(' a ',' b ')' ':=' z 'in' f" :=
   (lift_n 1 z (fun '(a, b) => f))

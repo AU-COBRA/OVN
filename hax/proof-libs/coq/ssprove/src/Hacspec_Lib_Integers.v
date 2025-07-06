@@ -35,61 +35,61 @@ Import choice.Choice.Exports.
 
 Equations int_add {WS} (x : both (int WS)) (y : both (int WS)) : both (int WS) :=
   int_add := lift2_both (Hacspec_Lib_Pre.int_add).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations int_sub {WS}
   (x : both (int WS)) (y : both (int WS))
   : both (int WS) :=
   int_sub := (lift2_both (Hacspec_Lib_Pre.int_sub)).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations int_opp {WS} (x : both (int WS)) : both (int WS) :=
   int_opp := (lift1_both (Hacspec_Lib_Pre.int_opp)).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations int_mul {WS}
   (x : both (int WS)) (y : both (int WS))
   : both (int WS) :=
   int_mul := (lift2_both (Hacspec_Lib_Pre.int_mul)).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations int_div {WS}
   (x : both (int WS)) (y : both (int WS))
   : both (int WS) :=
   int_div := (lift2_both (Hacspec_Lib_Pre.int_div : int _ -> int _ -> int _)).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations int_mod {WS}
   (x : both (int WS)) (y : both (int WS))
   : both (int WS) :=
   int_mod := (lift2_both (Hacspec_Lib_Pre.int_mod : int _ -> int _ -> int _)).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations int_xor {WS}
   (x : both (int WS)) (y : both (int WS))
   : both (int WS) :=
   int_xor := (lift2_both (Hacspec_Lib_Pre.int_xor : int _ -> int _ -> int _)).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations int_and {WS}
   (x : both (int WS)) (y : both (int WS))
   : both (int WS) :=
   int_and := (lift2_both (Hacspec_Lib_Pre.int_and : int _ -> int _ -> int _)).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations int_or {WS}
   (x : both (int WS)) (y : both (int WS))
   : both (int WS) :=
   int_or := (lift2_both (Hacspec_Lib_Pre.int_or : int _ -> int _ -> int _)).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations int_not {WS} (x : both (int WS)) : both (int WS) :=
   int_not := (lift1_both (Hacspec_Lib_Pre.int_not : int _ -> int _)).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations cast_int {WS1 WS2} (x : both (int WS1)) : both (int WS2) :=
   cast_int := (lift1_both (fun (n : int _) => repr _ (unsigned n))).
-Fail Next Obligation.
+Fail Final Obligation.
 (* End IntType. *)
 
 Notation secret := (lift1_both secret).

@@ -72,7 +72,7 @@ Equations sub (x : both v_Z) (y : both v_Z) : both v_Z :=
   sub x y  :=
     f_add x (f_opp y) : both v_Z.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations compute_group_element_for_vote (xi : both f_Z) (vote : both 'bool) (g_pow_yi : both v_G) : both v_G :=
   compute_group_element_for_vote xi vote g_pow_yi  :=
@@ -80,13 +80,13 @@ Equations compute_group_element_for_vote (xi : both f_Z) (vote : both 'bool) (g_
     then f_field_one
     else f_field_zero)) : both v_G.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations div (x : both v_G) (y : both v_G) : both v_G :=
   div x y  :=
     f_prod x (f_group_inv y) : both v_G.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations compute_g_pow_yi (i : both uint_size) (xis : both (nseq v_G (is_pure (n)))) : both v_G :=
   compute_g_pow_yi i xis  :=
@@ -101,19 +101,19 @@ Equations compute_g_pow_yi (i : both uint_size) (xis : both (nseq v_G (is_pure (
     div prod1 prod2 : both v_G.
 Solve All Obligations with now intros ; destruct from_uint_size.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations check_commitment (g_pow_xi_yi_vi : both v_G) (commitment : both f_Z) : both 'bool :=
   check_commitment g_pow_xi_yi_vi commitment  :=
     (f_hash (impl__into_vec (unsize (box_new (array_from_list [g_pow_xi_yi_vi]))))) =.? commitment : both 'bool.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations commit_to (g_pow_xi_yi_vi : both v_G) : both f_Z :=
   commit_to g_pow_xi_yi_vi  :=
     f_hash (impl__into_vec (unsize (box_new (array_from_list [g_pow_xi_yi_vi])))) : both f_Z.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Definition t_CastVoteParam : choice_type :=
   (int32 × v_Z × v_Z × v_Z × v_Z × 'bool).
@@ -122,37 +122,37 @@ Equations f_cvp_i (s : both t_CastVoteParam) : both int32 :=
     bind_both s (fun x =>
       ret_both (fst (fst (fst (fst (fst x)))) : int32)) : both int32.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_cvp_xi (s : both t_CastVoteParam) : both v_Z :=
   f_cvp_xi s  :=
     bind_both s (fun x =>
       ret_both (snd (fst (fst (fst (fst x)))) : v_Z)) : both v_Z.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_cvp_zkp_random_w (s : both t_CastVoteParam) : both v_Z :=
   f_cvp_zkp_random_w s  :=
     bind_both s (fun x =>
       ret_both (snd (fst (fst (fst x))) : v_Z)) : both v_Z.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_cvp_zkp_random_r (s : both t_CastVoteParam) : both v_Z :=
   f_cvp_zkp_random_r s  :=
     bind_both s (fun x =>
       ret_both (snd (fst (fst x)) : v_Z)) : both v_Z.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_cvp_zkp_random_d (s : both t_CastVoteParam) : both v_Z :=
   f_cvp_zkp_random_d s  :=
     bind_both s (fun x =>
       ret_both (snd (fst x) : v_Z)) : both v_Z.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_cvp_vote (s : both t_CastVoteParam) : both 'bool :=
   f_cvp_vote s  :=
     bind_both s (fun x =>
       ret_both (snd x : 'bool)) : both 'bool.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations Build_t_CastVoteParam {f_cvp_i : both int32} {f_cvp_xi : both v_Z} {f_cvp_zkp_random_w : both v_Z} {f_cvp_zkp_random_r : both v_Z} {f_cvp_zkp_random_d : both v_Z} {f_cvp_vote : both 'bool} : both (t_CastVoteParam) :=
   Build_t_CastVoteParam  :=
     bind_both f_cvp_vote (fun f_cvp_vote =>
@@ -163,7 +163,7 @@ Equations Build_t_CastVoteParam {f_cvp_i : both int32} {f_cvp_xi : both v_Z} {f_
               bind_both f_cvp_i (fun f_cvp_i =>
                 ret_both ((f_cvp_i,f_cvp_xi,f_cvp_zkp_random_w,f_cvp_zkp_random_r,f_cvp_zkp_random_d,f_cvp_vote) : (t_CastVoteParam)))))))) : both (t_CastVoteParam).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Notation "'Build_t_CastVoteParam' '[' x ']' '(' 'f_cvp_i' ':=' y ')'" := (Build_t_CastVoteParam (f_cvp_i := y) (f_cvp_xi := f_cvp_xi x) (f_cvp_zkp_random_w := f_cvp_zkp_random_w x) (f_cvp_zkp_random_r := f_cvp_zkp_random_r x) (f_cvp_zkp_random_d := f_cvp_zkp_random_d x) (f_cvp_vote := f_cvp_vote x)).
 Notation "'Build_t_CastVoteParam' '[' x ']' '(' 'f_cvp_xi' ':=' y ')'" := (Build_t_CastVoteParam (f_cvp_i := f_cvp_i x) (f_cvp_xi := y) (f_cvp_zkp_random_w := f_cvp_zkp_random_w x) (f_cvp_zkp_random_r := f_cvp_zkp_random_r x) (f_cvp_zkp_random_d := f_cvp_zkp_random_d x) (f_cvp_vote := f_cvp_vote x)).
 Notation "'Build_t_CastVoteParam' '[' x ']' '(' 'f_cvp_zkp_random_w' ':=' y ')'" := (Build_t_CastVoteParam (f_cvp_i := f_cvp_i x) (f_cvp_xi := f_cvp_xi x) (f_cvp_zkp_random_w := y) (f_cvp_zkp_random_r := f_cvp_zkp_random_r x) (f_cvp_zkp_random_d := f_cvp_zkp_random_d x) (f_cvp_vote := f_cvp_vote x)).
@@ -178,67 +178,67 @@ Equations f_or_zkp_x (s : both t_OrZKPCommit) : both v_G :=
     bind_both s (fun x =>
       ret_both (fst (fst (fst (fst (fst (fst (fst (fst (fst (fst x))))))))) : v_G)) : both v_G.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_or_zkp_y (s : both t_OrZKPCommit) : both v_G :=
   f_or_zkp_y s  :=
     bind_both s (fun x =>
       ret_both (snd (fst (fst (fst (fst (fst (fst (fst (fst (fst x))))))))) : v_G)) : both v_G.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_or_zkp_a1 (s : both t_OrZKPCommit) : both v_G :=
   f_or_zkp_a1 s  :=
     bind_both s (fun x =>
       ret_both (snd (fst (fst (fst (fst (fst (fst (fst (fst x)))))))) : v_G)) : both v_G.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_or_zkp_b1 (s : both t_OrZKPCommit) : both v_G :=
   f_or_zkp_b1 s  :=
     bind_both s (fun x =>
       ret_both (snd (fst (fst (fst (fst (fst (fst (fst x))))))) : v_G)) : both v_G.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_or_zkp_a2 (s : both t_OrZKPCommit) : both v_G :=
   f_or_zkp_a2 s  :=
     bind_both s (fun x =>
       ret_both (snd (fst (fst (fst (fst (fst (fst x)))))) : v_G)) : both v_G.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_or_zkp_b2 (s : both t_OrZKPCommit) : both v_G :=
   f_or_zkp_b2 s  :=
     bind_both s (fun x =>
       ret_both (snd (fst (fst (fst (fst (fst x))))) : v_G)) : both v_G.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_or_zkp_c (s : both t_OrZKPCommit) : both f_Z :=
   f_or_zkp_c s  :=
     bind_both s (fun x =>
       ret_both (snd (fst (fst (fst (fst x)))) : f_Z)) : both f_Z.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_or_zkp_d1 (s : both t_OrZKPCommit) : both f_Z :=
   f_or_zkp_d1 s  :=
     bind_both s (fun x =>
       ret_both (snd (fst (fst (fst x))) : f_Z)) : both f_Z.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_or_zkp_d2 (s : both t_OrZKPCommit) : both f_Z :=
   f_or_zkp_d2 s  :=
     bind_both s (fun x =>
       ret_both (snd (fst (fst x)) : f_Z)) : both f_Z.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_or_zkp_r1 (s : both t_OrZKPCommit) : both f_Z :=
   f_or_zkp_r1 s  :=
     bind_both s (fun x =>
       ret_both (snd (fst x) : f_Z)) : both f_Z.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_or_zkp_r2 (s : both t_OrZKPCommit) : both f_Z :=
   f_or_zkp_r2 s  :=
     bind_both s (fun x =>
       ret_both (snd x : f_Z)) : both f_Z.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations Build_t_OrZKPCommit {f_or_zkp_x : both v_G} {f_or_zkp_y : both v_G} {f_or_zkp_a1 : both v_G} {f_or_zkp_b1 : both v_G} {f_or_zkp_a2 : both v_G} {f_or_zkp_b2 : both v_G} {f_or_zkp_c : both f_Z} {f_or_zkp_d1 : both f_Z} {f_or_zkp_d2 : both f_Z} {f_or_zkp_r1 : both f_Z} {f_or_zkp_r2 : both f_Z} : both (t_OrZKPCommit) :=
   Build_t_OrZKPCommit  :=
     bind_both f_or_zkp_r2 (fun f_or_zkp_r2 =>
@@ -254,7 +254,7 @@ Equations Build_t_OrZKPCommit {f_or_zkp_x : both v_G} {f_or_zkp_y : both v_G} {f
                         bind_both f_or_zkp_x (fun f_or_zkp_x =>
                           ret_both ((f_or_zkp_x,f_or_zkp_y,f_or_zkp_a1,f_or_zkp_b1,f_or_zkp_a2,f_or_zkp_b2,f_or_zkp_c,f_or_zkp_d1,f_or_zkp_d2,f_or_zkp_r1,f_or_zkp_r2) : (t_OrZKPCommit))))))))))))) : both (t_OrZKPCommit).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_x' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := y) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)).
 Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_y' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := y) (f_or_zkp_a1 := f_or_zkp_a1 x) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)).
 Notation "'Build_t_OrZKPCommit' '[' x ']' '(' 'f_or_zkp_a1' ':=' y ')'" := (Build_t_OrZKPCommit (f_or_zkp_x := f_or_zkp_x x) (f_or_zkp_y := f_or_zkp_y x) (f_or_zkp_a1 := y) (f_or_zkp_b1 := f_or_zkp_b1 x) (f_or_zkp_a2 := f_or_zkp_a2 x) (f_or_zkp_b2 := f_or_zkp_b2 x) (f_or_zkp_c := f_or_zkp_c x) (f_or_zkp_d1 := f_or_zkp_d1 x) (f_or_zkp_d2 := f_or_zkp_d2 x) (f_or_zkp_r1 := f_or_zkp_r1 x) (f_or_zkp_r2 := f_or_zkp_r2 x)).
@@ -274,19 +274,19 @@ Equations f_rp_i (s : both t_RegisterParam) : both int32 :=
     bind_both s (fun x =>
       ret_both (fst (fst x) : int32)) : both int32.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_rp_xi (s : both t_RegisterParam) : both v_Z :=
   f_rp_xi s  :=
     bind_both s (fun x =>
       ret_both (snd (fst x) : v_Z)) : both v_Z.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_rp_zkp_random (s : both t_RegisterParam) : both v_Z :=
   f_rp_zkp_random s  :=
     bind_both s (fun x =>
       ret_both (snd x : v_Z)) : both v_Z.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations Build_t_RegisterParam {f_rp_i : both int32} {f_rp_xi : both v_Z} {f_rp_zkp_random : both v_Z} : both (t_RegisterParam) :=
   Build_t_RegisterParam  :=
     bind_both f_rp_zkp_random (fun f_rp_zkp_random =>
@@ -294,7 +294,7 @@ Equations Build_t_RegisterParam {f_rp_i : both int32} {f_rp_xi : both v_Z} {f_rp
         bind_both f_rp_i (fun f_rp_i =>
           ret_both ((f_rp_i,f_rp_xi,f_rp_zkp_random) : (t_RegisterParam))))) : both (t_RegisterParam).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Notation "'Build_t_RegisterParam' '[' x ']' '(' 'f_rp_i' ':=' y ')'" := (Build_t_RegisterParam (f_rp_i := y) (f_rp_xi := f_rp_xi x) (f_rp_zkp_random := f_rp_zkp_random x)).
 Notation "'Build_t_RegisterParam' '[' x ']' '(' 'f_rp_xi' ':=' y ')'" := (Build_t_RegisterParam (f_rp_i := f_rp_i x) (f_rp_xi := y) (f_rp_zkp_random := f_rp_zkp_random x)).
 Notation "'Build_t_RegisterParam' '[' x ']' '(' 'f_rp_zkp_random' ':=' y ')'" := (Build_t_RegisterParam (f_rp_i := f_rp_i x) (f_rp_xi := f_rp_xi x) (f_rp_zkp_random := y)).
@@ -306,19 +306,19 @@ Equations f_schnorr_zkp_u (s : both t_SchnorrZKPCommit) : both v_G :=
     bind_both s (fun x =>
       ret_both (fst (fst x) : v_G)) : both v_G.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_schnorr_zkp_c (s : both t_SchnorrZKPCommit) : both f_Z :=
   f_schnorr_zkp_c s  :=
     bind_both s (fun x =>
       ret_both (snd (fst x) : f_Z)) : both f_Z.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_schnorr_zkp_z (s : both t_SchnorrZKPCommit) : both f_Z :=
   f_schnorr_zkp_z s  :=
     bind_both s (fun x =>
       ret_both (snd x : f_Z)) : both f_Z.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations Build_t_SchnorrZKPCommit {f_schnorr_zkp_u : both v_G} {f_schnorr_zkp_c : both f_Z} {f_schnorr_zkp_z : both f_Z} : both (t_SchnorrZKPCommit) :=
   Build_t_SchnorrZKPCommit  :=
     bind_both f_schnorr_zkp_z (fun f_schnorr_zkp_z =>
@@ -326,7 +326,7 @@ Equations Build_t_SchnorrZKPCommit {f_schnorr_zkp_u : both v_G} {f_schnorr_zkp_c
         bind_both f_schnorr_zkp_u (fun f_schnorr_zkp_u =>
           ret_both ((f_schnorr_zkp_u,f_schnorr_zkp_c,f_schnorr_zkp_z) : (t_SchnorrZKPCommit))))) : both (t_SchnorrZKPCommit).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Notation "'Build_t_SchnorrZKPCommit' '[' x ']' '(' 'f_schnorr_zkp_u' ':=' y ')'" := (Build_t_SchnorrZKPCommit (f_schnorr_zkp_u := y) (f_schnorr_zkp_c := f_schnorr_zkp_c x) (f_schnorr_zkp_z := f_schnorr_zkp_z x)).
 Notation "'Build_t_SchnorrZKPCommit' '[' x ']' '(' 'f_schnorr_zkp_c' ':=' y ')'" := (Build_t_SchnorrZKPCommit (f_schnorr_zkp_u := f_schnorr_zkp_u x) (f_schnorr_zkp_c := y) (f_schnorr_zkp_z := f_schnorr_zkp_z x)).
 Notation "'Build_t_SchnorrZKPCommit' '[' x ']' '(' 'f_schnorr_zkp_z' ':=' y ')'" := (Build_t_SchnorrZKPCommit (f_schnorr_zkp_u := f_schnorr_zkp_u x) (f_schnorr_zkp_c := f_schnorr_zkp_c x) (f_schnorr_zkp_z := y)).
@@ -337,7 +337,7 @@ Equations Build_t_TallyParameter : both (t_TallyParameter) :=
   Build_t_TallyParameter  :=
     ret_both (tt (* Empty tuple *) : (t_TallyParameter)) : both (t_TallyParameter).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations schnorr_zkp (random : both f_Z) (h : both v_G) (x : both f_Z) : both (t_SchnorrZKPCommit) :=
   schnorr_zkp random h x  :=
@@ -350,7 +350,7 @@ Equations schnorr_zkp (random : both f_Z) (h : both v_G) (x : both f_Z) : both (
     letm[choice_typeMonad.result_bind_code (t_SchnorrZKPCommit)] hoist1 := v_Break (Build_t_SchnorrZKPCommit (f_schnorr_zkp_u := u) (f_schnorr_zkp_c := c) (f_schnorr_zkp_z := z)) in
     ControlFlow_Continue (never_to_any hoist1)) : both (t_SchnorrZKPCommit).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations schnorr_zkp_validate (h : both v_G) (pi : both (t_SchnorrZKPCommit)) : both 'bool :=
   schnorr_zkp_validate h pi  :=
@@ -358,7 +358,7 @@ Equations schnorr_zkp_validate (h : both v_G) (pi : both (t_SchnorrZKPCommit)) :
       h;
       f_schnorr_zkp_u pi])))))) ((f_g_pow (f_schnorr_zkp_z pi)) =.? (f_prod (f_schnorr_zkp_u pi) (f_pow h (f_schnorr_zkp_c pi)))) : both 'bool.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations zkp_one_out_of_two (random_w : both f_Z) (random_r : both f_Z) (random_d : both f_Z) (h : both v_G) (xi : both f_Z) (vi : both 'bool) : both (t_OrZKPCommit) :=
   zkp_one_out_of_two random_w random_r random_d h xi vi  :=
@@ -399,7 +399,7 @@ Equations zkp_one_out_of_two (random_w : both f_Z) (random_r : both f_Z) (random
     letb r1 := sub w (f_mul xi d1) in
     Build_t_OrZKPCommit (f_or_zkp_x := x) (f_or_zkp_y := y) (f_or_zkp_a1 := a1) (f_or_zkp_b1 := b1) (f_or_zkp_a2 := a2) (f_or_zkp_b2 := b2) (f_or_zkp_c := c) (f_or_zkp_d1 := d1) (f_or_zkp_d2 := d2) (f_or_zkp_r1 := r1) (f_or_zkp_r2 := r2) : both (t_OrZKPCommit).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations zkp_one_out_of_two_validate (h : both v_G) (zkp : both (t_OrZKPCommit)) : both 'bool :=
   zkp_one_out_of_two_validate h zkp  :=
@@ -411,7 +411,7 @@ Equations zkp_one_out_of_two_validate (h : both v_G) (zkp : both (t_OrZKPCommit)
       f_or_zkp_b2 zkp])))) in
     andb (andb (andb (andb (c =.? (f_add (f_or_zkp_d1 zkp) (f_or_zkp_d2 zkp))) ((f_or_zkp_a1 zkp) =.? (f_prod (f_g_pow (f_or_zkp_r1 zkp)) (f_pow (f_or_zkp_x zkp) (f_or_zkp_d1 zkp))))) ((f_or_zkp_b1 zkp) =.? (f_prod (f_pow h (f_or_zkp_r1 zkp)) (f_pow (f_or_zkp_y zkp) (f_or_zkp_d1 zkp))))) ((f_or_zkp_a2 zkp) =.? (f_prod (f_g_pow (f_or_zkp_r2 zkp)) (f_pow (f_or_zkp_x zkp) (f_or_zkp_d2 zkp))))) ((f_or_zkp_b2 zkp) =.? (f_prod (f_pow h (f_or_zkp_r2 zkp)) (f_pow (div (f_or_zkp_y zkp) f_g) (f_or_zkp_d2 zkp)))) : both 'bool.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Definition t_OvnContractState : choice_type :=
   (nseq v_G (is_pure (n)) × nseq (t_SchnorrZKPCommit) (is_pure (n)) × nseq f_Z (is_pure (n)) × nseq v_G (is_pure (n)) × nseq (t_OrZKPCommit) (is_pure (n)) × int32 × nseq 'bool (is_pure (n))).
@@ -420,43 +420,43 @@ Equations f_g_pow_xis (s : both t_OvnContractState) : both (nseq v_G (is_pure (n
     bind_both s (fun x =>
       ret_both (fst (fst (fst (fst (fst (fst x))))) : (nseq v_G (is_pure (n))))) : both (nseq v_G (is_pure (n))).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_zkp_xis (s : both t_OvnContractState) : both (nseq (t_SchnorrZKPCommit) (is_pure (n))) :=
   f_zkp_xis s  :=
     bind_both s (fun x =>
       ret_both (snd (fst (fst (fst (fst (fst x))))) : (nseq (t_SchnorrZKPCommit) (is_pure (n))))) : both (nseq (t_SchnorrZKPCommit) (is_pure (n))).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_commit_vis (s : both t_OvnContractState) : both (nseq f_Z (is_pure (n))) :=
   f_commit_vis s  :=
     bind_both s (fun x =>
       ret_both (snd (fst (fst (fst (fst x)))) : (nseq f_Z (is_pure (n))))) : both (nseq f_Z (is_pure (n))).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_g_pow_xi_yi_vis (s : both t_OvnContractState) : both (nseq v_G (is_pure (n))) :=
   f_g_pow_xi_yi_vis s  :=
     bind_both s (fun x =>
       ret_both (snd (fst (fst (fst x))) : (nseq v_G (is_pure (n))))) : both (nseq v_G (is_pure (n))).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_zkp_vis (s : both t_OvnContractState) : both (nseq (t_OrZKPCommit) (is_pure (n))) :=
   f_zkp_vis s  :=
     bind_both s (fun x =>
       ret_both (snd (fst (fst x)) : (nseq (t_OrZKPCommit) (is_pure (n))))) : both (nseq (t_OrZKPCommit) (is_pure (n))).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_tally (s : both t_OvnContractState) : both int32 :=
   f_tally s  :=
     bind_both s (fun x =>
       ret_both (snd (fst x) : int32)) : both int32.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations f_round1 (s : both t_OvnContractState) : both (nseq 'bool (is_pure (n))) :=
   f_round1 s  :=
     bind_both s (fun x =>
       ret_both (snd x : (nseq 'bool (is_pure (n))))) : both (nseq 'bool (is_pure (n))).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations Build_t_OvnContractState {f_g_pow_xis : both (nseq v_G (is_pure (n)))} {f_zkp_xis : both (nseq (t_SchnorrZKPCommit) (is_pure (n)))} {f_commit_vis : both (nseq f_Z (is_pure (n)))} {f_g_pow_xi_yi_vis : both (nseq v_G (is_pure (n)))} {f_zkp_vis : both (nseq (t_OrZKPCommit) (is_pure (n)))} {f_tally : both int32} {f_round1 : both (nseq 'bool (is_pure (n)))} : both (t_OvnContractState) :=
   Build_t_OvnContractState  :=
     bind_both f_round1 (fun f_round1 =>
@@ -468,7 +468,7 @@ Equations Build_t_OvnContractState {f_g_pow_xis : both (nseq v_G (is_pure (n)))}
                 bind_both f_g_pow_xis (fun f_g_pow_xis =>
                   ret_both ((f_g_pow_xis,f_zkp_xis,f_commit_vis,f_g_pow_xi_yi_vis,f_zkp_vis,f_tally,f_round1) : (t_OvnContractState))))))))) : both (t_OvnContractState).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_g_pow_xis' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := y) (f_zkp_xis := f_zkp_xis x) (f_commit_vis := f_commit_vis x) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := f_zkp_vis x) (f_tally := f_tally x) (f_round1 := f_round1 x)).
 Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_zkp_xis' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := f_g_pow_xis x) (f_zkp_xis := y) (f_commit_vis := f_commit_vis x) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := f_zkp_vis x) (f_tally := f_tally x) (f_round1 := f_round1 x)).
 Notation "'Build_t_OvnContractState' '[' x ']' '(' 'f_commit_vis' ':=' y ')'" := (Build_t_OvnContractState (f_g_pow_xis := f_g_pow_xis x) (f_zkp_xis := f_zkp_xis x) (f_commit_vis := y) (f_g_pow_xi_yi_vis := f_g_pow_xi_yi_vis x) (f_zkp_vis := f_zkp_vis x) (f_tally := f_tally x) (f_round1 := f_round1 x)).
@@ -482,12 +482,12 @@ Definition state_OVN : choice_type :=
 #[global] Program Instance t_CastVoteParam_t_HasReceiveContext : t_HasReceiveContext t_CastVoteParam 'unit :=
   {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result t_CastVoteParam t_ParseError)) (tt, inl ctx)) : _)|}.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 #[global] Program Instance t_CastVoteParam_t_Sized : t_Sized t_CastVoteParam :=
   fun x =>
     x.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations cast_vote (ctx : both t_CastVoteParam) (state : both (t_OvnContractState)) : both (t_Result (v_A × t_OvnContractState) t_ParseError) :=
   cast_vote ctx state  :=
     run (letb '(_,out) := f_get (f_parameter_cursor ctx) in
@@ -500,7 +500,7 @@ Equations cast_vote (ctx : both t_CastVoteParam) (state : both (t_OvnContractSta
     letb cast_vote_state_ret := Build_t_OvnContractState[cast_vote_state_ret] (f_zkp_vis := update_at_usize (f_zkp_vis cast_vote_state_ret) (cast_int (WS2 := U32) (f_cvp_i params)) zkp_vi) in
     Result_Ok (prod_b (f_accept,cast_vote_state_ret)))) : both (t_Result (v_A × t_OvnContractState) t_ParseError).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Definition receive_OVN_cast_vote (ctx : both t_CastVoteParam) (st : both state_OVN) : both (t_Result ((v_A × state_OVN)) (t_ParseError)) :=
   cast_vote ctx st.
 
@@ -521,7 +521,7 @@ Equations commit_to_vote (ctx : both t_CastVoteParam) (state : both (t_OvnContra
     letb commit_to_vote_state_ret := Build_t_OvnContractState[commit_to_vote_state_ret] (f_commit_vis := update_at_usize (f_commit_vis commit_to_vote_state_ret) (cast_int (WS2 := U32) (f_cvp_i params)) commit_vi) in
     Result_Ok (prod_b (f_accept,commit_to_vote_state_ret)))) : both (t_Result (v_A × t_OvnContractState) t_ParseError).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Definition receive_OVN_commit_to_vote (ctx : both t_CastVoteParam) (st : both state_OVN) : both (t_Result ((v_A × state_OVN)) (t_ParseError)) :=
   commit_to_vote ctx st.
 
@@ -546,17 +546,17 @@ Equations init_ovn_contract (_ : both 'unit) : both (t_Result (t_OvnContractStat
   init_ovn_contract _  :=
     Result_Ok (Build_t_OvnContractState (f_g_pow_xis := repeat f_group_one n) (f_zkp_xis := repeat (Build_t_SchnorrZKPCommit (f_schnorr_zkp_u := f_group_one) (f_schnorr_zkp_z := f_field_zero) (f_schnorr_zkp_c := f_field_zero)) n) (f_commit_vis := repeat f_field_zero n) (f_g_pow_xi_yi_vis := repeat f_group_one n) (f_zkp_vis := repeat (Build_t_OrZKPCommit (f_or_zkp_x := f_group_one) (f_or_zkp_y := f_group_one) (f_or_zkp_a1 := f_group_one) (f_or_zkp_b1 := f_group_one) (f_or_zkp_a2 := f_group_one) (f_or_zkp_b2 := f_group_one) (f_or_zkp_c := f_field_zero) (f_or_zkp_d1 := f_field_zero) (f_or_zkp_d2 := f_field_zero) (f_or_zkp_r1 := f_field_zero) (f_or_zkp_r2 := f_field_zero)) n) (f_tally := ret_both (0 : int32)) (f_round1 := repeat (ret_both (false : 'bool)) n)) : both (t_Result (t_OvnContractState) t_Reject).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 
 #[global] Program Instance t_RegisterParam_t_HasReceiveContext : t_HasReceiveContext t_RegisterParam 'unit :=
   {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result t_RegisterParam t_ParseError)) (tt, inl ctx)) : _)|}.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 #[global] Program Instance t_RegisterParam_t_Sized : t_Sized t_RegisterParam :=
   fun x =>
     x.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations register_vote (ctx : both t_RegisterParam) (state : both (t_OvnContractState)) : both (t_Result (v_A × t_OvnContractState) t_ParseError) :=
   register_vote ctx state  :=
     run (letb '(_,out) := f_get (f_parameter_cursor ctx) in
@@ -569,19 +569,19 @@ Equations register_vote (ctx : both t_RegisterParam) (state : both (t_OvnContrac
     letb register_vote_state_ret := Build_t_OvnContractState[register_vote_state_ret] (f_round1 := update_at_usize (f_round1 register_vote_state_ret) (cast_int (WS2 := U32) (f_rp_i params)) (ret_both (true : 'bool))) in
     Result_Ok (prod_b (f_accept,register_vote_state_ret)))) : both (t_Result (v_A × t_OvnContractState) t_ParseError).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Definition receive_OVN_register (ctx : both t_RegisterParam) (st : both state_OVN) : both (t_Result ((v_A × state_OVN)) (t_ParseError)) :=
   register_vote ctx st.
 
 #[global] Program Instance t_TallyParameter_t_HasReceiveContext : t_HasReceiveContext t_TallyParameter 'unit :=
   {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result t_TallyParameter t_ParseError)) (tt, inl ctx)) : _)|}.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 #[global] Program Instance t_TallyParameter_t_Sized : t_Sized t_TallyParameter :=
   fun x =>
     x.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations tally_votes (_ : both t_TallyParameter) (state : both (t_OvnContractState)) : both (t_Result (v_A × t_OvnContractState) t_ParseError) :=
   tally_votes _ state  :=
     letb _ := foldi_both_list (f_into_iter (Build_t_Range (f_start := ret_both (0 : uint_size)) (f_end := n))) (fun i =>
@@ -613,7 +613,7 @@ Equations tally_votes (_ : both t_TallyParameter) (state : both (t_OvnContractSt
     letb tally_votes_state_ret := Build_t_OvnContractState[tally_votes_state_ret] (f_tally := tally) in
     Result_Ok (prod_b (f_accept,tally_votes_state_ret)) : both (t_Result (v_A × t_OvnContractState) t_ParseError).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Definition receive_OVN_tally (ctx : both t_TallyParameter) (st : both state_OVN) : both (t_Result ((v_A × state_OVN)) (t_ParseError)) :=
   tally_votes ctx st.
 
@@ -625,16 +625,16 @@ Inductive Msg_OVN : Type :=
 #[global] Program Instance state_OVN_t_HasReceiveContext : t_HasReceiveContext state_OVN 'unit :=
   {| f_get := (fun  (ctx : _) => (solve_lift (@ret_both (t_ParamType × t_Result state_OVN t_ParseError)) (tt, inl ctx)) : _)|}.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 #[global] Program Instance state_OVN_t_Sized : t_Sized state_OVN :=
   fun x =>
     x.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 #[global] Program Instance state_OVN_t_HasActions : t_HasActions state_OVN :=
   _ (Build_t_OvnContractState (f_g_pow_xis := repeat f_group_one n) (f_zkp_xis := repeat (Build_t_SchnorrZKPCommit (f_schnorr_zkp_u := f_group_one) (f_schnorr_zkp_z := f_field_zero) (f_schnorr_zkp_c := f_field_zero)) n) (f_commit_vis := repeat f_field_zero n) (f_g_pow_xi_yi_vis := repeat f_group_one n) (f_zkp_vis := repeat (Build_t_OrZKPCommit (f_or_zkp_x := f_group_one) (f_or_zkp_y := f_group_one) (f_or_zkp_a1 := f_group_one) (f_or_zkp_b1 := f_group_one) (f_or_zkp_a2 := f_group_one) (f_or_zkp_b2 := f_group_one) (f_or_zkp_c := f_field_zero) (f_or_zkp_d1 := f_field_zero) (f_or_zkp_d2 := f_field_zero) (f_or_zkp_r1 := f_field_zero) (f_or_zkp_r2 := f_field_zero)) n) (f_tally := ret_both (0 : int32)) (f_round1 := repeat (ret_both (false : 'bool)) n)).
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations receive_OVN (chain : Chain) (ctx : ContractCallContext) (st : state_OVN) (msg : Datatypes.option Msg_OVN) : ResultMonad.result (state_OVN * list ActionBody) t_ParseError :=
   receive_OVN chain ctx st msg  :=
     match msg with
@@ -662,15 +662,15 @@ Equations receive_OVN (chain : Chain) (ctx : ContractCallContext) (st : state_OV
       ResultMonad.Err tt
     end : ResultMonad.result (state_OVN * list ActionBody) t_ParseError.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 #[global] Program Instance state_OVN_Serializable : Serializable state_OVN :=
   _.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 #[global] Program Instance Msg_OVN_Serializable : Serializable Msg_OVN :=
   Derive Serializable Msg_OVN_rect<msg_OVN_cast_vote,msg_OVN_commit_to_vote,msg_OVN_register,msg_OVN_tally>.
 Solve All Obligations with now intros ; destruct from_uint_size.
-Fail Next Obligation.
+Fail Final Obligation.
 Definition contract_OVN : Contract state_OVN Msg_OVN state_OVN t_ParseError :=
   build_contract init_OVN receive_OVN.
 End HacspecOvn.

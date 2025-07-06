@@ -31,7 +31,7 @@ Program Definition serialize_by_other {A B} (f_to : B -> A) (f_from : A -> B)  `
       serialize m := serialize (f_to m);
       deserialize m := option_map f_from (deserialize m) ;
   |}.
-Next Obligation.
+Final Obligation.
   intros. hnf. rewrite deserialize_serialize.
   unfold option_map. now f_equal.
 Defined.
@@ -44,7 +44,7 @@ Program Definition serialize_by_other_option {A B} (f_to : B -> Datatypes.option
                      | None => None
                      end;
   |}.
-Next Obligation.
+Final Obligation.
   intros. hnf. simpl. rewrite deserialize_serialize. now f_equal.
 Defined.
 

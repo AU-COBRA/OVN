@@ -50,7 +50,7 @@ Notation seq_new_ := (lift2_both seq_new_).
 Notation seq_new := (lift1_both seq_new).
 Equations seq_len {A : choice_type} (x : both (seq A)) : both (uint_size) :=
   seq_len := (lift1_both Hacspec_Lib_Pre.seq_len).
-Fail Next Obligation.
+Fail Final Obligation.
 Notation seq_index := (lift2_both seq_index).
 
 (**** Seq manipulation *)
@@ -196,7 +196,7 @@ Equations array_new_ {A: choice_type} (init: both A) `(len: uint_size) : both (n
 Equations array_index
   {A: choice_type} {len : nat} (x : both (nseq_ A len)) {WS} (y : both (int WS)) : both A :=
   array_index x (WS := WS) y := lift2_both (fun x y => Hacspec_Lib_Pre.array_index x y) x y.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations array_upd {A : choice_type} {len} (s: both (nseq_ A len)) (i: both (@int U32)) (new_v: both A) : both (nseq_ A len) :=
   array_upd s i new_v :=
@@ -213,7 +213,7 @@ Equations array_from_list_helper {A: choice_type} (x : both A) (xs: list (both A
     bind_both x (fun temp_x =>
     bind_both (array_from_list_helper y ys k) (fun temp_y =>
     lift_both (ret_both (setm (temp_y : nseq_ A (S k)) (Ordinal (ssrbool.introT ssrnat.ltP (lt_succ_diag_r_sub k (length (y :: ys))))) temp_x : nseq_ A (S k))))).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations array_from_list {A: choice_type} (l: list (both A))
   : both (nseq_ A (length l)) :=
@@ -223,7 +223,7 @@ Equations array_from_list {A: choice_type} (l: list (both A))
     | (x :: xs) => array_from_list_helper x xs (length xs)
     end.
 Solve All Obligations with (intros ; (fset_equality || solve_in_fset)).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Program Definition array_from_seq {A: choice_type} (out_len: nat) (input: both (seq A)) : both (nseq_ A out_len) :=
   lift1_both  (* (H_loc_incl_x := fsubsetxx _) (H_opsig_incl_x := fsubsetxx _) *) (array_from_seq out_len) input.
@@ -232,7 +232,7 @@ Equations array_to_seq
   {A : choice_type} {n} (f : both (nseq_ A n))
   (* `{H_loc_incl_x : is_true (fsubset L1 L2)} `{H_opsig_incl_x : is_true (fsubset I1 I2)} *) : both (seq A) :=
   array_to_seq := (lift1_both Hacspec_Lib_Pre.array_to_seq).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Definition array_from_slice
   {a: choice_type}

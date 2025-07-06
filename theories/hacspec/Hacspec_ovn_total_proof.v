@@ -697,7 +697,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret (g ^+ FieldToWitness xi)
         }
     ].
-  Fail Next Obligation.
+  Fail Final Obligation.
 
   Program Definition dl_ideal :
     package fset0
@@ -713,7 +713,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret (g ^+ FieldToWitness xi)
         }
     ].
-  Fail Next Obligation.
+  Fail Final Obligation.
 
   Notation " 'chDLRandom' " :=
     (v_G × v_Z)
@@ -741,7 +741,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret (h, xi : f_Z)
         }
     ].
-  Fail Next Obligation.
+  Fail Final Obligation.
 
   Definition dl_real_ : loc_package [interface] [interface #val #[ DL_RANDOM ] : 'unit → chDLRandom] := {locpackage (pack dl_random ∘ pack dl_real) #with ltac:(unshelve solve_valid_package ; apply fsubsetxx)} .
 
@@ -781,14 +781,13 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
          is_state (schnorr_zkp (ret_both ri) (ret_both h) (ret_both xi))
        }
     ].
-  Next Obligation.
+  Final Obligation.
     intros.
     ssprove_valid.
     destruct x as [xi h].
     ssprove_valid.
     1: apply valid_scheme ; rewrite <- fset0E ; apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
   Qed.
-  Fail Next Obligation.
 
   Notation " 'schnorrMidInp' " :=
     (Schnorr_ZKP.Schnorr.MyAlg.choiceStatement × Schnorr_ZKP.Schnorr.MyAlg.choiceWitness)
@@ -812,7 +811,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
          ret (otf u : v_G, WitnessToField (otf e) : f_Z, WitnessToField (otf z) : f_Z)
        }
     ].
-  Next Obligation.
+  Final Obligation.
     intros.
     ssprove_valid.
     destruct x as [xi h].
@@ -820,7 +819,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     destruct x as [[[? ?] ?] ?].
     ssprove_valid.
   Qed.
-  Fail Next Obligation.
 
   Program Definition schnorr_ideal :
     package fset0
@@ -839,14 +837,13 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
                      (f_schnorr_zkp_z := ret_both (WitnessToField (otf z))))
        }
     ].
-  Next Obligation.
+  Final Obligation.
     intros.
     ssprove_valid.
     destruct x as [xi h].
     ssprove_valid.
     1: apply valid_scheme ; rewrite <- fset0E ; apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
   Qed.
-  Fail Next Obligation.
 
   Program Definition schnorr_ideal_no_assert :
     package fset0
@@ -864,14 +861,13 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
                      (f_schnorr_zkp_z := ret_both (WitnessToField (otf z))))
        }
     ].
-  Next Obligation.
+  Final Obligation.
     intros.
     ssprove_valid.
     destruct x as [xi h].
     ssprove_valid.
     1: apply valid_scheme ; rewrite <- fset0E ; apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
   Qed.
-  Fail Next Obligation.
 
   Lemma schnorr_advantage :
     ∀ (LA : {fset Location}) (A : raw_package),
@@ -1037,12 +1033,11 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret (commit : v_Z)
         }
     ].
-  Next Obligation.
+  Final Obligation.
     intros.
     ssprove_valid.
     1: apply valid_scheme ; rewrite <- fset0E ; apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
   Qed.
-  Fail Next Obligation.
 
   Program Definition commit_ideal :
     package fset0
@@ -1058,7 +1053,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret (xi : v_Z)
         }
     ].
-  Fail Next Obligation.
+  Fail Final Obligation.
 
   (* hash_is_psudorandom / commit - game *)
   Definition Commit_game :
@@ -1100,12 +1095,11 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret (temp : v_G)
         }
     ].
-  Next Obligation.
+  Final Obligation.
     intros.
     ssprove_valid.
     1: apply valid_scheme ; rewrite <- fset0E ; apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
   Qed.
-  Fail Next Obligation.
 
   Program Definition GPowYiNotZero_ideal i state :
     package fset0
@@ -1122,12 +1116,11 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret (temp : v_G)
         }
     ].
-  Next Obligation.
+  Final Obligation.
     intros.
     ssprove_valid.
     1: apply valid_scheme ; rewrite <- fset0E ; apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
   Qed.
-  Fail Next Obligation.
 
   (* GPowYiNotZero - game *)
   Definition GPowYiNotZero_game i state :
@@ -1174,14 +1167,13 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
                       (ret_both (vi : 'bool)))
        }
     ].
-  Next Obligation.
+  Final Obligation.
     intros.
     ssprove_valid.
     destruct x as [[[? ?] ?] [? ?]].
     ssprove_valid.
     1: apply valid_scheme ; rewrite <- fset0E ; apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
   Qed.
-  Fail Next Obligation.
 
   Program Definition cds_ideal :
     package fset0
@@ -1213,13 +1205,12 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
              : t_OrZKPCommit)
        }
     ].
-  Next Obligation.
+  Final Obligation.
     intros.
     ssprove_valid.
     destruct x as [[[? ?] ?] [? ?]].
     ssprove_valid.
   Qed.
-  Fail Next Obligation.
 
   Program Definition cds_ideal_no_assert :
     package fset0
@@ -1250,13 +1241,12 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
              : t_OrZKPCommit)
        }
     ].
-  Next Obligation.
+  Final Obligation.
     intros.
     ssprove_valid.
     destruct x as [[[? ?] ?] [? ?]].
     ssprove_valid.
   Qed.
-  Fail Next Obligation.
 
   Notation " 'CDSMidInp' " :=
     (OR_ZKP.proof_args.MyAlg.choiceStatement × OR_ZKP.proof_args.MyAlg.choiceWitness)
@@ -1280,13 +1270,12 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
          ret (OR_ZKP.or_sigma_ret_to_hacspec_ret temp)
        }
     ].
-  Next Obligation.
+  Final Obligation.
     intros.
     ssprove_valid.
     destruct x as [[[? ?] ?] [? ?]].
     ssprove_valid.
   Qed.
-  Fail Next Obligation.
 
   Lemma cds_advantage :
     ∀ (LA : {fset Location}) (A : raw_package),
@@ -1672,13 +1661,12 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   (*       } *)
   (*   ]. *)
   (* Solve All Obligations with now intros ; destruct from_uint_size. *)
-  (* Next Obligation. *)
+  (* Final Obligation. *)
   (*   intros. *)
   (*   ssprove_valid. *)
   (*   destruct x as [[h xi] c]. *)
   (*   ssprove_valid. *)
   (* Qed. *)
-  (* Fail Next Obligation. *)
 
   Notation " 'chSingleProtocolTranscript' " :=
     ((t_SchnorrZKPCommit × v_G) × (v_Z) × (t_OrZKPCommit × v_G))
@@ -1724,7 +1712,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret (((zkp_i, g_pow_xi, commit : f_Z, (cds_i : t_OrZKPCommit, vote_i))) : (((t_SchnorrZKPCommit × v_G) × v_Z) × (t_OrZKPCommit × v_G))%pack)
     ).
   Defined.
-  Next Obligation.
+  Final Obligation.
     intros.
     unfold full_protocol_interface_obligation_1.
     fold chElement.
@@ -1734,7 +1722,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       ssprove_valid.
     - try (rewrite <- fset0E ; setoid_rewrite @imfset0 ; rewrite in_fset0 ; reflexivity).
   Qed.
-  Fail Next Obligation.
 
   Program Definition full_protocol_interface_step1 (state : t_OvnContractState) (i : nat) (vi : 'bool) :
     package fset0
@@ -1774,7 +1761,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret (((zkp_i, g_pow_xi, commit, (cds_i : t_OrZKPCommit, vote_i))) : (((t_SchnorrZKPCommit × v_G) × v_Z) × (t_OrZKPCommit × v_G))%pack)
       ).
   Defined.
-  Next Obligation.
+  Final Obligation.
     intros.
     unfold full_protocol_interface_step1_obligation_1.
     fold chElement.
@@ -1784,7 +1771,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       ssprove_valid.
     - try (rewrite <- fset0E ; setoid_rewrite @imfset0 ; rewrite in_fset0 ; reflexivity).
   Qed.
-  Fail Next Obligation.
 
   Program Definition full_protocol_interface_step2 (state : t_OvnContractState) (i : nat) (vi : 'bool) :
     package fset0
@@ -1826,7 +1812,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           cds_i ← CDS ((g_pow_xi, g_pow_yi, vote_i), (xi, vi)) ;;
           ret (((zkp_i, g_pow_xi, commit, (cds_i : t_OrZKPCommit, vote_i))) : (((t_SchnorrZKPCommit × v_G) × v_Z) × (t_OrZKPCommit × v_G))%pack)).
   Defined.
-  Next Obligation.
+  Final Obligation.
     intros.
     unfold full_protocol_interface_step2_obligation_1.
     eapply (valid_package_cons _ _ _ _ _ _ [] []).
@@ -1877,7 +1863,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
             cds_i ← CDS ((g_pow_xi, g_pow_yi, vote_i), (xi, vi)) ;;
             ret (((zkp_i, g_pow_xi, commit, (cds_i : t_OrZKPCommit, vote_i))) : (((t_SchnorrZKPCommit × v_G) × v_Z) × (t_OrZKPCommit × v_G))%pack)).
   Defined.
-  Next Obligation.
+  Final Obligation.
     intros.
     unfold full_protocol_interface_step3_obligation_1.
     eapply (valid_package_cons _ _ _ _ _ _ [] []).
@@ -1905,7 +1891,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret res
         }
     ].
-  Fail Next Obligation.
+  Fail Final Obligation.
 
   Program Definition full_protocol_interface_step4 (state : t_OvnContractState) (i : nat) (vi : 'bool) :
     package fset0
@@ -1947,7 +1933,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           cds_i ← CDS ((g_pow_xi, g_pow_yi, vote_i), (xi, vi)) ;;
           ret (((zkp_i, g_pow_xi, commit, (cds_i : t_OrZKPCommit, vote_i))) : (((t_SchnorrZKPCommit × v_G) × v_Z) × (t_OrZKPCommit × v_G))%pack)).
   Defined.
-  Next Obligation.
+  Final Obligation.
     intros.
     unfold full_protocol_interface_step4_obligation_1.
     eapply (valid_package_cons _ _ _ _ _ _ [] []).
@@ -1964,7 +1950,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
          #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript
       ] :=
     {package (full_protocol_interface state i vi ∘ par dl_real (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real)))}.
-  Next Obligation.
+  Final Obligation.
     intros.
     trimmed_package (dl_real).
     trimmed_package (dl_ideal).
@@ -1992,7 +1978,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     1: rewrite <- !fset_cat ; simpl.
     all: try (apply fsubsetxx || solve_in_fset).
   Qed.
-  Fail Next Obligation.
 
   (* Theorem valid_link_inv : *)
   (*   forall L I E1 E2 p1 p2, *)
@@ -3065,7 +3050,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           ret ((round_1, round_2) , round_3)
         }
     ].
-  Next Obligation.
+  Final Obligation.
     fold chElement in *.
     intros.
     ssprove_valid.
@@ -3075,7 +3060,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     5: try destruct x6 , s.
     all: ssprove_valid.
   Qed.
-  Fail Next Obligation.
 
   Lemma real_to_full_protocol_advantage :
     forall state (i : nat) vi,

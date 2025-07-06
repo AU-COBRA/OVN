@@ -35,12 +35,12 @@ Equations f_g_val (s : both t_g_z_89_) : both int8 :=
   f_g_val s  :=
     bind_both s (fun x =>
       solve_lift (ret_both (x : int8))) : both int8.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations Build_t_g_z_89_ {f_g_val : both int8} : both (t_g_z_89_) :=
   Build_t_g_z_89_  :=
     bind_both f_g_val (fun f_g_val =>
       solve_lift (ret_both ((f_g_val) : (t_g_z_89_)))) : both (t_g_z_89_).
-Fail Next Obligation.
+Fail Final Obligation.
 Notation "'Build_t_g_z_89_' '[' x ']' '(' 'f_g_val' ':=' y ')'" := (Build_t_g_z_89_ (f_g_val := y)).
 
 Definition t_z_89_ : choice_type :=
@@ -49,12 +49,12 @@ Equations f_z_val (s : both t_z_89_) : both int8 :=
   f_z_val s  :=
     bind_both s (fun x =>
       solve_lift (ret_both (x : int8))) : both int8.
-Fail Next Obligation.
+Fail Final Obligation.
 Equations Build_t_z_89_ {f_z_val : both int8} : both (t_z_89_) :=
   Build_t_z_89_  :=
     bind_both f_z_val (fun f_z_val =>
       solve_lift (ret_both ((f_z_val) : (t_z_89_)))) : both (t_z_89_).
-Fail Next Obligation.
+Fail Final Obligation.
 Notation "'Build_t_z_89_' '[' x ']' '(' 'f_z_val' ':=' y ')'" := (Build_t_z_89_ (f_z_val := y)).
 
 Instance t_z_89_t_Copy : t_Copy t_z_89_ := _.
@@ -85,7 +85,7 @@ Instance t_z_89_t_Serialize : t_Serialize t_z_89_ := _.
   f_add := (@f_add);
   f_opp := (@f_opp);
   f_mul := (@f_mul)|}.
-Fail Next Obligation.
+Fail Final Obligation.
 Hint Unfold t_z_89__t_Field : core.
 
 #[global] Program Instance t_g_z_89__t_Group : t_Group t_g_z_89_ :=
@@ -127,5 +127,5 @@ Hint Unfold t_z_89__t_Field : core.
   f_group_one := (@f_group_one);
   f_prod := (@f_prod);
   f_group_inv := (@f_group_inv)|}.
-Fail Next Obligation.
+Fail Final Obligation.
 Hint Unfold t_g_z_89__t_Group : core.

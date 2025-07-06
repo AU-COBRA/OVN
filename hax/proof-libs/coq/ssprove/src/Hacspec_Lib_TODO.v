@@ -92,13 +92,13 @@ Instance int_sub_inst {ws : wsize} : Subtraction (@int ws) := { sub a b := int_s
 Class Multiplication A := mul : both A -> both A -> both A.
 Notation "a .* b" := (mul a b).
 Program Instance int_mul_inst {ws : wsize} : Multiplication (@int ws) := { mul a b := int_mul a b }.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Class Xor A := xor : both A -> both A -> both A.
 Notation "a .^ b" := (xor a b).
 
 Program Instance int_xor_inst {ws : wsize} : Xor (@int ws) := { xor a b := int_xor a b }.
-Fail Next Obligation.
+Fail Final Obligation.
 
 (** Iter *)
 
@@ -123,7 +123,7 @@ Definition array_from_list' {A} {n : nat} := lift1_both (fun (x : chList A) => @
 Equations nseq_array_or_seq {A len} (val : both (nseq_ A len)) : array_or_seq A len :=
   nseq_array_or_seq val := {| as_seq := array_to_seq val ; as_nseq := val ; as_list := array_to_list val |}.
 Solve All Obligations with intros ; exact fset0.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Arguments nseq_array_or_seq {A} {len}.
 Coercion nseq_array_or_seq : both >-> array_or_seq.
@@ -192,7 +192,7 @@ Defined.
 
 Notation " x '.a[' a ']'" := (array_index (n_seq_array_or_seq x _) a) (at level 40).
 
-Fail Next Obligation.
+Fail Final Obligation.
 Notation " x '.a[' i ']<-' a" := (array_upd x i a) (at level 40).
 
 Notation update_at := array_upd.
@@ -310,19 +310,19 @@ Equations swap_both_list {A} (x : list (both A)) : both (chList A) :=
    bind_both y (fun y' =>
    solve_lift (ret_both ((y' :: x') : chList A))))) x (solve_lift (ret_both ([] : chList A)))).
 Solve All Obligations with solve_ssprove_obligations.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations match_list {A B : choice_type} (x : both (chList A)) (f : list A -> B) : both B :=
   match_list x f :=
   bind_both x (fun x' => solve_lift (ret_both (f x'))).
 Solve All Obligations with solve_ssprove_obligations.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations map {A B} (x : both (chList A))  (f : both A -> both B) : both (chList B) :=
   map x f :=
   bind_both x (fun x' => swap_both_list (List.map (fun y => f (solve_lift (ret_both y))) x')).
 Solve All Obligations with solve_ssprove_obligations.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Definition cloned {A} (x : both (chList A)) : both (chList A) := x.
 
@@ -330,7 +330,7 @@ Equations iter {A} (x : both (seq A)) : both (chList A) :=
   iter x :=
   bind_both x (fun x' => solve_lift (ret_both (Hacspec_Lib_Pre.seq_to_list _ x' : chList A))).
 Solve All Obligations with solve_ssprove_obligations.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Definition dedup {A} (x : both (t_Vec A t_Global)) : both (t_Vec A t_Global) := x.
 
@@ -338,7 +338,7 @@ Definition t_String := Coq.Strings.String.string.
 Equations new {A} : both (t_Vec A t_Global) :=
   new := solve_lift (ret_both ([] : chList A)).
 Solve All Obligations with solve_ssprove_obligations.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Definition enumerate {A} (x : both (t_Vec A t_Global)) : both (t_Vec A t_Global) := x.
 
@@ -349,11 +349,11 @@ Equations drain : forall {A}, both (t_Vec A t_Global) -> t_Range -> both (t_Drai
   drain x _ :=
     bind_both x (fun x' => solve_lift (ret_both ((x', []) : (t_Drain A t_Global × t_Vec A t_Global)))).
 Solve All Obligations with solve_ssprove_obligations.
-Fail Next Obligation.
+Fail Final Obligation.
 Notation t_Rev := id.
 Equations rev {A} (x : both (chList A)) : both (chList A) := rev x := bind_both x (fun x => solve_lift (ret_both (List.rev x : chList _))).
 Solve All Obligations with solve_ssprove_obligations.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Definition pop {A} : both (chList A) -> both (chOption A × t_Vec A (t_Global)) :=
   lift1_both (fun (x : chList A) => (List.hd_error x , List.tl x) : (chOption A × t_Vec A (t_Global))).
@@ -371,7 +371,7 @@ Definition unzip {A B} : both (chList (A × B)) -> both (chList A × chList B) :
 Equations deref {A} : both (t_Vec A t_Global) -> both (seq A) :=
   deref X := bind_both X (fun x : t_Vec A t_Global => solve_lift (ret_both (Hacspec_Lib_Pre.seq_from_list A x))).
 Solve All Obligations with solve_ssprove_obligations.
-Fail Next Obligation.
+Fail Final Obligation.
 Definition t_Never : choice_type := 'unit.
 Definition abort : both t_Never := ret_both (tt : 'unit).
 
@@ -400,7 +400,7 @@ Equations run {A} (x : both (choice_typeMonad.M (CEMonad := (@choice_typeMonad.m
   bind_both x (fun y => match y with
                              | inl r | inr r => solve_lift ret_both r
                              end).
-Fail Next Obligation.
+Fail Final Obligation.
 
 
 Notation "'matchb' x 'with' '|' a '=>' b 'end'" :=
@@ -933,7 +933,7 @@ Equations repeat {A} (e : both A) (n : both uint_size) : both (nseq A (is_pure n
 )
        (Z.to_nat (unsigned (is_pure n)))
        (List.repeat_length (solve_lift e) (Z.to_nat (unsigned (is_pure n))))).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Class iterable (A B : choice_type) := {f_into_iter : both A -> both (chList B)}.
 Instance nseq_iterable_seq {A n} : iterable (nseq A n) A := {| f_into_iter := array_to_list |}.
@@ -942,7 +942,7 @@ Program Instance range_iterable {WS} : iterable ((int WS) × (int WS)) (int WS) 
     fun x =>
       bind_both x (fun '((a, b) : int WS × int WS) => solve_lift (ret_both (List.map (fun x => repr WS (Z.of_nat x)) (List.seq (Z.to_nat (unsigned a)) (Z.to_nat (unsigned (b))-Z.to_nat (unsigned a))) : chList (int WS) )))
   |}.
-Fail Next Obligation.
+Fail Final Obligation.
 Notation t_IntoIter := (chList _).
 Instance nseq_iterable_vec {A n} : iterable (t_Vec A n) A := {| f_into_iter := fun x => x |}.
 
@@ -954,7 +954,7 @@ Equations Build_t_Amount {f_micro_ccd : both int64} : both (t_Amount) :=
   Build_t_Amount  :=
     bind_both f_micro_ccd (fun f_micro_ccd =>
                              solve_lift (ret_both ((f_micro_ccd) : (t_Amount)))) : both (t_Amount).
-Fail Next Obligation.
+Fail Final Obligation.
 Definition t_Timestamp := int32.
 Definition t_BTreeMap (A B : Type) (C : vec_typ) := int32.
 Definition f_slot_time := int64.
@@ -971,7 +971,7 @@ Notation f_start_loc := fset0.
 Notation f_eq_loc := fset0.
 Equations impl__into_vec {A n} : both (nseq_ A n) -> both (t_Vec A t_Global) :=
   impl__into_vec X := bind_both X (fun x : nseq_ A n => solve_lift (ret_both (Hacspec_Lib_Pre.array_to_list x : chList _))).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Definition unsize {A} := @id A.
 Definition box_new {A} := @id A.

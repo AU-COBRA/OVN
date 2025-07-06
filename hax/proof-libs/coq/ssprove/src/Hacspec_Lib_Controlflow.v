@@ -70,7 +70,7 @@ Equations foldi_both
   foldi_both lo_hi f init :=
     foldi (fst lo_hi) (snd lo_hi) (@f) (init).
 Solve All Obligations with intros ; solve_fsubset_trans.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations foldi_both_list
            {acc B: choice_type}
@@ -84,12 +84,12 @@ Equations foldi_both_list
   bind_both l (fun l' => List.fold_left (fun x y => solve_lift @f (solve_lift ret_both y) (x) : both _) l' (solve_lift init)).
 Solve All Obligations with intros ; solve_fsubset_trans.
 Solve All Obligations with intros ; solve_ssprove_obligations.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Program Definition if_both {A} (c : both 'bool) (e_then : both A) (e_else : both A) : both A :=
   bind_both c (fun b => if b then lift_both e_then else lift_both e_else).
 Solve All Obligations with solve_ssprove_obligations.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Notation "'ifb' b 'then' et 'else' ee" :=
   (if_both b et ee) (at level 100).
@@ -101,7 +101,7 @@ Equations match_both_option {A B} (x : both (option A)) (fa : both A -> both B) 
                      | None => solve_lift fb
                      end).
 Solve All Obligations with solve_ssprove_obligations.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Notation "'matchb' x 'with' '|' 'Option_Some' a '=>' va '|' 'Option_None' '=>' vb 'end'" :=
   (match_both_option x (fun a => va) vb).
@@ -117,7 +117,7 @@ Program Definition foldi_both0_
         (cur : both acc) : both (acc) :=
   foldi_ fuel i (@f) (lift_both cur).
 Solve All Obligations with (intros ; (fset_equality || solve_in_fset)).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Equations foldi0
           {acc: choice_type}
@@ -135,7 +135,7 @@ Equations foldi0
                                     end))
 .
 Solve All Obligations with (intros ; (fset_equality || solve_in_fset)).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Definition foldi_both0
         {acc: choice_type}
@@ -153,7 +153,7 @@ Equations foldi_both0_list
   : both (acc) :=
   foldi_both0_list l f init :=
     bind_both l (fun l' => List.fold_left (fun x y => solve_lift @f (solve_lift ret_both y) (x) : both _) l' (solve_lift init : both _)).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Notation "'f_fold'" :=
   (fun lo_hi init f => foldi_both_list lo_hi f init).
@@ -161,7 +161,7 @@ Notation "'f_fold'" :=
 Program Definition if_both0 {A} (c : both 'bool) (e_then : both A) (e_else : both A) : both A :=
   bind_both c (fun b => if b then lift_both e_then else lift_both  e_else).
 Solve All Obligations with solve_ssprove_obligations.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Notation "'ifb0' b 'then' et 'else' ee" :=
   (if_both0 b et ee) (at level 100).

@@ -1739,7 +1739,7 @@ Equations array_from_option_list_helper {A: choice_type} (x : chOption A) (xs: l
       (lift_nseq (array_from_option_list_helper y ys k))
       (Ordinal (ssrbool.introT ssrnat.ltP (lt_succ_diag_r_sub (S k) (length (y :: ys)))))
       x.
-Fail Next Obligation.
+Fail Final Obligation.
 
 Definition array_from_option_list' {A: choice_type}  (l: list (chOption A)) (k : nat)
   : (nseq_ A k) :=
@@ -2095,7 +2095,7 @@ Equations tl_fmap {A : choice_type} {n} (a : {fmap 'I_(S(S n)) -> A}) : {fmap 'I
     @FMap.FMap _ _ (lower_fval fmval (gt_smallest_sorted i)) (lower_list_is_sorted _ _ (path_path_tl i)) ;
   tl_fmap (@FMap.FMap _ _ ((@Ordinal _ (S m') i3, k) :: fmval) i) :=
     @FMap.FMap _ _ (lower_fval ((Ordinal (n:=S (S n)) (m:=S m') i3, k) :: fmval) (in_nseq_tl_gt_zero fmval i)) (lower_list_is_sorted _ _ i).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Definition nseq_hd {A : choice_type} {n} (a : (nseq_ A (S n))) : A :=
   match a with
@@ -2319,7 +2319,7 @@ Defined.
 Equations array_to_list {A : choice_type} {n} (f : (nseq_ A n)) : list (A) :=
   array_to_list (n:=O%nat) f := [] ;
   array_to_list (n:=S _%nat) f := nseq_hd f :: array_to_list (nseq_tl f).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Theorem array_to_length_list_is_len : forall (A : choice_type) len (x : nseq_ A len), List.length (array_to_list x) = len.
 Proof.
@@ -2335,7 +2335,7 @@ Defined.
 Equations array_to_option_list {A : choice_type} {n} (f : (nseq_ A n)) : list (chOption A) :=
   array_to_option_list (n:=O%nat) f := [] ;
   array_to_option_list (n:=S _%nat) f := nseq_hd_option f :: array_to_option_list (nseq_tl f).
-Fail Next Obligation.
+Fail Final Obligation.
 
 Theorem array_to_length_option_list_is_len : forall (A : choice_type) len (x : nseq_ A len), List.length (array_to_option_list x) = len.
 Proof.
@@ -3136,7 +3136,7 @@ Global Instance List_eqdec {A} `{EqDec A} : EqDec (list A) := {
 Global Program Instance Dec_eq_prod (A B : Type) `{EqDec A} `{EqDec B} : EqDec (A * B) := {
     eqb '(a0, b0) '(a1, b1) := andb (eqb a0 a1) (eqb b0 b1)
   }.
-Next Obligation.
+Final Obligation.
   split ; intros ; destruct x ; destruct y.
   - rewrite LocationUtility.is_true_split_and in H1. destruct H1.
     rewrite (eqb_leibniz) in H1.
@@ -3318,7 +3318,7 @@ Definition result_unwrap {a b} (x : (result b a)) : a :=
 Definition option := chOption.
 (* Program Definition option_choice_type (a : choice_type) := *)
 (*   {| ct := chOption a ; := option a ; |}. *)
-(* Next Obligation. *)
+(* Final Obligation. *)
 (*   intros. *)
 (*   rewrite ChoiceEq. *)
 (*   reflexivity. *)

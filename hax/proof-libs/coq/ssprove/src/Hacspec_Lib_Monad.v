@@ -60,7 +60,7 @@ Module choice_typeMonad.
                                                     end)
     |}.
   Solve All Obligations with (intros ; (fset_equality || solve_in_fset)).
-  Fail Next Obligation.
+  Fail Final Obligation.
 
   #[global] Program Instance option_bind_code : BindCode :=
     {| mnd := choice_typeMonad.option_monad;
@@ -71,5 +71,5 @@ Module choice_typeMonad.
        | None => solve_lift ret_both (@None B : option B)
        end) |}.
   Solve All Obligations with (intros ; (fset_equality || solve_in_fset)).
-  Fail Next Obligation.
+  Fail Final Obligation.
 End choice_typeMonad.

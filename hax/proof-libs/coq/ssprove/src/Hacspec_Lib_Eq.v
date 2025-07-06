@@ -129,7 +129,7 @@ Global Program Instance Vector_eqdec {A n} `{EqDec A}: EqDec (VectorDef.t A n) :
 Global Program Instance Dec_eq_prod (A B : Type) `{EqDec A} `{EqDec B} : EqDec (A * B) := {
   eqb '(a0, b0) '(a1, b1) := andb (eqb a0 a1) (eqb b0 b1)
 }.
-Next Obligation.
+Final Obligation.
   split ; intros ; destruct x ; destruct y.
   - (* symmetry in H1. *)
     (* apply Bool.andb_true_eq in H1. destruct H1. *)

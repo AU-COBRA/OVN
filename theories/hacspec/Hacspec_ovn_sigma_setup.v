@@ -291,18 +291,16 @@ Module HacspecGroupAndFieldParam (HOP : HacspecOvnParameter) (HOGaFP : HacspecOv
 
   Program Definition Z_to_F : {rmorphism 'Z_q -> 'F_q} := GRing.ssrfun_idfun__canonical__GRing_RMorphism _.
   (* begin hide *)
-  Next Obligation.
+  Final Obligation.
     now rewrite (@pdiv_id q HacspecGroup.prime_order).
   Defined.
-  Fail Next Obligation.
   (* end hide *)
 
   Program Definition F_to_Z : {rmorphism 'F_q -> 'Z_q} := GRing.ssrfun_idfun__canonical__GRing_RMorphism _.
   (* begin hide *)
-  Next Obligation.
+  Final Obligation.
     now rewrite (@pdiv_id q HacspecGroup.prime_order).
   Defined.
-  Fail Next Obligation.
   (* end hide *)
 
   Lemma F_to_Z_cancel :

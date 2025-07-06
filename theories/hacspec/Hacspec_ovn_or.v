@@ -272,7 +272,7 @@ Module OVN_or_proof_preconditions (HOP : HacspecOvnParameter) (HOGaFP : HacspecO
                else ((r2' - r2) / ((d2 - d2')))%R in
       let v := ~~ (d1 - d1' != 0)%R (* y == h ^+ m * g *) in
       Some (fto (m, v, h)).
-    Fail Next Obligation.
+    Fail Final Obligation.
 
     Definition KeyGen (xv : choiceWitness) :=
       let '(m, v, h) := otf xv in
@@ -780,7 +780,7 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
           ret (hacspec_ret_to_or_sigma_ret (otf b.1) v)
       }]%g.
   (* begin hide *)
-  Next Obligation.
+  Final Obligation.
     eapply (valid_package_cons _ _ _ _ _ _ [] []).
     - apply valid_empty_package.
     - intros.
@@ -791,7 +791,6 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
       apply (ChoiceEquality.is_valid_code (both_prog_valid b)).
     - try (rewrite <- fset0E ; setoid_rewrite @imfset0 ; rewrite in_fset0 ; reflexivity).
   Qed.
-  Fail Next Obligation.
   (* end hide *)
 
   (* Adversary gets no advantage by running hacspec version *)

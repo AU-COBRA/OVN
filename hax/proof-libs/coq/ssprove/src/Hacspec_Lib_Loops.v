@@ -53,7 +53,7 @@ Section Loops.
     | S n' => foldi_ n' (int_add i (ret_both one)) f (f i cur)
     end.
   Solve All Obligations with (intros ; (fset_equality || solve_in_fset)).
-  Fail Next Obligation.
+  Fail Final Obligation.
 
   Equations foldi_both_
            {acc : choice_type}
@@ -67,7 +67,7 @@ Section Loops.
       | S n' => solve_lift foldi_both_ n' (int_add i (ret_both one)) (fun x y => solve_lift f (solve_lift x) y) (f i (solve_lift cur))
       end.
   Solve All Obligations with (intros ; (fset_equality || solve_in_fset)).
-  Fail Next Obligation.
+  Fail Final Obligation.
 
   Equations foldi
              {acc: choice_type}
@@ -85,7 +85,7 @@ Section Loops.
       end))
   .
   Solve All Obligations with (intros ; (fset_equality || solve_in_fset)).
-  Fail Next Obligation.
+  Fail Final Obligation.
 
   (* Fold done using natural numbers for bounds *)
   Fixpoint foldi_nat_
