@@ -24,10 +24,7 @@ From Hacspec Require Import Hacspec_Lib_Pre.
 Open Scope hacspec_scope.
 Import choice.Choice.Exports.
 
-(* TODO: remove when switching to Coq 9.0 *)
-Unset Universe Checking.
 From ConCert.Execution Require Import Serializable.
-Set Universe Checking.
 
 Program Definition serialize_by_other {A B} (f_to : B -> A) (f_from : A -> B)  `(forall m, f_from (f_to m) = m) `{Serializable A} : Serializable B :=
   {|
