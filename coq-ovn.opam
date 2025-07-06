@@ -20,26 +20,14 @@ depends: [
   "coq-mathcomp-word" {>= "3.0"}
   "coq-mathcomp-zify" {>= "1.5.0+2.0+8.16"}
   "coq-concert" {= "dev"}
-  "coq" {>= "8.19.0"}
-  # "odoc" {with-doc}
-  # "coq" {>= "8.18"}
+  "coq" {>= "8.20.0"}
   "coq-ssprove" {= "0.2.4"}
-  # "jasmin" {= "dev"}
   "coq-hacspec-ssprove" {= "dev"}
 ]
 
 pin-depends: [
-  # ["jasmin.dev" "git+https://github.com/proux01/jasmin.git#mathcomp2"]
-  # ["ssprove.dev" "git+https://github.com/ssprove/ssprove.git#jasmin-coq.8.18.0"]
-  ["coq-concert.dev" "git+https://github.com/AU-COBRA/ConCert.git#5e8c146292e7dd91f237ba31e65ee93d1e99a848"]
-  ["coq-metacoq-utils.1.3.2+8.19" "git+https://github.com/MetaCoq/metacoq.git#a9f5da7534b62cda3c870e64f00998e7ee5485f5"]
-  ["coq-metacoq-common.1.3.2+8.19" "git+https://github.com/MetaCoq/metacoq.git#a9f5da7534b62cda3c870e64f00998e7ee5485f5"]
-  ["coq-metacoq-template.1.3.2+8.19" "git+https://github.com/MetaCoq/metacoq.git#a9f5da7534b62cda3c870e64f00998e7ee5485f5"]
-  ["coq-metacoq-template-pcuic.1.3.2+8.19" "git+https://github.com/MetaCoq/metacoq.git#a9f5da7534b62cda3c870e64f00998e7ee5485f5"]
-  ["coq-metacoq-pcuic.1.3.2+8.19" "git+https://github.com/MetaCoq/metacoq.git#a9f5da7534b62cda3c870e64f00998e7ee5485f5"]
-  ["coq-metacoq-safechecker.1.3.2+8.19" "git+https://github.com/MetaCoq/metacoq.git#a9f5da7534b62cda3c870e64f00998e7ee5485f5"]
-  ["coq-metacoq-erasure.1.3.2+8.19" "git+https://github.com/MetaCoq/metacoq.git#a9f5da7534b62cda3c870e64f00998e7ee5485f5"]
-  ["coq-hacspec-ssprove.dev" "git+https://github.com/4ever2/hax.git#ssprove_backend_lib"]
+  ["coq-concert.dev" "git+https://github.com/AU-COBRA/ConCert.git#d06ca907c91cb46480d2e94e3666b84341c320fe"]
+  ["coq-hacspec-ssprove.dev" "git+https://github.com/4ever2/hax.git#91ed59ff8062da635746afb7c68be422ba27be03"]
 ]
 
 build: [

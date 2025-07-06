@@ -10,34 +10,19 @@ homepage: "https://github.com/AU-COBRA/OVN"
 bug-reports: "https://github.com/AU-COBRA/OVN/issues"
 depends: [
   "base" {= "v0.16.4"}
-  "coq" {= "8.18.0"}
+  "coq" {= "8.20.1"}
   "coq-concert" {= "dev"}
   "coq-hacspec-ssprove" {= "dev"}
-  "coq-mathcomp-word" {= "3.1"}
+  "coq-mathcomp-word" {= "3.2"}
   "coq-mathcomp-zify" {= "1.5.0+2.0+8.16"}
-  "coq-stdpp" {= "1.9.0"}
+  "coq-stdpp" {= "1.11.0"}
   "coq-ssprove" {= "0.2.4"}
-  "coq-hierarchy-builder" {= "1.8.0"}
+  "coq-hierarchy-builder" {= "1.9.1"}
 ]
 build: [make "theory"]
 install: [make "install"]
 dev-repo: "git+https://github.com/AU-COBRA/OVN.git"
 pin-depends: [
-  ["coq-concert.dev" "git+https://github.com/AU-COBRA/ConCert.git#420603c043011baa7ed714e9e997fd4b9f2ac770"]
-  [
-    "coq-elm-extraction.dev"
-    "git+https://github.com/AU-COBRA/coq-elm-extraction.git#903320120e3f36d7857161e5680fabeb6e743c6b"
-  ]
-  [
-    "coq-hacspec-ssprove.dev"
-    "git+https://github.com/4ever2/hax.git#ssprove_backend_lib"
-  ]
-  [
-    "coq-quickchick.dev"
-    "git+https://github.com/4ever2/QuickChick.git#bc61d58045feeb754264df9494965c280e266e1c"
-  ]
-  [
-    "coq-rust-extraction.dev"
-    "git+https://github.com/AU-COBRA/coq-rust-extraction.git#0053733e56008c917bf43d12e8bf0616d3b9a856"
-  ]
+  ["coq-concert.dev" "git+https://github.com/AU-COBRA/ConCert.git#d06ca907c91cb46480d2e94e3666b84341c320fe"]
+  ["coq-hacspec-ssprove.dev" "git+https://github.com/4ever2/hax.git#91ed59ff8062da635746afb7c68be422ba27be03"]
 ]

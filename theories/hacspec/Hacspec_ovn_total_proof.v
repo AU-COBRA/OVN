@@ -149,7 +149,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     try apply (AdvantageE_le_0 _ _ _ ) ;
     eapply Order.le_trans ; [ apply Advantage_triangle with (R := O) | ] ;
     replace (AdvantageE _ _ _) with (@GRing.zero R) ; [
-        replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ rewrite add0r ; apply Order.ge_refl | symmetry ] |
+        replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ rewrite add0r ; apply Order.POrderTheory.ge_refl | symmetry ] |
         symmetry ] ; revgoals.
 
 
