@@ -16,13 +16,15 @@ Open Scope bool_scope.
 From Hacspec Require Import ChoiceEquality.
 From Hacspec Require Import LocationUtility.
 From Hacspec Require Import Hacspec_Lib_Comparable.
+Set Warnings "-notation-incompatible-prefix".
 From Hacspec Require Import Hacspec_Lib_Pre.
 From Hacspec Require Import Hacspec_Lib.
+Set Warnings "notation-incompatible-prefix".
 
 Open Scope hacspec_scope.
 Import choice.Choice.Exports.
 
-Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
+Global Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
 
 From OVN Require Import Hacspec_ovn_Ovn_traits.
 Export Hacspec_ovn_Ovn_traits.

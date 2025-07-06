@@ -16,13 +16,15 @@ Open Scope bool_scope.
 From Hacspec Require Import ChoiceEquality.
 From Hacspec Require Import LocationUtility.
 From Hacspec Require Import Hacspec_Lib_Comparable.
+Set Warnings "-notation-incompatible-prefix".
 From Hacspec Require Import Hacspec_Lib_Pre.
 From Hacspec Require Import Hacspec_Lib.
+Set Warnings "notation-incompatible-prefix".
 
 Open Scope hacspec_scope.
 Import choice.Choice.Exports.
 
-Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
+Global Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
 
 From OVN Require Import Hacspec_ovn_Ovn_traits.
 Export Hacspec_ovn_Ovn_traits.
@@ -84,7 +86,7 @@ Instance t_z_89_t_Serialize : t_Serialize t_z_89_ := _.
   f_opp := (@f_opp);
   f_mul := (@f_mul)|}.
 Fail Next Obligation.
-Hint Unfold t_z_89__t_Field.
+Hint Unfold t_z_89__t_Field : core.
 
 #[global] Program Instance t_g_z_89__t_Group : t_Group t_g_z_89_ :=
   let f_Z := t_z_89_ : choice_type in
@@ -126,4 +128,4 @@ Hint Unfold t_z_89__t_Field.
   f_prod := (@f_prod);
   f_group_inv := (@f_group_inv)|}.
 Fail Next Obligation.
-Hint Unfold t_g_z_89__t_Group.
+Hint Unfold t_g_z_89__t_Group : core.

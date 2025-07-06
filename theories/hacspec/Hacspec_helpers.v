@@ -1,14 +1,19 @@
+Set Warnings "-ambiguous-paths,-notation-overridden,-notation-incompatible-format".
 From mathcomp Require Import all_ssreflect fingroup.fingroup ssreflect.
-Set Warnings "-notation-overridden,-ambiguous-paths".
+Set Warnings "ambiguous-paths,notation-overridden,notation-incompatible-format".
 From SSProve.Relational Require Import OrderEnrichedCategory .
 From SSProve.Crypt Require Import choice_type Package Prelude.
 From SSProve.Crypt Require Import Axioms ChoiceAsOrd RulesStateProb UniformStateProb.
 Import PackageNotation.
 From extructures Require Import ord fset.
+Set Warnings "-ambiguous-paths".
 From mathcomp Require Import word_ssrZ word.
+Set Warnings "ambiguous-paths".
 (* From Jasmin Require Import word. *)
 
+Set Warnings "-notation-overridden".
 From Coq Require Import ZArith.
+Set Warnings "notation-overridden".
 From Coq Require Import Strings.String.
 Import List.ListNotations.
 Open Scope list_scope.
@@ -18,8 +23,10 @@ Open Scope bool_scope.
 From Hacspec Require Import ChoiceEquality.
 From Hacspec Require Import LocationUtility.
 From Hacspec Require Import Hacspec_Lib_Comparable.
+Set Warnings "-notation-incompatible-prefix".
 From Hacspec Require Import Hacspec_Lib_Pre.
 From Hacspec Require Import Hacspec_Lib.
+Set Warnings "notation-incompatible-prefix".
 
 Open Scope hacspec_scope.
 Import choice.Choice.Exports.
@@ -28,7 +35,7 @@ Set Bullet Behavior "Strict Subproofs".
 Set Default Goal Selector "!".
 Set Primitive Projections.
 
-Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
+Global Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
 
 Lemma valid_both_is_deterministic : forall {A: choice_type} (is_pure : A) (is_state : raw_code A), (valid_both {| is_pure := is_pure ; is_state := is_state |}) -> deterministic is_state.
 Proof.
@@ -58,7 +65,7 @@ Definition both_equivalence {A} (a : both A) (b : both A) :=
 Arguments both_equivalence {A} a b.
 Infix "≈both" := (both_equivalence) (at level 77).
 
-Require Import FunctionalExtensionality.
+From Coq Require Import FunctionalExtensionality.
 
 Lemma r_swap_post : forall {A B : choiceType} {P} {a b} (Q Q' : postcond A B),
     Q = Q' ->
@@ -632,7 +639,7 @@ Proof.
   - apply both_eq_reflexivity.
   - rewrite array_from_list_equation_1.
     apply array_from_list_helper_eq.
-    + now rewrite List.map_length.
+    + now rewrite List.length_map.
     + now rewrite ret_both_is_pure_cancel.
     + induction l.
       * apply List.Forall_nil.
@@ -1766,7 +1773,9 @@ Ltac trim_is_interface :=
   rewrite filterm0 ;
   reflexivity.
 
+Set Warnings "-notation-incompatible-prefix".
 From SSProve.Crypt Require Import pkg_composition.
+Set Warnings "notation-incompatible-prefix".
 
 Ltac trimmed_package p :=
   match type of p with

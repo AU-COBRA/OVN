@@ -1,3 +1,10 @@
+-arg -w -arg -deprecated-from-Coq
+-arg -w -arg -deprecated-dirpath-Coq
+-arg -w -arg -non-reversible-notation
+# TODO
+-arg -w -arg -redundant-canonical-projection
+-arg -w -arg -elpi.add-const-for-axiom-or-sectionvar
+
 -Q theories OVN
 
 theories/hacspec/Hacspec_helpers.v

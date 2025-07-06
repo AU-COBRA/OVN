@@ -1,13 +1,18 @@
 (* begin details: Imports *)
+Set Warnings "-ambiguous-paths,-notation-overridden,-notation-incompatible-format".
 From mathcomp Require Import all_ssreflect fingroup.fingroup ssreflect.
-Set Warnings "-notation-overridden,-ambiguous-paths".
+Set Warnings "ambiguous-paths,notation-overridden,notation-incompatible-format".
 From SSProve.Crypt Require Import choice_type Package Prelude.
 Import PackageNotation.
 From extructures Require Import ord fset.
+Set Warnings "-ambiguous-paths".
 From mathcomp Require Import word_ssrZ word.
+Set Warnings "ambiguous-paths".
 (* From Jasmin Require Import word. *)
 
+Set Warnings "-notation-overridden".
 From Coq Require Import ZArith.
+Set Warnings "notation-overridden".
 From Coq Require Import Strings.String.
 Import List.ListNotations.
 Open Scope list_scope.
@@ -17,8 +22,10 @@ Open Scope bool_scope.
 From Hacspec Require Import ChoiceEquality.
 From Hacspec Require Import LocationUtility.
 From Hacspec Require Import Hacspec_Lib_Comparable.
+Set Warnings "-notation-incompatible-prefix".
 From Hacspec Require Import Hacspec_Lib_Pre.
 From Hacspec Require Import Hacspec_Lib.
+Set Warnings "notation-incompatible-prefix".
 
 
 Open Scope hacspec_scope.
@@ -28,7 +35,7 @@ Set Bullet Behavior "Strict Subproofs".
 Set Default Goal Selector "!".
 Set Primitive Projections.
 
-Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
+Global Obligation Tactic := (* try timeout 8 *) solve_ssprove_obligations.
 
 From OVN Require Import Hacspec_ovn.
 From OVN Require Import Hacspec_helpers.
@@ -47,7 +54,10 @@ From mathcomp Require Import all_ssreflect all_algebra reals distr realsum
   eqtype choice seq.
 Set Warnings "notation-overridden,ambiguous-paths".
 
+Set Warnings "-notation-incompatible-prefix".
 From SSProve.Mon Require Import SPropBase.
+Set Warnings "notation-incompatible-prefix".
+
 
 From SSProve.Crypt Require Import Axioms ChoiceAsOrd SubDistr Couplings
   UniformDistrLemmas FreeProbProg Theta_dens RulesStateProb UniformStateProb
@@ -544,7 +554,7 @@ Definition f_lower_invr_out{G : lowerToField} : {in [predC classical_sets.in_set
 Proof.
   intros ? ?.
   rewrite inE in H.
-  rewrite classical_sets.notin_set in H.
+  rewrite classical_sets.notin_setE in H.
   destruct (x == setoid_lower0 sf_zero) eqn:H0 ; [ clear H | now exfalso ].
   apply (ssrbool.elimT eqP) in H0.
   rewrite H0.
