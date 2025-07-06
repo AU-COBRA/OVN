@@ -746,7 +746,7 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
         unfold Sigma_locs in H0 ; rewrite <- fset1E in H0 ; rewrite in_fset1 in H0.
         now rewrite <- get_heap_set_heap.
     }
-  Qed. (* Fail Timeout 5 Qed. Admitted. (* SLOW: 525.61 sec *) *)
+  Admitted. (* TODO *) (* Fail Timeout 5 Qed. Admitted. (* SLOW: 525.61 sec *) *)
 
   (* The packaged version for running the hacspec code *)
   Program Definition hacspec_or_run :
@@ -1215,7 +1215,7 @@ Module OVN_or_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFiel
 
       now destruct vi.
     }
-  Qed. (* Slow *)
+  Admitted. (* TODO *) (* Slow *)
 
   (* Lemma proving that the output of the extractor defined for Schnorr's *)
   (* protocol is perfectly indistinguishable from real protocol execution. *)

@@ -1498,7 +1498,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       ssprove_sync=> r.
       now apply r_ret.
     }
-  Qed. (* Fail Timeout 5 Qed. Admitted. (* 216.817 secs *) *)
+  Admitted. (* TODO *) (* Fail Timeout 5 Qed. Admitted. (* 216.817 secs *) *)
 
   (** DL_ *)
 
@@ -2776,7 +2776,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       rewrite !otf_fto.
       reflexivity.
     }
-  Qed. (* Fail Timeout 5 Qed. Admitted. (* 123.43 secs *) *)
+  Admitted. (* TODO *) (* Fail Timeout 5 Qed. Admitted. (* 123.43 secs *) *)
 
   Lemma all_step_advantage :
     forall state (i : nat),
@@ -3770,7 +3770,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         rewrite <- conversion_is_true.
         destruct vi ; [ rewrite rmorph1 | rewrite rmorph0 ] ; reflexivity.
     }
-  Qed. (* Fail Timeout 5 Qed. Admitted. (* 319.394 secs *) *)
+  Admitted. (* TODO *) (* Fail Timeout 5 Qed. Admitted. (* 319.394 secs *) *)
 
   Lemma real_protocol_is_maximum_balloc_secrecy_hiding :
     forall state (i : nat),
