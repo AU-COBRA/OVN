@@ -4,13 +4,13 @@ Require Import Sumbool.
 
 From mathcomp Require Import fintype.
 
-From SSProve Require Import choice_type Package Prelude.
+From SSProve.Crypt Require Import choice_type Package Prelude.
 Import PackageNotation.
 From extructures Require Import ord fset fmap.
 
 From mathcomp Require Import ssrZ word.
 (* From Jasmin Require Import word. *)
-From SSProve Require Import jasmin_word.
+From SSProve.Crypt Require Import jasmin_word.
 
 From Coq Require Import ZArith List.
 Import List.ListNotations.
@@ -482,4 +482,3 @@ Proof.
   - now apply list_serializable.
   - now apply sum_serializable.
 Defined.
-

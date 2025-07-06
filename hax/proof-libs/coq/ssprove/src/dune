@@ -8,7 +8,7 @@
    Equations
    ConCert stdpp MetaCoq Ltac2 ; ConCert
    ; Jasmin
-   Crypt Mon Relational ; SSProve
+   SSProve ; SSProve
    )
  ; (libraries <ocaml_libraries>)
  )

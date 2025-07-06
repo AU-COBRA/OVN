@@ -1,9 +1,9 @@
 From mathcomp Require Import all_ssreflect all_algebra.
 
 From Coq Require Import ZArith List.
-From SSProve Require Import choice_type Package.
+From SSProve.Crypt Require Import choice_type Package.
 Import PackageNotation.
-From SSProve Require Import pkg_interpreter.
+From SSProve.Crypt Require Import pkg_interpreter.
 From extructures Require Import ord fset fmap.
 Require Import Hacspec_Lib_Comparable.
 

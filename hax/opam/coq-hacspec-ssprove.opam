@@ -9,9 +9,8 @@ depends: [
   "ocaml"
   "dune" {>= "3.8"}
   "base" {>= "0.16.2"}
-  "ssprove" {= "dev"}
+  "coq-ssprove" {= "0.2.4"}
   "coq-stdpp"
-  "coq-mathcomp-algebra" {= "2.1.0"}
   "coq-mathcomp-word" {>= "3.0"}
   "coq-mathcomp-zify" {>= "1.5.0+2.0+8.16"}
   "coq-concert" {= "dev"}
@@ -33,10 +32,7 @@ build: [
   ]
 ]
 pin-depends: [
-  # ["jasmin.dev" "git+https://github.com/proux01/jasmin.git#mathcomp2"]
-  ["ssprove.dev" "git+https://github.com/ssprove/ssprove.git#jasmin-coq.8.18.0"]
-  ["coq-concert.dev" "git+https://github.com/AU-COBRA/ConCert.git#master"]
+  ["coq-concert.dev" "git+https://github.com/AU-COBRA/ConCert.git#420603c043011baa7ed714e9e997fd4b9f2ac770"]
   ["coq-rust-extraction.dev" "git+https://github.com/AU-COBRA/coq-rust-extraction.git#0053733e56008c917bf43d12e8bf0616d3b9a856"]
   ["coq-elm-extraction.dev" "git+https://github.com/AU-COBRA/coq-elm-extraction.git#903320120e3f36d7857161e5680fabeb6e743c6b"]
-  ["coq-quickchick.dev" "git+https://github.com/4ever2/QuickChick.git#bc61d58045feeb754264df9494965c280e266e1c"]
 ]

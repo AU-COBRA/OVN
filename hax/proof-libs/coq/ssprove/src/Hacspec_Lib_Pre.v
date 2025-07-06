@@ -10,7 +10,7 @@ Require Import Sumbool.
 
 From mathcomp Require Import fintype.
 
-From SSProve Require Import choice_type Package Prelude.
+From SSProve.Crypt Require Import choice_type Package Prelude.
 Import PackageNotation.
 From extructures Require Import ord fset fmap.
 
@@ -18,7 +18,7 @@ Require Import ChoiceEquality.
 
 From mathcomp Require Import ssrZ word.
 (* From Jasmin Require Import word. *)
-From SSProve Require Import jasmin_word.
+From SSProve.Crypt Require Import jasmin_word.
 
 
 From Coq Require Import ZArith List.
@@ -789,12 +789,12 @@ Proof.
       (* (* unfold word_subType. *) *)
       (* unfold toword. *)
       (* unfold mkword. *)
-      
+
       rewrite Z.add_1_l.
       f_equal.
       rewrite mkwordK.
       rewrite Zmod_small.
-        
+
       reflexivity.
 
       clear -H.
@@ -3447,4 +3447,3 @@ Notation "'foldibnd' s 'to' e 'M(' v ')' 'for' z '>>' f" :=
   (Hacspec_Lib_Pre.foldi s e (choice_typeMonad.ret z) (fun x y => choice_typeMonad.bind y (f x))) (at level 50) : hacspec_scope.
 
 Axiom nat_mod_from_byte_seq_be : forall  {A n}, (seq A) -> (nat_mod n).
-

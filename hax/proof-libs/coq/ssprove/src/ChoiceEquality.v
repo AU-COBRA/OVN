@@ -1,7 +1,7 @@
 From Coq Require Import ZArith List.
-From SSProve Require Import choice_type Package.
+From SSProve.Crypt Require Import choice_type Package.
 Import PackageNotation.
-From SSProve Require Import pkg_interpreter.
+From SSProve.Crypt Require Import pkg_interpreter.
 From extructures Require Import ord fset fmap.
 From Hacspec Require Import Hacspec_Lib_Comparable.
 
@@ -12,8 +12,8 @@ Import RulesStateProb.
 Import RulesStateProb.RSemanticNotation.
 Open Scope rsemantic_scope.
 
-From SSProve Require Import choice_type Package Prelude.
-From SSProve Require Import Axioms. (* proof_irrelevance *)
+From SSProve.Crypt Require Import choice_type Package Prelude.
+From SSProve.Crypt Require Import Axioms. (* proof_irrelevance *)
 Import PackageNotation.
 From extructures Require Import ord fset fmap.
 
@@ -234,7 +234,7 @@ Section Both_helper.
     {| is_pure := x ; is_state := ret x |} .
 
   Program Definition both_ret_valid {A : choice_type} (x : A) : ValidBoth (both_ret x) :=
-    {| is_valid_code := valid_ret _ _ _ ; is_valid_both := both_valid_ret _ |} 
+    {| is_valid_code := valid_ret _ _ _ ; is_valid_both := both_valid_ret _ |}
     .
   Fail Next Obligation.
 
