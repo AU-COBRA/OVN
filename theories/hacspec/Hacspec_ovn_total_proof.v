@@ -17,7 +17,9 @@ From Hacspec Require Import ChoiceEquality.
 From Hacspec Require Import LocationUtility.
 From Hacspec Require Import Hacspec_Lib_Comparable.
 From Hacspec Require Import Hacspec_Lib_Pre.
+Unset Universe Checking.
 From Hacspec Require Import Hacspec_Lib.
+Set Universe Checking.
 
 Open Scope hacspec_scope.
 Import choice.Choice.Exports.
@@ -147,7 +149,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     try apply (AdvantageE_le_0 _ _ _ ) ;
     eapply Order.le_trans ; [ apply Advantage_triangle with (R := O) | ] ;
     replace (AdvantageE _ _ _) with (@GRing.zero R) ; [
-        replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ rewrite add0r ; easy | symmetry ] |
+        replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ rewrite add0r ; apply Order.ge_refl | symmetry ] |
         symmetry ] ; revgoals.
 
 
@@ -557,7 +559,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
                 easy.
               }
               {
-                eapply lt_trans.
+                eapply Nat.lt_trans.
                 1: apply /ltP ; apply H0.
                 subst n1.
                 apply Z2Nat.inj_lt.
@@ -1074,6 +1076,8 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     (in custom pack_type at level 2).
 
   Definition GPOWYINOTZERO : nat := 143.
+
+  Local Obligation Tactic := idtac.
 
   Program Definition GPowYiNotZero_real i state :
     package fset0

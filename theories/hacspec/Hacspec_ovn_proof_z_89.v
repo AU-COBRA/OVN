@@ -17,7 +17,9 @@ From Hacspec Require Import ChoiceEquality.
 From Hacspec Require Import LocationUtility.
 From Hacspec Require Import Hacspec_Lib_Comparable.
 From Hacspec Require Import Hacspec_Lib_Pre.
+Unset Universe Checking.
 From Hacspec Require Import Hacspec_Lib.
+Set Universe Checking.
 
 Open Scope hacspec_scope.
 Import choice.Choice.Exports.
@@ -140,7 +142,7 @@ Module OVN_GroupAndFieldParameter_Z89 <: HacspecOvnGroupAndFieldParameter OVN_Z8
   (*     } *)
 
   (* Any both type has a setoid lowering structure, as we have pointwise equality on [is_pure] *)
-  
+
   (* HB.instance Definition _ : is_setoid_lower both_v_G := *)
   (*   is_setoid_lower.Build both_v_G v_G_type (fun x => is_pure x) ret_both ret_both_is_pure_cancel (fun x => erefl)  (fun x y H => proj1 both_equivalence_is_pure_eq H)  (fun x y H => both_eq_fun_ext _ _ _). *)
 
@@ -300,7 +302,7 @@ Module OVN_GroupAndFieldParameter_Z89 <: HacspecOvnGroupAndFieldParameter OVN_Z8
     rewrite modulusD.
     now apply Z.lt_mul_diag_r.
   Qed.
-  
+
   Lemma modulus_lt :
     forall a b,
       (a < b)%nat ->
@@ -613,7 +615,7 @@ Module OVN_GroupAndFieldParameter_Z89 <: HacspecOvnGroupAndFieldParameter OVN_Z8
       }
 
       intros x y z.
-      
+
       apply both_equivalence_is_pure_eq.
       set (n0 := 88%nat).
       remember n0.
