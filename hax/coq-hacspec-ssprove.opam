@@ -14,8 +14,8 @@ depends: [
   "coq-mathcomp-word" {>= "3.0"}
   "coq-mathcomp-zify" {>= "1.5.0+2.0+8.16"}
   "coq-concert" {= "dev"}
-  "coq-extructures" {<= "0.4.0"}
-  "coq" {>= "8.20.0"}
+  "coq-extructures" {>= "0.5.0"}
+  "coq" {>= "9.0.0"}
   "odoc" {with-doc}
 ]
 build: [
@@ -33,5 +33,5 @@ build: [
   ]
 ]
 pin-depends: [
-  ["coq-concert.dev" "git+https://github.com/AU-COBRA/ConCert.git#d06ca907c91cb46480d2e94e3666b84341c320fe"]
+  ["coq-concert.dev" "git+https://github.com/AU-COBRA/ConCert.git#10768763dd8fc64e7d01181e79d88f0e6b972c0b"]
 ]

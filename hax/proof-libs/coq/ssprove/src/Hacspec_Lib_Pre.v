@@ -4,7 +4,7 @@ Global Set Warnings "-auto-template".
 Global Set Warnings "-disj-pattern-notation".
 Global Set Warnings "-notation-overridden,-ambiguous-paths".
 
-Require Import Lia.
+From Coq Require Import Lia.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Sumbool.
 
@@ -1339,13 +1339,26 @@ Proof.
   easy.
 Qed.
 
+Lemma seq_from_list_empty : forall A,
+  seq_from_list A [] = emptym.
+Proof.
+  intros.
+  apply eq_fmap.
+  intros i.
+  unfold seq_from_list.
+  rewrite fmap_of_seqE.
+  apply seq.nth_nil.
+Qed.
+
 Theorem seq_from_list_size : forall A l,
     seq.size l = seq_len_nat (seq_from_list A l).
 Proof.
   intros.
   rewrite <- (rev_involutive l).
   induction (rev l).
-  - reflexivity.
+  - cbn.
+    rewrite seq_from_list_empty.
+    reflexivity.
   - simpl.
     rewrite seq_from_list_cat.
     rewrite seq.size_cat.
@@ -1486,7 +1499,8 @@ Proof.
   intros.
   rewrite <- (seq.revK t).
   induction (seq.rev t).
-  - reflexivity.
+  - rewrite seq_from_list_empty.
+    reflexivity.
   - simpl.
     rewrite seq.rev_cons.
     set (h := seq.rev l) at 1 ; rewrite <- IHl ; subst h. clear IHl.
@@ -2344,6 +2358,8 @@ Proof.
   destruct fmval.
   + reflexivity.
   + cbn.
+    unfold Ord.lt.
+    cbn.
     destruct negb eqn:O_p.
     * reflexivity.
     * apply ssrbool.negbFE in O_p.
@@ -3054,9 +3070,9 @@ Global Instance nat_mod_eqdec {p} : EqDec ((nat_mod p)) := {
 
 Global Instance nat_mod_comparable `{p : Z} : Comparable ((nat_mod p)) := {
     ltb a b := Z.ltb (nat_mod_val p a) (nat_mod_val p b);
-    leb a b := if Zeq_bool (nat_mod_val p a) (nat_mod_val p b) then true else Z.ltb (nat_mod_val p a) (nat_mod_val p b) ;
+    leb a b := if Z.eqb (nat_mod_val p a) (nat_mod_val p b) then true else Z.ltb (nat_mod_val p a) (nat_mod_val p b) ;
     gtb a b := Z.ltb (nat_mod_val p b) (nat_mod_val p a);
-    geb a b := if Zeq_bool (nat_mod_val p b) (nat_mod_val p a) then true else Z.ltb (nat_mod_val p b) (nat_mod_val p a) ;
+    geb a b := if Z.eqb (nat_mod_val p b) (nat_mod_val p a) then true else Z.ltb (nat_mod_val p b) (nat_mod_val p a) ;
   }.
 
 Fixpoint nat_mod_rem_aux {n : Z} (a:(nat_mod n)) (b:(nat_mod n)) (f : nat) {struct f} : (nat_mod n) :=

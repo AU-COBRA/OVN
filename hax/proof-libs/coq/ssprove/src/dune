@@ -9,6 +9,7 @@
    ConCert stdpp MetaCoq Ltac2 ; ConCert
    ; Jasmin
    SSProve ; SSProve
+   Stdlib
    )
  ; (libraries <ocaml_libraries>)
  )

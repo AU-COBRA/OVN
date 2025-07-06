@@ -1,4 +1,4 @@
-Require Import Lia.
+From Coq Require Import Lia.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Sumbool.
 

@@ -4,7 +4,7 @@ Global Set Warnings "-auto-template".
 Global Set Warnings "-disj-pattern-notation".
 Global Set Warnings "-notation-overridden,-ambiguous-paths".
 
-Require Import Lia.
+From Coq Require Import Lia.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Sumbool.
 
