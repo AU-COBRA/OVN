@@ -445,12 +445,12 @@ Qed.
 
 Lemma iff_extensionality : forall {A} (P Q : A -> Prop), (forall a, P a <-> Q a) -> ((forall a, P a) <-> (forall a, Q a)).
 Proof.
-  intros. split ; intuition.
+  intros. split ; auto with *.
 Qed.
 
 Lemma iff_eq_sym : forall {A} (x y : A), (x = y) <-> (y = x).
 Proof.
-  intros. split ; intuition.
+  intros. split ; auto with *.
 Qed.
 
 Definition loc_seq_has (a : Location) := seq.has (ssrbool.fun_of_rel (@eqtype.eq_op loc_eqType) a).

@@ -14,7 +14,7 @@ From SSProve.Crypt Require Import choice_type Package Prelude.
 Import PackageNotation.
 From extructures Require Import ord fset fmap.
 
-Require Import ChoiceEquality.
+From Hacspec Require Import ChoiceEquality.
 
 From mathcomp Require Import ssrZ word.
 (* From Jasmin Require Import word. *)
@@ -36,7 +36,7 @@ Open Scope list_scope.
 Open Scope hacspec_scope.
 Open Scope nat_scope.
 
-Require Import Hacspec_Lib_Comparable.
+From Hacspec Require Import Hacspec_Lib_Comparable.
 
 Import choice.Choice.Exports.
 
@@ -209,7 +209,7 @@ Axiom declassify_u32_from_uint32 : uint32 -> uint32.
 (* Represents any type that can be converted to uint_size and back *)
 Class UInt_sizeable (A : Type) := {
     usize : A -> uint_size;
-    from_uint_size :> uint_size -> A;
+    from_uint_size : uint_size -> A;
   }.
 Arguments usize {_} {_}.
 Arguments from_uint_size {_} {_}.
@@ -821,7 +821,7 @@ Proof.
   induction fuel ; intros.
   - reflexivity.
   - do 2 rewrite <- foldi__nat_move_S.
-    replace (S fuel + i)%nat with (fuel + (S i))%nat by (symmetry ; apply plus_Snm_nSm).
+    replace (S fuel + i)%nat with (fuel + (S i))%nat by (symmetry ; apply Nat.add_succ_comm).
     rewrite IHfuel.
     + reflexivity.
     + lia.
@@ -1208,7 +1208,7 @@ Proof.
   - apply (ssrbool.elimT eqtype.eqP) in p_eq_last.
     setoid_rewrite p_eq_last in i.
     cbn in i.
-    rewrite <- ssrnat.subnE in i.
+    try rewrite <- ssrnat.subnE in i.
     rewrite ssrnat.subSnn in i.
     discriminate.
   - easy.
@@ -2140,7 +2140,7 @@ Proof.
       reflexivity.
     + rewrite tl_fmap_equation_3.
       apply le_n_S.
-      eapply le_trans ; [ apply (IHfmval (path_sorted_tl i)) | ].
+      eapply Nat.le_trans ; [ apply (IHfmval (path_sorted_tl i)) | ].
       apply Nat.eq_le_incl.
       (* rewrite mkfmapK ; [ | apply (lower_is_sorted (@FMap.FMap _ _ ((Ordinal (n:=S (S n)) (m:=S m) i0, s0) :: fmval) i)) ]. *)
       simpl.
@@ -2287,7 +2287,7 @@ Proof.
   - cbn in *.
     specialize (IHn (tl_fmap a)).
     apply le_n_S in IHn.
-    refine (le_trans (length (FMap.fmval a)) _ (S (S n)) _ IHn).
+    refine (Nat.le_trans (length (FMap.fmval a)) _ (S (S n)) _ IHn).
     apply lower_fval_smaller_length.
 Qed.
 
@@ -2346,9 +2346,12 @@ Proof.
   destruct fmval.
   + reflexivity.
   + cbn.
+    unfold Ord.lt.
+    cbn.
     destruct negb eqn:O_p.
     * reflexivity.
-    * apply ssrbool.negbFE in O_p.
+    * rewrite Bool.andb_false_r.
+      apply ssrbool.negbFE in O_p.
       rewrite O_p.
       reflexivity.
 Qed.
@@ -2378,7 +2381,7 @@ Proof.
          f_equal.
          now erewrite (proj1 (lower_fval_ext (@FMap.FMap _ _ fmval (path_sorted_tl i)) _ _ _) eq_refl).
       -- cbn.
-         rewrite tl_fmap_equation_2.
+         try rewrite tl_fmap_equation_2.
          rewrite tl_fmap_equation_3.
          apply eq_fmap. intros ?.
          cbn.
@@ -2415,7 +2418,7 @@ Proof.
     apply (ssrbool.introT ssrnat.ltP).
     lia.
   - rewrite skipn_length.
-    apply lt_n_Sm_le.
+    apply Nat.lt_succ_r.
     lia.
 Defined.
 
@@ -3315,7 +3318,7 @@ Definition option := chOption.
 Module choice_typeMonad.
   Class CEMonad : Type :=
     {
-      M :> choice_type -> choice_type ;
+      M : choice_type -> choice_type ;
       bind {A B : choice_type} (x : (M A)) (f : A -> (M B)) : (M B) ;
       ret {A : choice_type} (x : A) : (M A) ;
       monad_law1 : forall {A B : choice_type} a (f : A -> M B),

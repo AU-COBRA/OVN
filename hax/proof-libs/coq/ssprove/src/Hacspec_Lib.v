@@ -32,4 +32,8 @@ From Hacspec Require Import Hacspec_Lib_Ltac. Export Hacspec_Lib_Ltac.
 From Hacspec Require Import Hacspec_Lib_Controlflow. Export Hacspec_Lib_Controlflow.
 From Hacspec Require Import Hacspec_Lib_Notation. Export Hacspec_Lib_Notation.
 From Hacspec Require Import Hacspec_Lib_TODO. Export Hacspec_Lib_TODO.
+
+(* TODO: remove when switching to Coq 9.0 *)
+Unset Universe Checking.
 From Hacspec Require Import ConCertLib. Export ConCertLib.
+Set Universe Checking.

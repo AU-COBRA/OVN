@@ -16,6 +16,7 @@ Class EqDec (A : Type) :=
   { eqb : A -> A -> bool ;
     eqb_leibniz : forall x y, is_true (eqb x y) <-> x = y }.
 
+Declare Scope hacspec_scope.
 Infix "=.?" := eqb (at level 40) : hacspec_scope.
 Infix "!=.?" := (fun a b => negb (eqb a b)) (at level 40) : hacspec_scope.
 

@@ -47,7 +47,7 @@ Module choice_typeMonad.
 
   Class BindCode :=
     {
-      mnd :> choice_typeMonad.CEMonad ;
+      mnd :: choice_typeMonad.CEMonad ;
       monad_bind_both {A B : choice_type} (x : both (choice_typeMonad.M (CEMonad := mnd) A)) (f : both A -> both (choice_typeMonad.M (CEMonad := mnd) B)) : both (choice_typeMonad.M (CEMonad := mnd) B) ;
     }.
 
