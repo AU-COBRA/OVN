@@ -3,7 +3,7 @@
  (package coq-hacspec-ssprove)
  (flags -w all)
  (theories
-   mathcomp elpi HB deriving ; Mathcomp
+   mathcomp elpi HB deriving elpi_elpi ; Mathcomp
    extructures
    Equations
    ConCert stdpp MetaCoq Ltac2 ; ConCert

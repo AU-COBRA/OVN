@@ -1,3 +1,3 @@
 pin-depends: [
-  ["coq-concert.dev" "git+https://github.com/AU-COBRA/ConCert.git#a6c8fa81bbdaa260b876c1b0a49a90d434080178"]
+  ["coq-concert.dev" "git+https://github.com/AU-COBRA/ConCert.git#d06ca907c91cb46480d2e94e3666b84341c320fe"]
 ]

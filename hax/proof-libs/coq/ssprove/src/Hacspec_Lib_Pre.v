@@ -1621,11 +1621,11 @@ Theorem length_resize_to_k : forall {A : choice_type} (l : list A) k, List.lengt
 Proof.
   intros.
   unfold resize_to_k.
-  rewrite List.app_length.
-  rewrite List.rev_length.
+  rewrite List.length_app.
+  rewrite List.length_rev.
   rewrite seq.size_drop.
   rewrite List.repeat_length.
-  rewrite List.rev_length.
+  rewrite List.length_rev.
   Lia.lia.
 Defined.
 
@@ -2123,8 +2123,8 @@ Proof.
       (* rewrite mkfmapK ; [ | apply (lower_is_sorted (@FMap.FMap _ _ fmval (path_sorted_tl i)))]. *)
       epose (lower_keeps_value (FMap.FMap (T:=fintype_ordinal__canonical__Ord_Ord (S (S n))) (fmval:=fmval) (path_sorted_tl i))).
       simpl in e.
-      rewrite <- (map_length snd).
-      rewrite <- (map_length snd).
+      rewrite <- (length_map snd).
+      rewrite <- (length_map snd).
       assert (forall {A B} (f : A -> B) (l : list A), seq.map f l = map f l).
       {
         clear ; intros.
@@ -2344,12 +2344,9 @@ Proof.
   destruct fmval.
   + reflexivity.
   + cbn.
-    unfold Ord.lt.
-    cbn.
     destruct negb eqn:O_p.
     * reflexivity.
-    * rewrite Bool.andb_false_r.
-      apply ssrbool.negbFE in O_p.
+    * apply ssrbool.negbFE in O_p.
       rewrite O_p.
       reflexivity.
 Qed.
@@ -2415,7 +2412,7 @@ Proof.
   - unfold Positive.
     apply (ssrbool.introT ssrnat.ltP).
     lia.
-  - rewrite skipn_length.
+  - rewrite length_skipn.
     apply Nat.lt_succ_r.
     lia.
 Defined.
@@ -3179,7 +3176,7 @@ Definition to_be_bytes {WS} : (@int WS) -> (nseq_ int8 (WS / 8)) :=
                                     (fun i : nat => repr _ (nat_be_range 8 (toword k) i) : int _)
                                     (seq.iota 0 (nat_of_wsize WS / 8))))
                 (length (seq.iota 0 (nat_of_wsize WS / 8)))
-                (map_length
+                (length_map
                    (fun i : nat =>
                       repr _ (nat_be_range 8 (toword k) i))
                    (seq.iota 0 (nat_of_wsize WS / 8))))
@@ -3221,11 +3218,11 @@ Definition to_le_bytes {WS} : (@int WS) -> (nseq_ int8 (WS / 8)) :=
          repr _ (nat_be_range 8 (toword k) i))
         (rev (seq.iota 0 (nat_of_wsize WS / 8)))))
      (length (rev (seq.iota 0 (nat_of_wsize WS / 8))))
-     (map_length
+     (length_map
         (fun i : nat =>
          repr _ (nat_be_range 8 (toword k) i))
         (rev (seq.iota 0 (nat_of_wsize WS / 8))))) (length (seq.iota 0 (nat_of_wsize WS / 8)))
-     (rev_length (seq.iota 0 (nat_of_wsize WS / 8)))) (nat_of_wsize WS / 8)%nat (seq.size_iota 0 (nat_of_wsize WS / 8)).
+     (length_rev (seq.iota 0 (nat_of_wsize WS / 8)))) (nat_of_wsize WS / 8)%nat (seq.size_iota 0 (nat_of_wsize WS / 8)).
 
 Definition from_le_bytes_fold_fun {WS} (i : int8) (s : ('nat × @int WS)) : ('nat × @int WS) :=
   let (n,v) := s in
