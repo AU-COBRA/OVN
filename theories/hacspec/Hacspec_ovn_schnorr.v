@@ -18,9 +18,7 @@ From Hacspec Require Import ChoiceEquality.
 From Hacspec Require Import LocationUtility.
 From Hacspec Require Import Hacspec_Lib_Comparable.
 From Hacspec Require Import Hacspec_Lib_Pre.
-Unset Universe Checking.
 From Hacspec Require Import Hacspec_Lib.
-Set Universe Checking.
 
 Open Scope hacspec_scope.
 Import choice.Choice.Exports.
