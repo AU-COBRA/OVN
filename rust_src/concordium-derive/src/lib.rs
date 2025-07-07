@@ -477,7 +477,7 @@ fn receive_worker(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStre
 		let res: Result<(Action, _), _> = #fn_name(&ctx, #(#fn_optional_args, )* state);
 		match res {
 		    Ok((act, state_res)) => {
-                        state = state_res;
+                        state = state_res.clone();
 			act.tag() as i32
 		    }
 		    Err(reject) => {
@@ -505,7 +505,7 @@ fn receive_worker(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStre
 		    let res : Result<(Action, #fn_out), _> = #fn_name(&ctx, #(#fn_optional_args, )* state);
 		    match res {
 			Ok((act, state_res)) => {
-                            let temp : _ = state_res;
+                            let temp : _ = state_res.clone();
                             state = state_res;
 			    let res = state_bytes
 				.seek(SeekFrom::Start(0))

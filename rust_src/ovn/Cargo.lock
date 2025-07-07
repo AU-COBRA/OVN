@@ -364,6 +364,7 @@ dependencies = [
  "hacspec-lib",
  "hax-lib",
  "hax-lib-macros",
+ "num-bigint",
  "quickcheck",
  "quickcheck_macros",
  "rand",

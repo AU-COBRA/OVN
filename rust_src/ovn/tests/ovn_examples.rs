@@ -13,6 +13,7 @@ pub use hacspec_ovn::ovn_group::*;
 pub use hacspec_ovn::ovn_secp256k1::*;
 pub use hacspec_ovn::ovn_z89::*;
 pub use hacspec_ovn::ovn_z18446744073709551557::*;
+pub use hacspec_ovn::ovn_z115792089237316195423570985008687907853269984665640564039457584007913129639747::*;
 use rand::random;
 
 #[cfg(test)]
@@ -20,9 +21,9 @@ pub fn schnorr_zkp_correctness<G: Group>(random_x: u128, random_r: u128) -> bool
     let x: G::Z = G::Z::random_field_elem(random_x);
     let r: G::Z = G::Z::random_field_elem(random_r);
 
-    let pow_x = G::g_pow(x);
+    let pow_x = G::g_pow(x.clone());
 
-    let pi: SchnorrZKPCommit<G> = schnorr_zkp(r, pow_x, x);
+    let pi: SchnorrZKPCommit<G> = schnorr_zkp(r, pow_x.clone(), x);
 
     let valid = schnorr_zkp_validate::<G>(pow_x, pi);
     valid
@@ -66,7 +67,7 @@ pub fn or_zkp_correctness<G: Group>(
 
     let mut h = G::g_pow(h);
     let x = x;
-    let pi: OrZKPCommit<G> = zkp_one_out_of_two(w, r, d, h, x, v);
+    let pi: OrZKPCommit<G> = zkp_one_out_of_two(w, r, d, h.clone(), x, v);
     let valid = zkp_one_out_of_two_validate::<G>(h, pi);
     valid
 }
@@ -80,9 +81,20 @@ pub fn or_zkp_correctness_z89() {
 
 #[test]
 pub fn or_zkp_correctness_z18446744073709551557() {
-    QuickCheck::new()
-        .tests(10000)
-        .quickcheck(or_zkp_correctness::<g_z_18446744073709551557> as fn(u128, u128, u128, u128, u128, bool) -> bool)
+    QuickCheck::new().tests(10000).quickcheck(
+        or_zkp_correctness::<g_z_18446744073709551557>
+            as fn(u128, u128, u128, u128, u128, bool) -> bool,
+    )
+}
+
+#[test]
+pub fn or_zkp_correctness_z115792089237316195423570985008687907853269984665640564039457584007913129639747(
+) {
+    QuickCheck::new().tests(10000).quickcheck(
+        or_zkp_correctness::<
+            g_z_115792089237316195423570985008687907853269984665640564039457584007913129639747,
+        > as fn(u128, u128, u128, u128, u128, bool) -> bool,
+    )
 }
 
 #[test]
@@ -95,18 +107,18 @@ pub fn or_zkp_secp256k1_correctness() {
 
 #[cfg(test)]
 pub fn sum_to_zero<G: Group, const n: usize>() {
-    let mut xis: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut g_pow_xis: [G; n] = [G::group_one(); n];
+    let mut xis: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut g_pow_xis: [G; n] = core::array::from_fn(|_| G::group_one());
     use rand::random;
     for i in 0..n {
         xis[i] = G::Z::random_field_elem(random());
-        g_pow_xis[i] = G::g_pow(xis[i]);
+        g_pow_xis[i] = G::g_pow(xis[i].clone());
     }
 
     let mut res = G::group_one();
     for i in 0..n {
-        let g_pow_yi = compute_g_pow_yi::<G, n>(i, g_pow_xis);
-        res = G::prod(res , /* group product */  G::pow(g_pow_yi, xis[i]));
+        let g_pow_yi = compute_g_pow_yi::<G, n>(i, g_pow_xis.clone());
+        res = G::prod(res, /* group product */ G::pow(g_pow_yi, xis[i].clone()));
     }
 
     assert!(res == G::group_one());
@@ -123,22 +135,28 @@ pub fn sum_to_zero_z18446744073709551557() {
 }
 
 #[test]
+pub fn sum_to_zero_z115792089237316195423570985008687907853269984665640564039457584007913129639747()
+{
+    sum_to_zero::<
+        g_z_115792089237316195423570985008687907853269984665640564039457584007913129639747,
+        5555,
+    >()
+}
+
+#[test]
 pub fn sum_to_zero_secp256k1() {
-    sum_to_zero::<Group_curve, 55>()
+    sum_to_zero::<Group_curve, 555>()
 }
 
 #[derive(Copy, Clone, hacspec_concordium::Serial, hacspec_concordium::Deserial)]
-pub struct ElemOfEach<G : Group> {
-    i : u32,
-    z : G::Z,
-    g : G,
+pub struct ElemOfEach<G: Group> {
+    i: u32,
+    z: G::Z,
+    g: G,
 }
 
 #[cfg(test)]
-pub fn test_params_of_group<
-    G: Group,
-    A: HasActions,
-    >() {
+pub fn test_params_of_group<G: Group, A: HasActions>() {
     // Setup the context
     let mut ctx = hacspec_concordium::test_infrastructure::ReceiveContextTest::empty();
     let parameter = ElemOfEach::<G> {
@@ -148,8 +166,7 @@ pub fn test_params_of_group<
     };
     let parameter_bytes = to_bytes(&parameter);
     let ctx_params = ctx.set_parameter(&parameter_bytes);
-    let param_back: Result<ElemOfEach<G>, ParseError> =
-        ctx_params.parameter_cursor().get();
+    let param_back: Result<ElemOfEach<G>, ParseError> = ctx_params.parameter_cursor().get();
     assert!(param_back.is_ok());
 
     let wu_param = param_back.unwrap();
@@ -181,56 +198,68 @@ pub fn test_correctness<G: Group, const n: usize, A: HasActions>(
     cvp_zkp_random_ds2: [G::Z; n],
 ) -> bool {
     // Setup the context
-    let mut ctx : test_infrastructure::ContextTest<_> = test_infrastructure::ReceiveContextTest::empty();
+    let mut ctx: test_infrastructure::ContextTest<_> =
+        test_infrastructure::ReceiveContextTest::empty();
 
-    let init_ctx : test_infrastructure::ContextTest<_> = test_infrastructure::InitContextTest::empty();
+    let init_ctx: test_infrastructure::ContextTest<_> =
+        test_infrastructure::InitContextTest::empty();
     let mut state: OvnContractState<G, n> = init_ovn_contract(&init_ctx).unwrap();
 
     for i in 0..n {
         let parameter = RegisterParam::<G::Z> {
             rp_i: i as u32,
-            rp_xi: xis[i],
-            rp_zkp_random: rp_zkp_randoms[i],
+            rp_xi: xis[i].clone(),
+            rp_zkp_random: rp_zkp_randoms[i].clone(),
         };
         let parameter_bytes = to_bytes(&parameter);
-        let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
+        let pb: &[u8] = unsafe {
+            std::slice::from_raw_parts(
+                parameter_bytes.as_ptr(),
+                parameter_bytes.len() * mem::size_of::<u8>(),
+            )
+        };
         ctx = ctx.set_parameter(pb);
-        (_, state) =
-            register_vote::<G, n, A>(&ctx, state)
-                .unwrap();
+        (_, state) = register_vote::<G, n, A>(&ctx, state).unwrap();
     }
 
     for i in 0..n {
         let parameter = CastVoteParam::<G::Z> {
             cvp_i: i as u32,
-            cvp_xi: xis[i],
-            cvp_zkp_random_w: cvp_zkp_random_ws1[i],
-            cvp_zkp_random_r: cvp_zkp_random_rs1[i],
-            cvp_zkp_random_d: cvp_zkp_random_ds1[i],
+            cvp_xi: xis[i].clone(),
+            cvp_zkp_random_w: cvp_zkp_random_ws1[i].clone(),
+            cvp_zkp_random_r: cvp_zkp_random_rs1[i].clone(),
+            cvp_zkp_random_d: cvp_zkp_random_ds1[i].clone(),
             cvp_vote: votes[i],
         };
         let parameter_bytes = to_bytes(&parameter);
-        let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
+        let pb: &[u8] = unsafe {
+            std::slice::from_raw_parts(
+                parameter_bytes.as_ptr(),
+                parameter_bytes.len() * mem::size_of::<u8>(),
+            )
+        };
         ctx = ctx.set_parameter(pb);
-        (_, state) =
-            commit_to_vote::<G, n, A>(&ctx, state)
-                .unwrap();
+        (_, state) = commit_to_vote::<G, n, A>(&ctx, state).unwrap();
     }
 
     for i in 0..n {
         let parameter = CastVoteParam::<G::Z> {
             cvp_i: i as u32,
-            cvp_xi: xis[i],
-            cvp_zkp_random_w: cvp_zkp_random_ws2[i],
-            cvp_zkp_random_r: cvp_zkp_random_rs2[i],
-            cvp_zkp_random_d: cvp_zkp_random_ds2[i],
+            cvp_xi: xis[i].clone(),
+            cvp_zkp_random_w: cvp_zkp_random_ws2[i].clone(),
+            cvp_zkp_random_r: cvp_zkp_random_rs2[i].clone(),
+            cvp_zkp_random_d: cvp_zkp_random_ds2[i].clone(),
             cvp_vote: votes[i],
         };
         let parameter_bytes = to_bytes(&parameter);
-        let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
+        let pb: &[u8] = unsafe {
+            std::slice::from_raw_parts(
+                parameter_bytes.as_ptr(),
+                parameter_bytes.len() * mem::size_of::<u8>(),
+            )
+        };
         ctx = ctx.set_parameter(pb);
-        (_, state) =
-            cast_vote::<G, n, A>(&ctx, state).unwrap();
+        (_, state) = cast_vote::<G, n, A>(&ctx, state).unwrap();
     }
 
     let parameter = TallyParameter {};
@@ -254,15 +283,15 @@ pub fn test_correctness<G: Group, const n: usize, A: HasActions>(
 fn randomized_full_test<G: Group, const n: usize>() -> bool {
     use rand::random;
     let mut votes: [bool; n] = [false; n];
-    let mut xis: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut rp_zkp_randoms: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut cvp_zkp_random_ws1: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut cvp_zkp_random_rs1: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut cvp_zkp_random_ds1: [G::Z; n] = [G::Z::field_zero(); n];
+    let mut xis: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut rp_zkp_randoms: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut cvp_zkp_random_ws1: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut cvp_zkp_random_rs1: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut cvp_zkp_random_ds1: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
 
-    let mut cvp_zkp_random_ws2: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut cvp_zkp_random_rs2: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut cvp_zkp_random_ds2: [G::Z; n] = [G::Z::field_zero(); n];
+    let mut cvp_zkp_random_ws2: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut cvp_zkp_random_rs2: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut cvp_zkp_random_ds2: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
 
     for i in 0..n {
         votes[i] = random();
@@ -307,6 +336,17 @@ fn test_full_z18446744073709551557() {
 
 // #[concordium_test]
 #[test]
+fn test_full_z115792089237316195423570985008687907853269984665640564039457584007913129639747() {
+    QuickCheck::new().tests(5).quickcheck(
+        randomized_full_test::<
+            g_z_115792089237316195423570985008687907853269984665640564039457584007913129639747,
+            5555,
+        > as fn() -> bool,
+    )
+}
+
+// #[concordium_test]
+#[test]
 fn test_full_secp256k1() {
     QuickCheck::new()
         .tests(1)
@@ -324,40 +364,45 @@ pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
     cvp_zkp_random_ws2: [G::Z; n],
     cvp_zkp_random_rs2: [G::Z; n],
     cvp_zkp_random_ds2: [G::Z; n],
-    target : usize,
+    target: usize,
     order: u128,
 ) -> bool {
     // Setup the context
-    let mut ctx : test_infrastructure::ContextTest<_> = test_infrastructure::ReceiveContextTest::empty();
+    let mut ctx: test_infrastructure::ContextTest<_> =
+        test_infrastructure::ReceiveContextTest::empty();
     let mut did_leak = false;
 
-    let init_ctx : test_infrastructure::ContextTest<_> = test_infrastructure::InitContextTest::empty();
+    let init_ctx: test_infrastructure::ContextTest<_> =
+        test_infrastructure::InitContextTest::empty();
     let mut state: OvnContractState<G, n> = init_ovn_contract(&init_ctx).unwrap();
 
-    for i in 0..n-1 {
+    for i in 0..n - 1 {
         let parameter = RegisterParam::<G::Z> {
             rp_i: i as u32,
-            rp_xi: xis[i],
-            rp_zkp_random: rp_zkp_randoms[i],
+            rp_xi: xis[i].clone(),
+            rp_zkp_random: rp_zkp_randoms[i].clone(),
         };
         let parameter_bytes = to_bytes(&parameter);
-        let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
+        let pb: &[u8] = unsafe {
+            std::slice::from_raw_parts(
+                parameter_bytes.as_ptr(),
+                parameter_bytes.len() * mem::size_of::<u8>(),
+            )
+        };
         ctx = ctx.set_parameter(pb);
-        (_, state) =
-            register_vote::<G, n, A>(&ctx, state)
-                .unwrap();
+        (_, state) = register_vote::<G, n, A>(&ctx, state).unwrap();
     }
 
     // Inject malicious secret key
     {
         let mut prod1 = G::group_one();
         for j in 0..target {
-            prod1 = G::prod(prod1, state.g_pow_xis[j]);
+            prod1 = G::prod(prod1, state.g_pow_xis[j].clone());
         }
 
         let mut prod2 = G::group_one();
-        for j in (target + 1)..n-1 {
-            prod2 = G::prod(prod2, state.g_pow_xis[j]);
+        for j in (target + 1)..n - 1 {
+            prod2 = G::prod(prod2, state.g_pow_xis[j].clone());
         }
 
         for xj in 0..order {
@@ -366,61 +411,71 @@ pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
                 return true;
             }
 
-            if prod1 == G::prod(prod2, G::g_pow(G::Z::random_field_elem(xj))) {
-                xis[n-1] = G::Z::random_field_elem(xj);
+            if prod1 == G::prod(prod2.clone(), G::g_pow(G::Z::random_field_elem(xj))) {
+                xis[n - 1] = G::Z::random_field_elem(xj);
                 break;
             }
         }
 
         let parameter = RegisterParam::<G::Z> {
-            rp_i: (n-1) as u32,
-            rp_xi: xis[n-1],
-            rp_zkp_random: rp_zkp_randoms[n-1],
+            rp_i: (n - 1) as u32,
+            rp_xi: xis[n - 1].clone(),
+            rp_zkp_random: rp_zkp_randoms[n - 1].clone(),
         };
         let parameter_bytes = to_bytes(&parameter);
-        let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
+        let pb: &[u8] = unsafe {
+            std::slice::from_raw_parts(
+                parameter_bytes.as_ptr(),
+                parameter_bytes.len() * mem::size_of::<u8>(),
+            )
+        };
         ctx = ctx.set_parameter(pb);
-        (_, state) =
-            register_vote::<G, n, A>(&ctx, state)
-                .unwrap();
+        (_, state) = register_vote::<G, n, A>(&ctx, state).unwrap();
     }
 
     for i in 0..n {
         let parameter = CastVoteParam::<G::Z> {
             cvp_i: i as u32,
-            cvp_xi: xis[i],
-            cvp_zkp_random_w: cvp_zkp_random_ws1[i],
-            cvp_zkp_random_r: cvp_zkp_random_rs1[i],
-            cvp_zkp_random_d: cvp_zkp_random_ds1[i],
+            cvp_xi: xis[i].clone(),
+            cvp_zkp_random_w: cvp_zkp_random_ws1[i].clone(),
+            cvp_zkp_random_r: cvp_zkp_random_rs1[i].clone(),
+            cvp_zkp_random_d: cvp_zkp_random_ds1[i].clone(),
             cvp_vote: votes[i],
         };
         let parameter_bytes = to_bytes(&parameter);
-        let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
+        let pb: &[u8] = unsafe {
+            std::slice::from_raw_parts(
+                parameter_bytes.as_ptr(),
+                parameter_bytes.len() * mem::size_of::<u8>(),
+            )
+        };
         ctx = ctx.set_parameter(pb);
-        (_, state) =
-            commit_to_vote::<G, n, A>(&ctx, state)
-                .unwrap();
+        (_, state) = commit_to_vote::<G, n, A>(&ctx, state).unwrap();
     }
 
     for i in 0..n {
         let parameter = CastVoteParam::<G::Z> {
             cvp_i: i as u32,
-            cvp_xi: xis[i],
-            cvp_zkp_random_w: cvp_zkp_random_ws2[i],
-            cvp_zkp_random_r: cvp_zkp_random_rs2[i],
-            cvp_zkp_random_d: cvp_zkp_random_ds2[i],
+            cvp_xi: xis[i].clone(),
+            cvp_zkp_random_w: cvp_zkp_random_ws2[i].clone(),
+            cvp_zkp_random_r: cvp_zkp_random_rs2[i].clone(),
+            cvp_zkp_random_d: cvp_zkp_random_ds2[i].clone(),
             cvp_vote: votes[i],
         };
         let parameter_bytes = to_bytes(&parameter);
-        let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
+        let pb: &[u8] = unsafe {
+            std::slice::from_raw_parts(
+                parameter_bytes.as_ptr(),
+                parameter_bytes.len() * mem::size_of::<u8>(),
+            )
+        };
         ctx = ctx.set_parameter(pb);
-        (_, state) =
-            cast_vote::<G, n, A>(&ctx, state).unwrap();
+        (_, state) = cast_vote::<G, n, A>(&ctx, state).unwrap();
     }
 
     println!("target: {}", target);
     for i in 0..n {
-        let g_pow_yi = compute_g_pow_yi::<G, n>(i, state.g_pow_xis);
+        let g_pow_yi = compute_g_pow_yi::<G, n>(i, state.g_pow_xis.clone());
         if g_pow_yi == G::group_one() {
             println!("leak");
             let vote_i = state.g_pow_xi_yi_vis[i] == G::g();
@@ -449,18 +504,18 @@ pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
 }
 
 #[cfg(test)]
-fn full_attack_test<G: Group, const n: usize, const order: u128>() -> bool {
+fn full_attack_test<G: Group, const n: usize>() -> bool {
     use rand::random;
     let mut votes: [bool; n] = [false; n];
-    let mut xis: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut rp_zkp_randoms: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut cvp_zkp_random_ws1: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut cvp_zkp_random_rs1: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut cvp_zkp_random_ds1: [G::Z; n] = [G::Z::field_zero(); n];
+    let mut xis: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut rp_zkp_randoms: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut cvp_zkp_random_ws1: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut cvp_zkp_random_rs1: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut cvp_zkp_random_ds1: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
 
-    let mut cvp_zkp_random_ws2: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut cvp_zkp_random_rs2: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut cvp_zkp_random_ds2: [G::Z; n] = [G::Z::field_zero(); n];
+    let mut cvp_zkp_random_ws2: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut cvp_zkp_random_rs2: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut cvp_zkp_random_ds2: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
 
     for i in 0..n {
         votes[i] = random();
@@ -487,7 +542,7 @@ fn full_attack_test<G: Group, const n: usize, const order: u128>() -> bool {
         cvp_zkp_random_rs2,
         cvp_zkp_random_ds2,
         target,
-        order
+        9999999,
     )
 }
 
@@ -495,17 +550,26 @@ fn full_attack_test<G: Group, const n: usize, const order: u128>() -> bool {
 fn test_attack_g_pow_yi_zero_z89() {
     QuickCheck::new()
         .tests(100)
-        .quickcheck(full_attack_test::<g_z_89, 55, 89u128> as fn() -> bool)
+        .quickcheck(full_attack_test::<g_z_89, 55> as fn() -> bool)
 }
 
 #[test]
 fn test_attack_g_pow_yi_zero_z18446744073709551557() {
-    QuickCheck::new()
-        .tests(5)
-        .quickcheck(full_attack_test::<g_z_18446744073709551557, 555, 18446744073709551557u128> as fn() -> bool)
+    QuickCheck::new().tests(5).quickcheck(
+        full_attack_test::<g_z_18446744073709551557, 555> as fn() -> bool,
+    )
 }
 
-
+#[test]
+fn test_attack_g_pow_yi_zero_z115792089237316195423570985008687907853269984665640564039457584007913129639747(
+) {
+    QuickCheck::new().tests(5).quickcheck(
+        full_attack_test::<
+            g_z_115792089237316195423570985008687907853269984665640564039457584007913129639747,
+            5555,
+        > as fn() -> bool,
+    )
+}
 
 #[cfg(test)]
 pub fn test_attack_2_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
@@ -521,69 +585,77 @@ pub fn test_attack_2_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
     order: u128,
 ) -> bool {
     // Setup the context
-    let mut ctx : test_infrastructure::ContextTest<_> = test_infrastructure::ReceiveContextTest::empty();
+    let mut ctx: test_infrastructure::ContextTest<_> =
+        test_infrastructure::ReceiveContextTest::empty();
     let mut did_leak = false;
 
-    let init_ctx : test_infrastructure::ContextTest<_> = test_infrastructure::InitContextTest::empty();
+    let init_ctx: test_infrastructure::ContextTest<_> =
+        test_infrastructure::InitContextTest::empty();
     let mut state: OvnContractState<G, n> = init_ovn_contract(&init_ctx).unwrap();
 
-    for i in 0..n-1 {
+    for i in 0..n - 1 {
         let parameter = RegisterParam::<G::Z> {
             rp_i: i as u32,
-            rp_xi: xis[i],
-            rp_zkp_random: rp_zkp_randoms[i],
+            rp_xi: xis[i].clone(),
+            rp_zkp_random: rp_zkp_randoms[i].clone(),
         };
         let parameter_bytes = to_bytes(&parameter);
-        let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
+        let pb: &[u8] = unsafe {
+            std::slice::from_raw_parts(
+                parameter_bytes.as_ptr(),
+                parameter_bytes.len() * mem::size_of::<u8>(),
+            )
+        };
         ctx = ctx.set_parameter(pb);
-        (_, state) =
-            register_vote::<G, n, A>(&ctx, state)
-                .unwrap();
+        (_, state) = register_vote::<G, n, A>(&ctx, state).unwrap();
     }
 
     // Inject malicious secret key
     let mut valid_targets = Vec::new();
     let mut final_order = 0;
     for xj in 0..order {
-        if xj > 1000000 {
+        if xj > 10000 {
             // unrealistic attack?
             return true;
         }
 
         let z_xj = G::Z::random_field_elem(xj);
-        let g_pow_xj = G::g_pow(z_xj);
+        let g_pow_xj = G::g_pow(z_xj.clone());
 
-        for target in 0..n-1 {
+        for target in 0..n - 1 {
             let mut prod1 = G::group_one();
             for j in 0..target {
-                prod1 = G::prod(prod1, state.g_pow_xis[j]);
+                prod1 = G::prod(prod1, state.g_pow_xis[j].clone());
             }
 
             let mut prod2 = G::group_one();
-            for j in (target + 1)..n-1 {
-                prod2 = G::prod(prod2, state.g_pow_xis[j]);
+            for j in (target + 1)..n - 1 {
+                prod2 = G::prod(prod2, state.g_pow_xis[j].clone());
             }
 
-            if prod1 == G::prod(prod2, g_pow_xj) {
+            if prod1 == G::prod(prod2, g_pow_xj.clone()) {
                 valid_targets.push(target);
             }
         }
 
         if !valid_targets.is_empty() {
-            xis[n-1] = z_xj;
+            xis[n - 1] = z_xj;
             final_order = xj;
 
             let parameter = RegisterParam::<G::Z> {
-                rp_i: (n-1) as u32,
-                rp_xi: xis[n-1],
-                rp_zkp_random: rp_zkp_randoms[n-1],
+                rp_i: (n - 1) as u32,
+                rp_xi: xis[n - 1].clone(),
+                rp_zkp_random: rp_zkp_randoms[n - 1].clone(),
             };
             let parameter_bytes = to_bytes(&parameter);
-            let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
+            let pb: &[u8] = unsafe {
+                std::slice::from_raw_parts(
+                    parameter_bytes.as_ptr(),
+                    parameter_bytes.len() * mem::size_of::<u8>(),
+                )
+            };
             ctx = ctx.set_parameter(pb);
-            (_, state) =
-                register_vote::<G, n, A>(&ctx, state)
-                .unwrap();
+            (_, state) = register_vote::<G, n, A>(&ctx, state).unwrap();
             break;
         }
     }
@@ -591,39 +663,46 @@ pub fn test_attack_2_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
     for i in 0..n {
         let parameter = CastVoteParam::<G::Z> {
             cvp_i: i as u32,
-            cvp_xi: xis[i],
-            cvp_zkp_random_w: cvp_zkp_random_ws1[i],
-            cvp_zkp_random_r: cvp_zkp_random_rs1[i],
-            cvp_zkp_random_d: cvp_zkp_random_ds1[i],
+            cvp_xi: xis[i].clone(),
+            cvp_zkp_random_w: cvp_zkp_random_ws1[i].clone(),
+            cvp_zkp_random_r: cvp_zkp_random_rs1[i].clone(),
+            cvp_zkp_random_d: cvp_zkp_random_ds1[i].clone(),
             cvp_vote: votes[i],
         };
         let parameter_bytes = to_bytes(&parameter);
-        let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
+        let pb: &[u8] = unsafe {
+            std::slice::from_raw_parts(
+                parameter_bytes.as_ptr(),
+                parameter_bytes.len() * mem::size_of::<u8>(),
+            )
+        };
         ctx = ctx.set_parameter(pb);
-        (_, state) =
-            commit_to_vote::<G, n, A>(&ctx, state)
-                .unwrap();
+        (_, state) = commit_to_vote::<G, n, A>(&ctx, state).unwrap();
     }
 
     for i in 0..n {
         let parameter = CastVoteParam::<G::Z> {
             cvp_i: i as u32,
-            cvp_xi: xis[i],
-            cvp_zkp_random_w: cvp_zkp_random_ws2[i],
-            cvp_zkp_random_r: cvp_zkp_random_rs2[i],
-            cvp_zkp_random_d: cvp_zkp_random_ds2[i],
+            cvp_xi: xis[i].clone(),
+            cvp_zkp_random_w: cvp_zkp_random_ws2[i].clone(),
+            cvp_zkp_random_r: cvp_zkp_random_rs2[i].clone(),
+            cvp_zkp_random_d: cvp_zkp_random_ds2[i].clone(),
             cvp_vote: votes[i],
         };
         let parameter_bytes = to_bytes(&parameter);
-        let pb : &[u8] = unsafe { std::slice::from_raw_parts(parameter_bytes.as_ptr(), parameter_bytes.len() * mem::size_of::<u8>()) };
+        let pb: &[u8] = unsafe {
+            std::slice::from_raw_parts(
+                parameter_bytes.as_ptr(),
+                parameter_bytes.len() * mem::size_of::<u8>(),
+            )
+        };
         ctx = ctx.set_parameter(pb);
-        (_, state) =
-            cast_vote::<G, n, A>(&ctx, state).unwrap();
+        (_, state) = cast_vote::<G, n, A>(&ctx, state).unwrap();
     }
 
     println!("target: {:?} after {}", valid_targets, final_order);
     for i in 0..n {
-        let g_pow_yi = compute_g_pow_yi::<G, n>(i, state.g_pow_xis);
+        let g_pow_yi = compute_g_pow_yi::<G, n>(i, state.g_pow_xis.clone());
         if g_pow_yi == G::group_one() {
             println!("leak");
             let vote_i = state.g_pow_xi_yi_vis[i] == G::g();
@@ -652,18 +731,18 @@ pub fn test_attack_2_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
 }
 
 #[cfg(test)]
-fn full_attack_2_test<G: Group, const n: usize, const order: u128>() -> bool {
+fn full_attack_2_test<G: Group, const n: usize>() -> bool {
     use rand::random;
     let mut votes: [bool; n] = [false; n];
-    let mut xis: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut rp_zkp_randoms: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut cvp_zkp_random_ws1: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut cvp_zkp_random_rs1: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut cvp_zkp_random_ds1: [G::Z; n] = [G::Z::field_zero(); n];
+    let mut xis: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut rp_zkp_randoms: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut cvp_zkp_random_ws1: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut cvp_zkp_random_rs1: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut cvp_zkp_random_ds1: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
 
-    let mut cvp_zkp_random_ws2: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut cvp_zkp_random_rs2: [G::Z; n] = [G::Z::field_zero(); n];
-    let mut cvp_zkp_random_ds2: [G::Z; n] = [G::Z::field_zero(); n];
+    let mut cvp_zkp_random_ws2: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut cvp_zkp_random_rs2: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
+    let mut cvp_zkp_random_ds2: [G::Z; n] = core::array::from_fn(|_| G::Z::field_zero());
 
     for i in 0..n {
         votes[i] = random();
@@ -687,7 +766,7 @@ fn full_attack_2_test<G: Group, const n: usize, const order: u128>() -> bool {
         cvp_zkp_random_ws2,
         cvp_zkp_random_rs2,
         cvp_zkp_random_ds2,
-        order
+        9999999,
     )
 }
 
@@ -695,12 +774,24 @@ fn full_attack_2_test<G: Group, const n: usize, const order: u128>() -> bool {
 fn test_attack_2_g_pow_yi_zero_z89() {
     QuickCheck::new()
         .tests(100)
-        .quickcheck(full_attack_2_test::<g_z_89, 55, 89u128> as fn() -> bool)
+        .quickcheck(full_attack_2_test::<g_z_89, 55> as fn() -> bool)
 }
 
 #[test]
 fn test_attack_2_g_pow_yi_zero_z18446744073709551557() {
-    QuickCheck::new()
-        .tests(100)
-        .quickcheck(full_attack_2_test::<g_z_18446744073709551557, 555, 18446744073709551557u128> as fn() -> bool)
+    QuickCheck::new().tests(100).quickcheck(
+        full_attack_2_test::<g_z_18446744073709551557, 555>
+            as fn() -> bool,
+    )
+}
+
+#[test]
+fn test_attack_2_g_pow_yi_zero_z115792089237316195423570985008687907853269984665640564039457584007913129639747(
+) {
+    QuickCheck::new().tests(100).quickcheck(
+        full_attack_2_test::<
+            g_z_115792089237316195423570985008687907853269984665640564039457584007913129639747,
+            5555,
+        > as fn() -> bool,
+    )
 }

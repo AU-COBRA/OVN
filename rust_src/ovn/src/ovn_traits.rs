@@ -7,7 +7,9 @@ use hacspec_concordium::*;
 
 /** Interface for field implementation */
 pub trait Field:
-    core::marker::Copy + PartialEq + Eq + Clone + Copy + Serialize
+    // core::marker::Copy +
+    PartialEq + Eq + Clone // + Copy
+    + Serialize
 {
     fn q() -> Self;
 
@@ -25,7 +27,9 @@ pub trait Field:
 
 /** Interface for group implementation */
 pub trait Group:
-    core::marker::Copy + PartialEq + Eq + Clone + Copy + Serialize
+    // core::marker::Copy + 
+    PartialEq + Eq + Clone // + Copy
+    + Serialize
 {
     type Z: Field;
 

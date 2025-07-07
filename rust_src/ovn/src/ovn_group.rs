@@ -36,9 +36,9 @@ pub struct SchnorrZKPCommit<G: Group> {
 // https://crypto.stanford.edu/cs355/19sp/lec5.pdf
 pub fn schnorr_zkp<G: Group>(random: G::Z, h: G, x: G::Z) -> SchnorrZKPCommit<G> {
     let r = random;
-    let u = G::g_pow(r);
-    let c = G::hash(vec![G::g(), h, u]);
-    let z = G::Z::add(r, G::Z::mul(c, x));
+    let u = G::g_pow(r.clone());
+    let c = G::hash(vec![G::g(), h.clone(), u.clone()]);
+    let z = G::Z::add(r, G::Z::mul(c.clone(), x));
 
     return SchnorrZKPCommit {
         schnorr_zkp_u: u,
@@ -49,7 +49,7 @@ pub fn schnorr_zkp<G: Group>(random: G::Z, h: G, x: G::Z) -> SchnorrZKPCommit<G>
 
 // https://crypto.stanford.edu/cs355/19sp/lec5.pdf
 pub fn schnorr_zkp_validate<G: Group>(h: G, pi: SchnorrZKPCommit<G>) -> bool {
-    pi.schnorr_zkp_c == G::hash(vec![G::g(), h, pi.schnorr_zkp_u])
+    pi.schnorr_zkp_c == G::hash(vec![G::g(), h.clone(), pi.schnorr_zkp_u.clone()])
         && G::g_pow(pi.schnorr_zkp_z) == G::prod(pi.schnorr_zkp_u, G::pow(h, pi.schnorr_zkp_c))
 }
 
@@ -83,22 +83,22 @@ pub fn zkp_one_out_of_two<G: Group>(
     let w = random_w;
 
     if vi {
-        let r1 = random_r;
-        let d1 = random_d;
+        let r1 = random_r.clone();
+        let d1 = random_d.clone();
 
-        let x = G::g_pow(xi);
-        let y = G::prod(G::pow(h, xi), G::g());
+        let x = G::g_pow(xi.clone());
+        let y = G::prod(G::pow(h.clone(), xi.clone()), G::g());
 
-        let a1 = G::prod(G::g_pow(r1), G::pow(x, d1));
-        let b1 = G::prod(G::pow(h, r1), G::pow(y, d1));
+        let a1 = G::prod(G::g_pow(r1.clone()), G::pow(x.clone(), d1.clone()));
+        let b1 = G::prod(G::pow(h.clone(), r1.clone()), G::pow(y.clone(), d1.clone()));
 
-        let a2 = G::g_pow(w);
-        let b2 = G::pow(h, w);
+        let a2 = G::g_pow(w.clone());
+        let b2 = G::pow(h, w.clone());
 
-        let c = G::hash(vec![x, y, a1, b1, a2, b2]);
+        let c = G::hash(vec![x.clone(), y.clone(), a1.clone(), b1.clone(), a2.clone(), b2.clone()]);
 
-        let d2 = sub::<G::Z>(c, d1);
-        let r2 = sub::<G::Z>(w, G::Z::mul(xi, d2));
+        let d2 = sub::<G::Z>(c.clone(), d1.clone());
+        let r2 = sub::<G::Z>(w, G::Z::mul(xi, d2.clone()));
 
         OrZKPCommit {
             or_zkp_x: x,
@@ -117,19 +117,19 @@ pub fn zkp_one_out_of_two<G: Group>(
         let r2 = random_r;
         let d2 = random_d;
 
-        let x = G::g_pow(xi);
-        let y = G::pow(h, xi);
+        let x = G::g_pow(xi.clone());
+        let y = G::pow(h.clone(), xi.clone());
 
-        let a1 = G::g_pow(w);
-        let b1 = G::pow(h, w);
+        let a1 = G::g_pow(w.clone());
+        let b1 = G::pow(h.clone(), w.clone());
 
-        let a2 = G::prod(G::g_pow(r2), G::pow(x, d2));
-        let b2 = G::prod(G::pow(h, r2), G::pow(div::<G>(y, G::g()), d2));
+        let a2 = G::prod(G::g_pow(r2.clone()), G::pow(x.clone(), d2.clone()));
+        let b2 = G::prod(G::pow(h, r2.clone()), G::pow(div::<G>(y.clone(), G::g()), d2.clone()));
 
-        let c = G::hash(vec![x, y, a1, b1, a2, b2]);
+        let c = G::hash(vec![x.clone(), y.clone(), a1.clone(), b1.clone(), a2.clone(), b2.clone()]);
 
-        let d1 = sub::<G::Z>(c, d2);
-        let r1 = sub::<G::Z>(w, G::Z::mul(xi, d1));
+        let d1 = sub::<G::Z>(c.clone(), d2.clone());
+        let r1 = sub::<G::Z>(w, G::Z::mul(xi, d1.clone()));
 
         OrZKPCommit {
             or_zkp_x: x,
@@ -150,22 +150,22 @@ pub fn zkp_one_out_of_two<G: Group>(
 // Anonymous voting by two-round public discussion
 pub fn zkp_one_out_of_two_validate<G: Group>(h: G, zkp: OrZKPCommit<G>) -> bool {
     let c = G::hash(vec![
-        zkp.or_zkp_x,
-        zkp.or_zkp_y,
-        zkp.or_zkp_a1,
-        zkp.or_zkp_b1,
-        zkp.or_zkp_a2,
-        zkp.or_zkp_b2,
+        zkp.or_zkp_x.clone(),
+        zkp.or_zkp_y.clone(),
+        zkp.or_zkp_a1.clone(),
+        zkp.or_zkp_b1.clone(),
+        zkp.or_zkp_a2.clone(),
+        zkp.or_zkp_b2.clone(),
     ]); // TODO: add i
 
-    c == G::Z::add(zkp.or_zkp_d1, zkp.or_zkp_d2)
-        && zkp.or_zkp_a1 == G::prod(G::g_pow(zkp.or_zkp_r1), G::pow(zkp.or_zkp_x, zkp.or_zkp_d1))
+    c == G::Z::add(zkp.or_zkp_d1.clone(), zkp.or_zkp_d2.clone())
+        && zkp.or_zkp_a1 == G::prod(G::g_pow(zkp.or_zkp_r1.clone()), G::pow(zkp.or_zkp_x.clone(), zkp.or_zkp_d1.clone()))
         && zkp.or_zkp_b1
             == G::prod(
-                G::pow(h, zkp.or_zkp_r1),
-                G::pow(zkp.or_zkp_y, zkp.or_zkp_d1),
+                G::pow(h.clone(), zkp.or_zkp_r1),
+                G::pow(zkp.or_zkp_y.clone(), zkp.or_zkp_d1),
             )
-        && zkp.or_zkp_a2 == G::prod(G::g_pow(zkp.or_zkp_r2), G::pow(zkp.or_zkp_x, zkp.or_zkp_d2))
+        && zkp.or_zkp_a2 == G::prod(G::g_pow(zkp.or_zkp_r2.clone()), G::pow(zkp.or_zkp_x, zkp.or_zkp_d2.clone()))
         && zkp.or_zkp_b2
             == G::prod(
                 G::pow(h, zkp.or_zkp_r2),
@@ -203,17 +203,17 @@ pub struct OvnContractState<G: Group, const n: usize> {
 pub fn init_ovn_contract<G: Group, const n: usize>(_: &impl HasInitContext,
 ) -> InitResult<OvnContractState<G, n>> {
     Ok(OvnContractState::<G, n> {
-        g_pow_xis: [G::group_one(); n],
-        zkp_xis: [SchnorrZKPCommit::<G> {
+        g_pow_xis: core::array::from_fn(|_| G::group_one()), // .unwrap().collect(), // [G::group_one(); n],
+        zkp_xis: core::array::from_fn(|_| SchnorrZKPCommit::<G> {
             schnorr_zkp_u: G::group_one(),
             schnorr_zkp_z: G::Z::field_zero(),
             schnorr_zkp_c: G::Z::field_zero(),
-        }; n],
+        }),
 
-        commit_vis: [G::Z::field_zero(); n],
+        commit_vis: core::array::from_fn(|_| G::Z::field_zero()),
 
-        g_pow_xi_yi_vis: [G::group_one(); n],
-        zkp_vis: [OrZKPCommit::<G> {
+        g_pow_xi_yi_vis: core::array::from_fn(|_| G::group_one()),
+        zkp_vis: core::array::from_fn(|_| OrZKPCommit::<G> {
             or_zkp_x: G::group_one(),
             or_zkp_y: G::group_one(),
             or_zkp_a1: G::group_one(),
@@ -228,7 +228,7 @@ pub fn init_ovn_contract<G: Group, const n: usize>(_: &impl HasInitContext,
 
             or_zkp_r1: G::Z::field_zero(),
             or_zkp_r2: G::Z::field_zero(),
-        }; n],
+        }),
 
         tally: 0,
 
@@ -251,9 +251,9 @@ pub fn register_vote<G: Group, const n: usize, A: HasActions>(
     state: OvnContractState<G, n>,
 ) -> Result<(A, OvnContractState<G, n>), ParseError> {
     let params: RegisterParam<G::Z> = ctx.parameter_cursor().get()?;
-    let g_pow_xi = G::g_pow(params.rp_xi);
+    let g_pow_xi = G::g_pow(params.rp_xi.clone());
 
-    let zkp_xi = schnorr_zkp::<G>(params.rp_zkp_random, g_pow_xi, params.rp_xi);
+    let zkp_xi = schnorr_zkp::<G>(params.rp_zkp_random, g_pow_xi.clone(), params.rp_xi);
 
     let mut register_vote_state_ret = state.clone();
     register_vote_state_ret.g_pow_xis[params.rp_i as usize] = g_pow_xi;
@@ -276,12 +276,12 @@ pub struct CastVoteParam<Z: Field> {
 pub fn compute_g_pow_yi<G: Group, const n: usize>(i: usize, xis: [G; n]) -> G {
     let mut prod1 = G::group_one();
     for j in 0..i {
-        prod1 = G::prod(prod1, xis[j]);
+        prod1 = G::prod(prod1, xis[j].clone());
     }
 
     let mut prod2 = G::group_one();
     for j in (i + 1)..n {
-        prod2 = G::prod(prod2, xis[j]);
+        prod2 = G::prod(prod2, xis[j].clone());
     }
 
     // implicitly: Y_i = g^y_i
@@ -310,12 +310,12 @@ pub fn commit_to_vote<G: Group, const n: usize, A: HasActions>(
     let params: CastVoteParam<G::Z> = ctx.parameter_cursor().get()?;
 
     for i in 0..n {
-        if !schnorr_zkp_validate(state.g_pow_xis[i], state.zkp_xis[i]) || !state.round1[i] {
+        if !schnorr_zkp_validate(state.g_pow_xis[i].clone(), state.zkp_xis[i].clone()) || !state.round1[i] {
             return Err(ParseError {});
         }
     }
 
-    let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i as usize, state.g_pow_xis);
+    let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i as usize, state.g_pow_xis.clone());
     let g_pow_xi_yi_vi =
         compute_group_element_for_vote::<G>(params.cvp_xi, params.cvp_vote, g_pow_yi);
     let commit_vi = commit_to::<G>(g_pow_xi_yi_vi);
@@ -334,14 +334,14 @@ pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
 ) -> Result<(A, OvnContractState<G, n>), ParseError> {
     let params: CastVoteParam<G::Z> = ctx.parameter_cursor().get()?;
 
-    let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i as usize, state.g_pow_xis);
+    let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i as usize, state.g_pow_xis.clone());
 
     let zkp_vi = zkp_one_out_of_two::<G>(
         params.cvp_zkp_random_w,
         params.cvp_zkp_random_r,
         params.cvp_zkp_random_d,
-        g_pow_yi,
-        params.cvp_xi,
+        g_pow_yi.clone(),
+        params.cvp_xi.clone(),
         params.cvp_vote,
     );
 
@@ -366,17 +366,17 @@ pub fn tally_votes<G: Group, const n: usize, A: HasActions>(
     state: OvnContractState<G, n>,
 ) -> Result<(A, OvnContractState<G, n>), ParseError> {
     for i in 0..n {
-        let g_pow_yi = compute_g_pow_yi::<G, n>(i as usize, state.g_pow_xis);
-        if !zkp_one_out_of_two_validate::<G>(g_pow_yi, state.zkp_vis[i]) {
+        let g_pow_yi = compute_g_pow_yi::<G, n>(i as usize, state.g_pow_xis.clone());
+        if !zkp_one_out_of_two_validate::<G>(g_pow_yi, state.zkp_vis[i].clone()) {
             return Err(ParseError {});
         }
-        if !check_commitment::<G>(state.g_pow_xi_yi_vis[i], state.commit_vis[i]) {
+        if !check_commitment::<G>(state.g_pow_xi_yi_vis[i].clone(), state.commit_vis[i].clone()) {
             return Err(ParseError {});
         }
     }
 
     let mut vote_result = G::group_one();
-    for g_pow_vote in state.g_pow_xi_yi_vis {
+    for g_pow_vote in state.g_pow_xi_yi_vis.clone() {
         vote_result = G::prod(vote_result, g_pow_vote);
     }
 
@@ -387,11 +387,11 @@ pub fn tally_votes<G: Group, const n: usize, A: HasActions>(
     let mut curr = G::Z::field_zero();
     for i in 0..n as u32 {
         // Should be while, but is bounded by n anyways!
-        if G::g_pow(curr) == vote_result {
+        if G::g_pow(curr.clone()) == vote_result {
             tally = i;
         }
 
-        curr = G::Z::add(curr, G::Z::field_one());
+        curr = G::Z::add(curr.clone(), G::Z::field_one());
     }
 
     let mut tally_votes_state_ret = state.clone();
