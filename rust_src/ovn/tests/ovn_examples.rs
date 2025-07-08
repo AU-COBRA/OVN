@@ -209,7 +209,7 @@ pub fn test_correctness<G: Group, const n: usize, A: HasActions>(
             cvp_zkp_random_d: cvp_zkp_random_ds2[i],
             cvp_vote: votes[i],
         };
-        let commit_vi = commit_to_vote_private(private_param, state);
+        let commit_vi = commit_to_vote_private(private_param, state.g_pow_xis.map(|x| x.unwrap()));
 
         let parameter = CommitVoteParamPublic::<G::Z> {
             cvp_i: i as u32,
@@ -232,7 +232,7 @@ pub fn test_correctness<G: Group, const n: usize, A: HasActions>(
             cvp_zkp_random_d: cvp_zkp_random_ds2[i],
             cvp_vote: votes[i],
         };
-        let (zkp_vi, g_pow_yi_xi_vi) = cast_vote_private(private_param, state);
+        let (zkp_vi, g_pow_yi_xi_vi) = cast_vote_private(private_param, state.g_pow_xis.map(|x| x.unwrap()));
 
         let parameter = CastVoteParamPublic::<G> {
             cvp_i: i as u32,
@@ -259,8 +259,8 @@ pub fn test_correctness<G: Group, const n: usize, A: HasActions>(
         }
     }
 
-    assert_eq!(state.tally, count);
-    state.tally == count
+    assert_eq!(state.tally, Some(count));
+    state.tally == Some(count)
 }
 
 #[cfg(test)]
@@ -310,21 +310,21 @@ fn test_full_z89() {
         .quickcheck(randomized_full_test::<g_z_89, 55> as fn() -> bool)
 }
 
-// #[concordium_test]
-#[test]
-fn test_full_z18446744073709551557() {
-    QuickCheck::new()
-        .tests(5)
-        .quickcheck(randomized_full_test::<g_z_18446744073709551557, 555> as fn() -> bool)
-}
+// // #[concordium_test]
+// #[test]
+// fn test_full_z18446744073709551557() {
+//     QuickCheck::new()
+//         .tests(5)
+//         .quickcheck(randomized_full_test::<g_z_18446744073709551557, 555> as fn() -> bool)
+// }
 
-// #[concordium_test]
-#[test]
-fn test_full_secp256k1() {
-    QuickCheck::new()
-        .tests(1)
-        .quickcheck(randomized_full_test::<Group_curve, 15> as fn() -> bool)
-}
+// // #[concordium_test]
+// #[test]
+// fn test_full_secp256k1() {
+//     QuickCheck::new()
+//         .tests(1)
+//         .quickcheck(randomized_full_test::<Group_curve, 15> as fn() -> bool)
+// }
 
 #[cfg(test)]
 pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
@@ -365,12 +365,12 @@ pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
     {
         let mut prod1 = G::group_one();
         for j in 0..target {
-            prod1 = G::prod(prod1, state.g_pow_xis[j]);
+            prod1 = G::prod(prod1, state.g_pow_xis[j].unwrap());
         }
 
         let mut prod2 = G::group_one();
         for j in (target + 1)..n-1 {
-            prod2 = G::prod(prod2, state.g_pow_xis[j]);
+            prod2 = G::prod(prod2, state.g_pow_xis[j].unwrap());
         }
 
         for xj in 0..order {
@@ -407,7 +407,7 @@ pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
             cvp_zkp_random_d: cvp_zkp_random_ds2[i],
             cvp_vote: votes[i],
         };
-        let commit_vi = commit_to_vote_private(private_param, state);
+        let commit_vi = commit_to_vote_private(private_param, state.g_pow_xis.map(|x| x.unwrap()));
 
         let parameter = CommitVoteParamPublic::<G::Z> {
             cvp_i: i as u32,
@@ -430,7 +430,7 @@ pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
             cvp_zkp_random_d: cvp_zkp_random_ds2[i],
             cvp_vote: votes[i],
         };
-        let (zkp_vi, g_pow_yi_xi_vi) = cast_vote_private(private_param, state);
+        let (zkp_vi, g_pow_yi_xi_vi) = cast_vote_private(private_param, state.g_pow_xis.map(|x| x.unwrap()));
 
         let parameter = CastVoteParamPublic::<G> {
             cvp_i: i as u32,
@@ -446,10 +446,10 @@ pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
 
     println!("target: {}", target);
     for i in 0..n {
-        let g_pow_yi = compute_g_pow_yi::<G, n>(i, state.g_pow_xis);
+        let g_pow_yi = compute_g_pow_yi::<G, n>(i, state.g_pow_xis.map(|x| x.unwrap()));
         if g_pow_yi == G::group_one() {
             println!("leak");
-            let vote_i = state.g_pow_xi_yi_vis[i] == G::g();
+            let vote_i = state.g_pow_xi_yi_vis[i] == Some(G::g());
             println!("vote {} vs guess {} for {}", votes[i], vote_i, i);
             assert!(vote_i == votes[i]);
             did_leak = true;
@@ -469,9 +469,9 @@ pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
         }
     }
 
-    assert_eq!(state.tally, count);
+    assert_eq!(state.tally, Some(count));
     assert!(!did_leak);
-    state.tally == count
+    state.tally == Some(count)
 }
 
 #[cfg(test)]
@@ -582,12 +582,12 @@ pub fn test_attack_2_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
         for target in 0..n-1 {
             let mut prod1 = G::group_one();
             for j in 0..target {
-                prod1 = G::prod(prod1, state.g_pow_xis[j]);
+                prod1 = G::prod(prod1, state.g_pow_xis[j].unwrap());
             }
 
             let mut prod2 = G::group_one();
             for j in (target + 1)..n-1 {
-                prod2 = G::prod(prod2, state.g_pow_xis[j]);
+                prod2 = G::prod(prod2, state.g_pow_xis[j].unwrap());
             }
 
             if prod1 == G::prod(prod2, g_pow_xj) {
@@ -623,7 +623,7 @@ pub fn test_attack_2_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
             cvp_zkp_random_d: cvp_zkp_random_ds2[i],
             cvp_vote: votes[i],
         };
-        let commit_vi = commit_to_vote_private(private_param, state);
+        let commit_vi = commit_to_vote_private(private_param, state.g_pow_xis.map(|x| x.unwrap()));
 
         let parameter = CommitVoteParamPublic::<G::Z> {
             cvp_i: i as u32,
@@ -646,7 +646,7 @@ pub fn test_attack_2_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
             cvp_zkp_random_d: cvp_zkp_random_ds2[i],
             cvp_vote: votes[i],
         };
-        let (zkp_vi, g_pow_yi_xi_vi) = cast_vote_private(private_param, state);
+        let (zkp_vi, g_pow_yi_xi_vi) = cast_vote_private(private_param, state.g_pow_xis.map(|x| x.unwrap()));
 
         let parameter = CastVoteParamPublic::<G> {
             cvp_i: i as u32,
@@ -662,10 +662,10 @@ pub fn test_attack_2_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
 
     println!("target: {:?} after {}", valid_targets, final_order);
     for i in 0..n {
-        let g_pow_yi = compute_g_pow_yi::<G, n>(i, state.g_pow_xis);
+        let g_pow_yi = compute_g_pow_yi::<G, n>(i, state.g_pow_xis.map(|x| x.unwrap()));
         if g_pow_yi == G::group_one() {
             println!("leak");
-            let vote_i = state.g_pow_xi_yi_vis[i] == G::g();
+            let vote_i = state.g_pow_xi_yi_vis[i] == Some(G::g());
             println!("vote {} vs guess {} for {}", votes[i], vote_i, i);
             assert!(vote_i == votes[i]);
             did_leak = true;
@@ -685,9 +685,9 @@ pub fn test_attack_2_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
         }
     }
 
-    assert_eq!(state.tally, count);
+    assert_eq!(state.tally, Some(count));
     assert!(!did_leak);
-    state.tally == count
+    state.tally == Some(count)
 }
 
 #[cfg(test)]

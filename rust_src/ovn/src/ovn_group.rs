@@ -185,17 +185,15 @@ pub fn check_commitment<G: Group>(g_pow_xi_yi_vi: G, commitment: G::Z) -> bool {
 #[cfg_attr(not(hax), contract_state(contract = "OVN"))]
 #[derive(Serialize, SchemaType, Clone, Copy)]
 pub struct OvnContractState<G: Group, const n: usize> {
-    pub g_pow_xis: [G; n],
-    pub zkp_xis: [SchnorrZKPCommit<G>; n],
+    pub g_pow_xis: [Option<G>; n],
+    pub zkp_xis: [Option<SchnorrZKPCommit<G>>; n],
 
-    pub commit_vis: [G::Z; n],
+    pub commit_vis: [Option<G::Z>; n],
 
-    pub g_pow_xi_yi_vis: [G; n],
-    pub zkp_vis: [OrZKPCommit<G>; n],
+    pub g_pow_xi_yi_vis: [Option<G>; n],
+    pub zkp_vis: [Option<OrZKPCommit<G>>; n],
 
-    pub tally: u32,
-
-    pub round1: [bool; n],
+    pub tally: Option<u32>,
 }
 
 #[hax_lib_macros::init(contract = "OVN")]
@@ -203,36 +201,15 @@ pub struct OvnContractState<G: Group, const n: usize> {
 pub fn init_ovn_contract<G: Group, const n: usize>(_: &impl HasInitContext,
 ) -> InitResult<OvnContractState<G, n>> {
     Ok(OvnContractState::<G, n> {
-        g_pow_xis: [G::group_one(); n],
-        zkp_xis: [SchnorrZKPCommit::<G> {
-            schnorr_zkp_u: G::group_one(),
-            schnorr_zkp_z: G::Z::field_zero(),
-            schnorr_zkp_c: G::Z::field_zero(),
-        }; n],
+        g_pow_xis: [None; n],
+        zkp_xis: [None; n],
 
-        commit_vis: [G::Z::field_zero(); n],
+        commit_vis: [None; n],
 
-        g_pow_xi_yi_vis: [G::group_one(); n],
-        zkp_vis: [OrZKPCommit::<G> {
-            or_zkp_x: G::group_one(),
-            or_zkp_y: G::group_one(),
-            or_zkp_a1: G::group_one(),
-            or_zkp_b1: G::group_one(),
-            or_zkp_a2: G::group_one(),
-            or_zkp_b2: G::group_one(),
+        g_pow_xi_yi_vis: [None; n],
+        zkp_vis: [None; n],
 
-            or_zkp_c: G::Z::field_zero(),
-
-            or_zkp_d1: G::Z::field_zero(),
-            or_zkp_d2: G::Z::field_zero(),
-
-            or_zkp_r1: G::Z::field_zero(),
-            or_zkp_r2: G::Z::field_zero(),
-        }; n],
-
-        tally: 0,
-
-        round1: [false; n],
+        tally: None,
     })
 }
 
@@ -258,9 +235,8 @@ pub fn register_vote<G: Group, const n: usize, A: HasActions>(
     let zkp_xi = schnorr_zkp::<G>(params.rp_zkp_random, g_pow_xi, params.rp_xi);
 
     let mut register_vote_state_ret = state.clone();
-    register_vote_state_ret.g_pow_xis[params.rp_i as usize] = g_pow_xi;
-    register_vote_state_ret.zkp_xis[params.rp_i as usize] = zkp_xi;
-    register_vote_state_ret.round1[params.rp_i as usize] = true;
+    register_vote_state_ret.g_pow_xis[params.rp_i as usize] = Some(g_pow_xi);
+    register_vote_state_ret.zkp_xis[params.rp_i as usize] = Some(zkp_xi);
 
     Ok((A::accept(), register_vote_state_ret))
 }
@@ -315,9 +291,9 @@ pub fn compute_group_element_for_vote<G: Group>(xi: G::Z, vote: bool, g_pow_yi: 
 /** Commitment before round 2 */
 pub fn commit_to_vote_private<G: Group, const n: usize>(
     params : CommitVoteParamPrivate<G::Z>,
-    state: OvnContractState<G, n>,
+    g_pow_xis: [G; n],
 ) -> G::Z {
-    let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i as usize, state.g_pow_xis);
+    let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i as usize, g_pow_xis);
     let g_pow_xi_yi_vi =
         compute_group_element_for_vote::<G>(params.cvp_xi, params.cvp_vote, g_pow_yi);
     let commit_vi = commit_to::<G>(g_pow_xi_yi_vi);
@@ -332,15 +308,24 @@ pub fn commit_to_vote<G: Group, const n: usize, A: HasActions>(
 ) -> Result<(A, OvnContractState<G, n>), ParseError> {
     let params: CommitVoteParamPublic<G::Z> = ctx.parameter_cursor().get()?;
 
-    // TODO: do only once
-    for i in 0..n {
-        if !schnorr_zkp_validate(state.g_pow_xis[i], state.zkp_xis[i]) || !state.round1[i] {
-            return Err(ParseError {});
-        }
+    // let zkp_xis_unwrapped = state.zkp_xis[i].ok();
+
+    if !state.zkp_xis.iter().all(|x| x.is_some()) {
+        return Err(ParseError {})
+    }
+    if !state.g_pow_xis.iter().all(|x| x.is_some()) {
+        return Err(ParseError {})
+    }
+
+    // for i in 0..n {
+    let zkp_xis_i = state.zkp_xis[params.cvp_i as usize].unwrap();
+    let g_pow_xis_i = state.g_pow_xis[params.cvp_i as usize].unwrap();
+    if !schnorr_zkp_validate(g_pow_xis_i, zkp_xis_i) {
+        return Err(ParseError {});
     }
 
     let mut commit_to_vote_state_ret = state.clone();
-    commit_to_vote_state_ret.commit_vis[params.cvp_i as usize] = params.cvp_commit_vi;
+    commit_to_vote_state_ret.commit_vis[params.cvp_i as usize] = Some(params.cvp_commit_vi);
     Ok((A::accept(), commit_to_vote_state_ret))
 }
 
@@ -367,9 +352,9 @@ pub struct CastVoteParamPrivate<Z: Field> {
 
 pub fn cast_vote_private<G: Group, const n: usize>(
     params: CastVoteParamPrivate<G::Z>,
-    state: OvnContractState<G, n>,
+    g_pow_xis: [G; n],
 ) -> (OrZKPCommit<G>, G) {
-    let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i as usize, state.g_pow_xis);
+    let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i as usize, g_pow_xis);
 
     let zkp_vi = zkp_one_out_of_two::<G>(
         params.cvp_zkp_random_w,
@@ -396,8 +381,8 @@ pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
     let params: CastVoteParamPublic<G> = ctx.parameter_cursor().get()?;
 
     let mut cast_vote_state_ret = state.clone();
-    cast_vote_state_ret.g_pow_xi_yi_vis[params.cvp_i as usize] = params.cvp_g_pow_xi_yi_vi;
-    cast_vote_state_ret.zkp_vis[params.cvp_i as usize] = params.cvp_zkp_vi;
+    cast_vote_state_ret.g_pow_xi_yi_vis[params.cvp_i as usize] = Some(params.cvp_g_pow_xi_yi_vi);
+    cast_vote_state_ret.zkp_vis[params.cvp_i as usize] = Some(params.cvp_zkp_vi);
 
     Ok((A::accept(), cast_vote_state_ret))
 }
@@ -413,17 +398,17 @@ pub fn tally_votes<G: Group, const n: usize, A: HasActions>(
     state: OvnContractState<G, n>,
 ) -> Result<(A, OvnContractState<G, n>), ParseError> {
     for i in 0..n {
-        let g_pow_yi = compute_g_pow_yi::<G, n>(i as usize, state.g_pow_xis);
-        if !zkp_one_out_of_two_validate::<G>(g_pow_yi, state.zkp_vis[i]) {
+        let g_pow_yi = compute_g_pow_yi::<G, n>(i as usize, state.g_pow_xis.map(|x| x.unwrap()));
+        if !zkp_one_out_of_two_validate::<G>(g_pow_yi, state.zkp_vis[i].unwrap()) {
             return Err(ParseError {});
         }
-        if !check_commitment::<G>(state.g_pow_xi_yi_vis[i], state.commit_vis[i]) {
+        if !check_commitment::<G>(state.g_pow_xi_yi_vis[i].unwrap(), state.commit_vis[i].unwrap()) {
             return Err(ParseError {});
         }
     }
 
     let mut vote_result = G::group_one();
-    for g_pow_vote in state.g_pow_xi_yi_vis {
+    for g_pow_vote in state.g_pow_xi_yi_vis.map(|x| x.unwrap()) {
         vote_result = G::prod(vote_result, g_pow_vote);
     }
 
@@ -442,7 +427,7 @@ pub fn tally_votes<G: Group, const n: usize, A: HasActions>(
     }
 
     let mut tally_votes_state_ret = state.clone();
-    tally_votes_state_ret.tally = tally;
+    tally_votes_state_ret.tally = Some(tally);
 
     Ok((A::accept(), tally_votes_state_ret))
 }
