@@ -2,7 +2,7 @@
 
 theories/hacspec/Hacspec_helpers.v
 theories/hacspec/Hacspec_ovn_Ovn_traits.v
-# theories/hacspec/Hacspec_ovn_Ovn_z_89_.v
+theories/hacspec/Hacspec_ovn_Ovn_z_89_.v
 theories/hacspec/Hacspec_ovn.v
 theories/hacspec/Hacspec_ovn_group_and_field.v
 
@@ -16,6 +16,15 @@ theories/hacspec/Hacspec_ovn_total_proof.v
 
 theories/ssprove/Schnorr.v
 theories/ssprove/SigmaProtocol.v
+
+theories/extraction/ConCert_ovn.v
+theories/extraction/sha256.v
+theories/extraction/OVN_uint.v
+# theories/extraction/OVN_sint.v
+# theories/extraction/OVN_Z.v
+theories/extraction/Test.v
+
+
 
 # -R theories/hacspec Examples
 # -arg -w
