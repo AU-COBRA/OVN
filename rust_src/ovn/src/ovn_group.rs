@@ -238,7 +238,9 @@ pub fn init_ovn_contract<G: Group, const n: usize>(_: &impl HasInitContext,
 
 #[derive(Serialize, SchemaType)]
 pub struct RegisterParam<Z: Field> {
+    // public input
     pub rp_i: u32,
+    // private input
     pub rp_xi: Z,
     pub rp_zkp_random: Z,
 }
@@ -264,8 +266,18 @@ pub fn register_vote<G: Group, const n: usize, A: HasActions>(
 }
 
 #[derive(Serialize, SchemaType)]
-pub struct CastVoteParam<Z: Field> {
+pub struct CommitVoteParamPublic<Z: Field> {
+    // public
     pub cvp_i: u32,
+    // from private
+    pub cvp_commit_vi : Z,
+}
+
+#[derive(Serialize, SchemaType)]
+pub struct CommitVoteParamPrivate<Z: Field> {
+    // public
+    pub cvp_i: u32,
+    // private
     pub cvp_xi: Z,
     pub cvp_zkp_random_w: Z,
     pub cvp_zkp_random_r: Z,
@@ -301,39 +313,62 @@ pub fn compute_group_element_for_vote<G: Group>(xi: G::Z, vote: bool, g_pow_yi: 
 }
 
 /** Commitment before round 2 */
-#[hax_lib_macros::receive(contract = "OVN", name = "commit_to_vote", parameter = "CastVoteParam", generate_instance = false)]
-#[cfg_attr(not(hax), receive(contract = "OVN", name = "commit_to_vote", parameter = "CastVoteParam"))]
+pub fn commit_to_vote_private<G: Group, const n: usize>(
+    params : CommitVoteParamPrivate<G::Z>,
+    state: OvnContractState<G, n>,
+) -> G::Z {
+    let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i as usize, state.g_pow_xis);
+    let g_pow_xi_yi_vi =
+        compute_group_element_for_vote::<G>(params.cvp_xi, params.cvp_vote, g_pow_yi);
+    let commit_vi = commit_to::<G>(g_pow_xi_yi_vi);
+    commit_vi
+}
+
+#[hax_lib_macros::receive(contract = "OVN", name = "commit_to_vote", parameter = "CommitVoteParamPublic", generate_instance = false)]
+#[cfg_attr(not(hax), receive(contract = "OVN", name = "commit_to_vote", parameter = "CommitVoteParamPublic"))]
 pub fn commit_to_vote<G: Group, const n: usize, A: HasActions>(
     ctx: &impl HasReceiveContext,
     state: OvnContractState<G, n>,
 ) -> Result<(A, OvnContractState<G, n>), ParseError> {
-    let params: CastVoteParam<G::Z> = ctx.parameter_cursor().get()?;
+    let params: CommitVoteParamPublic<G::Z> = ctx.parameter_cursor().get()?;
 
+    // TODO: do only once
     for i in 0..n {
         if !schnorr_zkp_validate(state.g_pow_xis[i], state.zkp_xis[i]) || !state.round1[i] {
             return Err(ParseError {});
         }
     }
 
-    let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i as usize, state.g_pow_xis);
-    let g_pow_xi_yi_vi =
-        compute_group_element_for_vote::<G>(params.cvp_xi, params.cvp_vote, g_pow_yi);
-    let commit_vi = commit_to::<G>(g_pow_xi_yi_vi);
-
     let mut commit_to_vote_state_ret = state.clone();
-    commit_to_vote_state_ret.commit_vis[params.cvp_i as usize] = commit_vi;
+    commit_to_vote_state_ret.commit_vis[params.cvp_i as usize] = params.cvp_commit_vi;
     Ok((A::accept(), commit_to_vote_state_ret))
 }
 
-/** Primary function in round 2, also opens commitment */
-#[hax_lib_macros::receive(contract = "OVN", name = "cast_vote", parameter = "CastVoteParam", generate_instance = true)]
-#[cfg_attr(not(hax), receive(contract = "OVN", name = "cast_vote", parameter = "CastVoteParam"))]
-pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
-    ctx: &impl HasReceiveContext,
-    state: OvnContractState<G, n>,
-) -> Result<(A, OvnContractState<G, n>), ParseError> {
-    let params: CastVoteParam<G::Z> = ctx.parameter_cursor().get()?;
+#[derive(Serialize, SchemaType)]
+pub struct CastVoteParamPublic<G: Group> {
+    // public
+    pub cvp_i: u32,
+    // from private
+    pub cvp_zkp_vi : OrZKPCommit<G>,
+    pub cvp_g_pow_xi_yi_vi : G,
+}
 
+#[derive(Serialize, SchemaType)]
+pub struct CastVoteParamPrivate<Z: Field> {
+    // public
+    pub cvp_i: u32,
+    // private
+    pub cvp_xi: Z,
+    pub cvp_zkp_random_w: Z,
+    pub cvp_zkp_random_r: Z,
+    pub cvp_zkp_random_d: Z,
+    pub cvp_vote: bool,
+}
+
+pub fn cast_vote_private<G: Group, const n: usize>(
+    params: CastVoteParamPrivate<G::Z>,
+    state: OvnContractState<G, n>,
+) -> (OrZKPCommit<G>, G) {
     let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i as usize, state.g_pow_xis);
 
     let zkp_vi = zkp_one_out_of_two::<G>(
@@ -348,9 +383,21 @@ pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
     let g_pow_xi_yi_vi =
         compute_group_element_for_vote::<G>(params.cvp_xi, params.cvp_vote, g_pow_yi);
 
+    (zkp_vi, g_pow_xi_yi_vi)
+}
+
+/** Primary function in round 2, also opens commitment */
+#[hax_lib_macros::receive(contract = "OVN", name = "cast_vote", parameter = "CastVoteParamPublic", generate_instance = true)]
+#[cfg_attr(not(hax), receive(contract = "OVN", name = "cast_vote", parameter = "CastVoteParamPublic"))]
+pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
+    ctx: &impl HasReceiveContext,
+    state: OvnContractState<G, n>,
+) -> Result<(A, OvnContractState<G, n>), ParseError> {
+    let params: CastVoteParamPublic<G> = ctx.parameter_cursor().get()?;
+
     let mut cast_vote_state_ret = state.clone();
-    cast_vote_state_ret.g_pow_xi_yi_vis[params.cvp_i as usize] = g_pow_xi_yi_vi;
-    cast_vote_state_ret.zkp_vis[params.cvp_i as usize] = zkp_vi;
+    cast_vote_state_ret.g_pow_xi_yi_vis[params.cvp_i as usize] = params.cvp_g_pow_xi_yi_vi;
+    cast_vote_state_ret.zkp_vis[params.cvp_i as usize] = params.cvp_zkp_vi;
 
     Ok((A::accept(), cast_vote_state_ret))
 }
