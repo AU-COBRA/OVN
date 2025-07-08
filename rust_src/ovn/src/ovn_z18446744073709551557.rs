@@ -9,6 +9,7 @@ pub use crate::ovn_traits::*;
 ////////////////////
 
 #[derive(Clone, Copy, PartialEq, Eq, hacspec_concordium::Serial, hacspec_concordium::Deserial, Debug)]
+#[allow(non_camel_case_types)]
 pub struct z_18446744073709551557 { z_val : u64 }
 
 // impl hacspec_concordium::Deserial for z_18446744073709551557 {
@@ -101,6 +102,7 @@ impl Field for z_18446744073709551557 {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, hacspec_concordium::Serial, hacspec_concordium::Deserial, Debug)]
+#[allow(non_camel_case_types)]
 pub struct g_z_18446744073709551557 { g_val : u64 }
 
 // impl hacspec_concordium::Deserial for g_z_18446744073709551557 {
@@ -143,7 +145,7 @@ impl core::iter::Product for g_z_18446744073709551557 {
 impl Group for g_z_18446744073709551557 {
     type Z = z_18446744073709551557;
 
-    #[warn(unused_doc_comment)]
+    #[allow(unused_doc_comments)]
     /// Found using the following python script:
     /// from sympy import isprime, primitive_root
 

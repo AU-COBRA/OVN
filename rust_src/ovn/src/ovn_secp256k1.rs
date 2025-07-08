@@ -9,6 +9,7 @@ use hacspec_lib::*;
 use hacspec_bip_340::*;
 
 #[derive(core::marker::Copy, Clone, PartialEq, Eq)]
+#[allow(non_camel_case_types)]
 pub struct Z_curve {
     z_val: Scalar,
 }
@@ -116,6 +117,7 @@ impl Field for Z_curve {
 
 
 #[derive(core::marker::Copy, Clone, PartialEq, Eq)]
+#[allow(non_camel_case_types)]
 pub struct Group_curve {
     g_val: Point,
 }

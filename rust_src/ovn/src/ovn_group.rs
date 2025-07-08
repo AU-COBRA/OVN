@@ -188,55 +188,87 @@ pub struct OvnContractState<G: Group, const n: usize> {
     pub g_pow_xis: [Option<G>; n],
     pub zkp_xis: [Option<SchnorrZKPCommit<G>>; n],
 
+    pub register_count: u32,
+
     pub commit_vis: [Option<G::Z>; n],
+    pub commit_count: u32,
 
     pub g_pow_xi_yi_vis: [Option<G>; n],
     pub zkp_vis: [Option<OrZKPCommit<G>>; n],
+    pub vote_count: u32,
 
     pub tally: Option<u32>,
 }
 
 #[hax_lib_macros::init(contract = "OVN")]
 #[cfg_attr(not(hax), init(contract = "OVN"))]
-pub fn init_ovn_contract<G: Group, const n: usize>(_: &impl HasInitContext,
+pub fn init_ovn_contract<G: Group, const n: usize>(
+    _: &impl HasInitContext,
 ) -> InitResult<OvnContractState<G, n>> {
     Ok(OvnContractState::<G, n> {
         g_pow_xis: [None; n],
         zkp_xis: [None; n],
+        register_count: 0,
 
         commit_vis: [None; n],
+        commit_count: 0,
 
         g_pow_xi_yi_vis: [None; n],
         zkp_vis: [None; n],
+        vote_count: 0,
 
         tally: None,
     })
 }
 
 #[derive(Serialize, SchemaType)]
-pub struct RegisterParam<Z: Field> {
+pub struct RegisterParamPublic<G: Group> {
     // public input
     pub rp_i: u32,
-    // private input
+    // from private input
+    pub rp_g_pow_xi: G,
+    pub rp_zkp_xi: SchnorrZKPCommit<G>,
+}
+
+#[derive(Serialize, SchemaType)]
+pub struct RegisterParamPrivate<Z: Field> {
     pub rp_xi: Z,
     pub rp_zkp_random: Z,
 }
 
+pub fn register_vote_private<G: Group>(
+    params: RegisterParamPrivate<G::Z>,
+) -> (G, SchnorrZKPCommit<G>) {
+    let g_pow_xi = G::g_pow(params.rp_xi);
+    let zkp_xi = schnorr_zkp::<G>(params.rp_zkp_random, g_pow_xi, params.rp_xi);
+    (g_pow_xi, zkp_xi)
+}
+
 /** Primary function in round 1 */
-#[hax_lib_macros::receive(contract = "OVN", name = "register", parameter = "RegisterParam", generate_instance = true)]
-#[cfg_attr(not(hax), receive(contract = "OVN", name = "register", parameter = "RegisterParam"))]
+#[hax_lib_macros::receive(
+    contract = "OVN",
+    name = "register",
+    parameter = "RegisterParamPublic",
+    generate_instance = true
+)]
+#[cfg_attr(not(hax),receive(contract = "OVN", name = "register", parameter = "RegisterParamPublic"))]
 pub fn register_vote<G: Group, const n: usize, A: HasActions>(
     ctx: &impl HasReceiveContext,
     state: OvnContractState<G, n>,
 ) -> Result<(A, OvnContractState<G, n>), ParseError> {
-    let params: RegisterParam<G::Z> = ctx.parameter_cursor().get()?;
-    let g_pow_xi = G::g_pow(params.rp_xi);
+    let params: RegisterParamPublic<G> = ctx.parameter_cursor().get()?;
 
-    let zkp_xi = schnorr_zkp::<G>(params.rp_zkp_random, g_pow_xi, params.rp_xi);
+    if state.g_pow_xis[params.rp_i as usize].is_some()
+        || state.zkp_xis[params.rp_i as usize].is_some()
+    {
+        return Err(ParseError {});
+    }
 
     let mut register_vote_state_ret = state.clone();
-    register_vote_state_ret.g_pow_xis[params.rp_i as usize] = Some(g_pow_xi);
-    register_vote_state_ret.zkp_xis[params.rp_i as usize] = Some(zkp_xi);
+    register_vote_state_ret.g_pow_xis[params.rp_i as usize] = Some(params.rp_g_pow_xi);
+    register_vote_state_ret.zkp_xis[params.rp_i as usize] = Some(params.rp_zkp_xi);
+
+    register_vote_state_ret.register_count += 1;
 
     Ok((A::accept(), register_vote_state_ret))
 }
@@ -246,13 +278,13 @@ pub struct CommitVoteParamPublic<Z: Field> {
     // public
     pub cvp_i: u32,
     // from private
-    pub cvp_commit_vi : Z,
+    pub cvp_commit_vi: Z,
 }
 
 #[derive(Serialize, SchemaType)]
 pub struct CommitVoteParamPrivate<Z: Field> {
     // public
-    pub cvp_i: u32,
+    pub cvp_i_: u32,
     // private
     pub cvp_xi: Z,
     pub cvp_zkp_random_w: Z,
@@ -290,34 +322,44 @@ pub fn compute_group_element_for_vote<G: Group>(xi: G::Z, vote: bool, g_pow_yi: 
 
 /** Commitment before round 2 */
 pub fn commit_to_vote_private<G: Group, const n: usize>(
-    params : CommitVoteParamPrivate<G::Z>,
+    params: CommitVoteParamPrivate<G::Z>,
     g_pow_xis: [G; n],
 ) -> G::Z {
-    let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i as usize, g_pow_xis);
+    let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i_ as usize, g_pow_xis);
     let g_pow_xi_yi_vi =
         compute_group_element_for_vote::<G>(params.cvp_xi, params.cvp_vote, g_pow_yi);
     let commit_vi = commit_to::<G>(g_pow_xi_yi_vi);
     commit_vi
 }
 
-#[hax_lib_macros::receive(contract = "OVN", name = "commit_to_vote", parameter = "CommitVoteParamPublic", generate_instance = false)]
-#[cfg_attr(not(hax), receive(contract = "OVN", name = "commit_to_vote", parameter = "CommitVoteParamPublic"))]
+#[hax_lib_macros::receive(
+    contract = "OVN",
+    name = "commit_to_vote",
+    parameter = "CommitVoteParamPublic",
+    generate_instance = false
+)]
+#[cfg_attr(
+    not(hax),
+    receive(
+        contract = "OVN",
+        name = "commit_to_vote",
+        parameter = "CommitVoteParamPublic"
+    )
+)]
 pub fn commit_to_vote<G: Group, const n: usize, A: HasActions>(
     ctx: &impl HasReceiveContext,
     state: OvnContractState<G, n>,
 ) -> Result<(A, OvnContractState<G, n>), ParseError> {
     let params: CommitVoteParamPublic<G::Z> = ctx.parameter_cursor().get()?;
 
-    // let zkp_xis_unwrapped = state.zkp_xis[i].ok();
-
-    if !state.zkp_xis.iter().all(|x| x.is_some()) {
-        return Err(ParseError {})
-    }
-    if !state.g_pow_xis.iter().all(|x| x.is_some()) {
-        return Err(ParseError {})
+    if state.register_count != n as u32 {
+        return Err(ParseError {});
     }
 
-    // for i in 0..n {
+    if state.commit_vis[params.cvp_i as usize].is_some() {
+        return Err(ParseError {});
+    }
+
     let zkp_xis_i = state.zkp_xis[params.cvp_i as usize].unwrap();
     let g_pow_xis_i = state.g_pow_xis[params.cvp_i as usize].unwrap();
     if !schnorr_zkp_validate(g_pow_xis_i, zkp_xis_i) {
@@ -326,63 +368,100 @@ pub fn commit_to_vote<G: Group, const n: usize, A: HasActions>(
 
     let mut commit_to_vote_state_ret = state.clone();
     commit_to_vote_state_ret.commit_vis[params.cvp_i as usize] = Some(params.cvp_commit_vi);
+    commit_to_vote_state_ret.commit_count += 1;
     Ok((A::accept(), commit_to_vote_state_ret))
 }
 
 #[derive(Serialize, SchemaType)]
 pub struct CastVoteParamPublic<G: Group> {
     // public
-    pub cvp_i: u32,
+    pub vp_i: u32,
     // from private
-    pub cvp_zkp_vi : OrZKPCommit<G>,
-    pub cvp_g_pow_xi_yi_vi : G,
+    pub vp_zkp_vi: OrZKPCommit<G>,
+    pub vp_g_pow_xi_yi_vi: G,
 }
 
 #[derive(Serialize, SchemaType)]
 pub struct CastVoteParamPrivate<Z: Field> {
     // public
-    pub cvp_i: u32,
+    pub vp_i_: u32,
     // private
-    pub cvp_xi: Z,
-    pub cvp_zkp_random_w: Z,
-    pub cvp_zkp_random_r: Z,
-    pub cvp_zkp_random_d: Z,
-    pub cvp_vote: bool,
+    pub vp_xi: Z,
+    pub vp_zkp_random_w: Z,
+    pub vp_zkp_random_r: Z,
+    pub vp_zkp_random_d: Z,
+    pub vp_vote: bool,
 }
 
 pub fn cast_vote_private<G: Group, const n: usize>(
     params: CastVoteParamPrivate<G::Z>,
     g_pow_xis: [G; n],
 ) -> (OrZKPCommit<G>, G) {
-    let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i as usize, g_pow_xis);
+    let g_pow_yi = compute_g_pow_yi::<G, n>(params.vp_i_ as usize, g_pow_xis);
 
     let zkp_vi = zkp_one_out_of_two::<G>(
-        params.cvp_zkp_random_w,
-        params.cvp_zkp_random_r,
-        params.cvp_zkp_random_d,
+        params.vp_zkp_random_w,
+        params.vp_zkp_random_r,
+        params.vp_zkp_random_d,
         g_pow_yi,
-        params.cvp_xi,
-        params.cvp_vote,
+        params.vp_xi,
+        params.vp_vote,
     );
 
     let g_pow_xi_yi_vi =
-        compute_group_element_for_vote::<G>(params.cvp_xi, params.cvp_vote, g_pow_yi);
+        compute_group_element_for_vote::<G>(params.vp_xi, params.vp_vote, g_pow_yi);
 
     (zkp_vi, g_pow_xi_yi_vi)
 }
 
 /** Primary function in round 2, also opens commitment */
-#[hax_lib_macros::receive(contract = "OVN", name = "cast_vote", parameter = "CastVoteParamPublic", generate_instance = true)]
-#[cfg_attr(not(hax), receive(contract = "OVN", name = "cast_vote", parameter = "CastVoteParamPublic"))]
+#[hax_lib_macros::receive(
+    contract = "OVN",
+    name = "cast_vote",
+    parameter = "CastVoteParamPublic",
+    generate_instance = true
+)]
+#[cfg_attr(
+    not(hax),
+    receive(
+        contract = "OVN",
+        name = "cast_vote",
+        parameter = "CastVoteParamPublic"
+    )
+)]
 pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
     ctx: &impl HasReceiveContext,
     state: OvnContractState<G, n>,
 ) -> Result<(A, OvnContractState<G, n>), ParseError> {
     let params: CastVoteParamPublic<G> = ctx.parameter_cursor().get()?;
 
+    if state.commit_count != n as u32 {
+        return Err(ParseError {});
+    }
+
+    if state.g_pow_xi_yi_vis[params.vp_i as usize].is_some()
+        || state.zkp_vis[params.vp_i as usize].is_some()
+    {
+        return Err(ParseError {});
+    }
+
+    if !check_commitment::<G>(
+        params.vp_g_pow_xi_yi_vi,
+        state.commit_vis[params.vp_i as usize].unwrap(),
+    ) {
+        return Err(ParseError {});
+    }
+
+    let g_pow_yi =
+        compute_g_pow_yi::<G, n>(params.vp_i as usize, state.g_pow_xis.map(|x| x.unwrap()));
+    if !zkp_one_out_of_two_validate::<G>(g_pow_yi, params.vp_zkp_vi) {
+        return Err(ParseError {});
+    }
+
     let mut cast_vote_state_ret = state.clone();
-    cast_vote_state_ret.g_pow_xi_yi_vis[params.cvp_i as usize] = Some(params.cvp_g_pow_xi_yi_vi);
-    cast_vote_state_ret.zkp_vis[params.cvp_i as usize] = Some(params.cvp_zkp_vi);
+    cast_vote_state_ret.g_pow_xi_yi_vis[params.vp_i as usize] = Some(params.vp_g_pow_xi_yi_vi);
+    cast_vote_state_ret.zkp_vis[params.vp_i as usize] = Some(params.vp_zkp_vi);
+    cast_vote_state_ret.vote_count += 1;
 
     Ok((A::accept(), cast_vote_state_ret))
 }
@@ -390,21 +469,23 @@ pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
 #[derive(Serialize, SchemaType)]
 pub struct TallyParameter {}
 
-#[hax_lib_macros::receive(contract = "OVN", name = "tally", parameter = "TallyParameter", generate_instance = true)]
-#[cfg_attr(not(hax), receive(contract = "OVN", name = "tally", parameter = "TallyParameter"))]
+#[hax_lib_macros::receive(
+    contract = "OVN",
+    name = "tally",
+    parameter = "TallyParameter",
+    generate_instance = true
+)]
+#[cfg_attr(
+    not(hax),
+    receive(contract = "OVN", name = "tally", parameter = "TallyParameter")
+)]
 /** Anyone can tally the votes */
 pub fn tally_votes<G: Group, const n: usize, A: HasActions>(
     _: &impl HasReceiveContext,
     state: OvnContractState<G, n>,
 ) -> Result<(A, OvnContractState<G, n>), ParseError> {
-    for i in 0..n {
-        let g_pow_yi = compute_g_pow_yi::<G, n>(i as usize, state.g_pow_xis.map(|x| x.unwrap()));
-        if !zkp_one_out_of_two_validate::<G>(g_pow_yi, state.zkp_vis[i].unwrap()) {
-            return Err(ParseError {});
-        }
-        if !check_commitment::<G>(state.g_pow_xi_yi_vis[i].unwrap(), state.commit_vis[i].unwrap()) {
-            return Err(ParseError {});
-        }
+    if state.vote_count != n as u32 {
+        return Err(ParseError {});
     }
 
     let mut vote_result = G::group_one();

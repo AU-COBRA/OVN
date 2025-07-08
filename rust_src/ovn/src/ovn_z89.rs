@@ -13,6 +13,7 @@ pub use crate::ovn_traits::*;
 ////////////////////
 
 #[derive(Clone, Copy, PartialEq, Eq, hacspec_concordium::Serial, hacspec_concordium::Deserial, Debug)]
+#[allow(non_camel_case_types)]
 pub struct z_89 { z_val : u8 }
 
 // impl hacspec_concordium::Deserial for z_89 {
@@ -105,6 +106,7 @@ impl Field for z_89 {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, hacspec_concordium::Serial, hacspec_concordium::Deserial, Debug)]
+#[allow(non_camel_case_types)]
 pub struct g_z_89 { g_val : u8 }
 
 // impl hacspec_concordium::Deserial for g_z_89 {
