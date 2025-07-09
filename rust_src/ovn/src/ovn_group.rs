@@ -194,8 +194,6 @@ pub struct OvnContractState<G: Group, const n: usize> {
     pub zkp_vis: [OrZKPCommit<G>; n],
 
     pub tally: u32,
-
-    pub round1: [bool; n],
 }
 
 #[hax_lib_macros::init(contract = "OVN")]
@@ -231,8 +229,6 @@ pub fn init_ovn_contract<G: Group, const n: usize>(_: &impl HasInitContext,
         }; n],
 
         tally: 0,
-
-        round1: [false; n],
     })
 }
 
@@ -258,7 +254,10 @@ pub fn register_vote<G: Group, const n: usize, A: HasActions>(
     let mut register_vote_state_ret = state.clone();
     register_vote_state_ret.g_pow_xis[params.rp_i as usize] = g_pow_xi;
     register_vote_state_ret.zkp_xis[params.rp_i as usize] = zkp_xi;
-    register_vote_state_ret.round1[params.rp_i as usize] = true;
+
+    if !schnorr_zkp_validate(g_pow_xi, zkp_xi) {
+        return Err(ParseError {});
+    }
 
     Ok((A::accept(), register_vote_state_ret))
 }
@@ -309,12 +308,6 @@ pub fn commit_to_vote<G: Group, const n: usize, A: HasActions>(
 ) -> Result<(A, OvnContractState<G, n>), ParseError> {
     let params: CastVoteParam<G::Z> = ctx.parameter_cursor().get()?;
 
-    for i in 0..n {
-        if !schnorr_zkp_validate(state.g_pow_xis[i], state.zkp_xis[i]) || !state.round1[i] {
-            return Err(ParseError {});
-        }
-    }
-
     let g_pow_yi = compute_g_pow_yi::<G, n>(params.cvp_i as usize, state.g_pow_xis);
     let g_pow_xi_yi_vi =
         compute_group_element_for_vote::<G>(params.cvp_xi, params.cvp_vote, g_pow_yi);
@@ -352,6 +345,13 @@ pub fn cast_vote<G: Group, const n: usize, A: HasActions>(
     cast_vote_state_ret.g_pow_xi_yi_vis[params.cvp_i as usize] = g_pow_xi_yi_vi;
     cast_vote_state_ret.zkp_vis[params.cvp_i as usize] = zkp_vi;
 
+    if !zkp_one_out_of_two_validate::<G>(g_pow_yi, zkp_vi) {
+        return Err(ParseError {});
+    }
+    if !check_commitment::<G>(g_pow_xi_yi_vi, state.commit_vis[params.cvp_i as usize]) {
+        return Err(ParseError {});
+    }
+
     Ok((A::accept(), cast_vote_state_ret))
 }
 
@@ -365,16 +365,6 @@ pub fn tally_votes<G: Group, const n: usize, A: HasActions>(
     _: &impl HasReceiveContext,
     state: OvnContractState<G, n>,
 ) -> Result<(A, OvnContractState<G, n>), ParseError> {
-    for i in 0..n {
-        let g_pow_yi = compute_g_pow_yi::<G, n>(i as usize, state.g_pow_xis);
-        if !zkp_one_out_of_two_validate::<G>(g_pow_yi, state.zkp_vis[i]) {
-            return Err(ParseError {});
-        }
-        if !check_commitment::<G>(state.g_pow_xi_yi_vis[i], state.commit_vis[i]) {
-            return Err(ParseError {});
-        }
-    }
-
     let mut vote_result = G::group_one();
     for g_pow_vote in state.g_pow_xi_yi_vis {
         vote_result = G::prod(vote_result, g_pow_vote);

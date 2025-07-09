@@ -209,3 +209,5 @@ opam pin coq-concert git+https://github.com/AU-COBRA/ConCert.git#d06ca907c91cb46
 opam install coq-ssprove.0.2.4 coq-mathcomp-zify
 opam install ./hax/coq-hacspec-ssprove.opam
 ```
+
+wasmtime and python are required to run the WebAssembly benchmarks

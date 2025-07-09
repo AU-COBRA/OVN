@@ -321,8 +321,8 @@ fn test_full_z89() {
 #[test]
 fn test_full_z18446744073709551557() {
     QuickCheck::new()
-        .tests(1)
-        .quickcheck(randomized_full_test::<g_z_18446744073709551557, 200> as fn() -> bool)
+        .tests(5)
+        .quickcheck(randomized_full_test::<g_z_18446744073709551557, 20> as fn() -> bool)
 }
 
 // #[concordium_test]
