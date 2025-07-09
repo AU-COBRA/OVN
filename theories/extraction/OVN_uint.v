@@ -113,7 +113,6 @@ Module OVN_Uint63 (G : GroupParams).
       end.
 
 
-
     Definition field_int : Field int :=
       (* let f_q := 9223372036854775782%uint63 in *)
       let f_q := prime%uint63 in
@@ -141,17 +140,25 @@ Module OVN_Uint63 (G : GroupParams).
         ((mul x y) mod q)%uint63 in
       let g_pow x y :=
         mod_pow x y q in
+      let g_one := 1%uint63 in
+      (* Dummy hash function used in Rust tests *)
+      let fix prod_l l :=
+        match l with
+        | [] => g_one
+        | x :: xs => g_prod x (prod_l xs)
+        end in
     {|
       g_f := g_f;
       g_g := g_g;
       g_g_pow x := g_pow g_g x;
       g_pow := g_pow;
-      g_one := 1%uint63;
+      g_one := g_one;
       g_prod := g_prod;
       g_inv x :=
         mod_inv x q;
       (* hash := fun a => 14%uint63; *)
-      hash := hash_f;
+      hash := fun x => prod_l x;
+      (* hash := hash_f; *)
     |}.
 
     Definition group : Group T := group_int.

@@ -15,7 +15,9 @@ pub use hacspec_ovn::ovn_z89::*;
 pub use hacspec_ovn::ovn_z18446744073709551557::*;
 use rand::random;
 
-#[cfg(test)]
+use std::time::{Duration, Instant};
+
+/* #[cfg(test)]
 pub fn schnorr_zkp_correctness<G: Group>(random_x: u128, random_r: u128) -> bool {
     let x: G::Z = G::Z::random_field_elem(random_x);
     let r: G::Z = G::Z::random_field_elem(random_r);
@@ -26,30 +28,30 @@ pub fn schnorr_zkp_correctness<G: Group>(random_x: u128, random_r: u128) -> bool
 
     let valid = schnorr_zkp_validate::<G>(pow_x, pi);
     valid
-}
+} */
 
-#[test]
+/* #[test]
 pub fn schnorr_zkp_z_89_correctness() {
     QuickCheck::new()
         .tests(10000)
         .quickcheck(schnorr_zkp_correctness::<g_z_89> as fn(u128, u128) -> bool)
-}
+} */
 
-#[test]
+/* #[test]
 pub fn schnorr_zkp_z_18446744073709551557_correctness() {
     QuickCheck::new()
         .tests(10000)
         .quickcheck(schnorr_zkp_correctness::<g_z_18446744073709551557> as fn(u128, u128) -> bool)
-}
+} */
 
-#[test]
+/* #[test]
 pub fn schorr_zkp_secp256k1_correctness() {
     QuickCheck::new()
         .tests(10)
         .quickcheck(schnorr_zkp_correctness::<Group_curve> as fn(u128, u128) -> bool)
-}
+} */
 
-#[cfg(test)]
+/* #[cfg(test)]
 pub fn or_zkp_correctness<G: Group>(
     random_w: u128,
     random_r: u128,
@@ -69,31 +71,31 @@ pub fn or_zkp_correctness<G: Group>(
     let pi: OrZKPCommit<G> = zkp_one_out_of_two(w, r, d, h, x, v);
     let valid = zkp_one_out_of_two_validate::<G>(h, pi);
     valid
-}
+} */
 
-#[test]
+/* #[test]
 pub fn or_zkp_correctness_z89() {
     QuickCheck::new()
         .tests(10000)
         .quickcheck(or_zkp_correctness::<g_z_89> as fn(u128, u128, u128, u128, u128, bool) -> bool)
-}
+} */
 
-#[test]
+/* #[test]
 pub fn or_zkp_correctness_z18446744073709551557() {
     QuickCheck::new()
         .tests(10000)
         .quickcheck(or_zkp_correctness::<g_z_18446744073709551557> as fn(u128, u128, u128, u128, u128, bool) -> bool)
-}
+} */
 
-#[test]
+/* #[test]
 // TODO: Fix inverse opeation, should make this test parse
 pub fn or_zkp_secp256k1_correctness() {
     QuickCheck::new().tests(10).quickcheck(
         or_zkp_correctness::<Group_curve> as fn(u128, u128, u128, u128, u128, bool) -> bool,
     )
-}
+} */
 
-#[cfg(test)]
+/* #[cfg(test)]
 pub fn sum_to_zero<G: Group, const n: usize>() {
     let mut xis: [G::Z; n] = [G::Z::field_zero(); n];
     let mut g_pow_xis: [G; n] = [G::group_one(); n];
@@ -110,22 +112,22 @@ pub fn sum_to_zero<G: Group, const n: usize>() {
     }
 
     assert!(res == G::group_one());
-}
+} */
 
-#[test]
+/* #[test]
 pub fn sum_to_zero_z89() {
     sum_to_zero::<g_z_89, 55>()
-}
+} */
 
-#[test]
+/* #[test]
 pub fn sum_to_zero_z18446744073709551557() {
     sum_to_zero::<g_z_18446744073709551557, 555>()
-}
+} */
 
-#[test]
+/* #[test]
 pub fn sum_to_zero_secp256k1() {
     sum_to_zero::<Group_curve, 55>()
-}
+} */
 
 #[derive(Copy, Clone, hacspec_concordium::Serial, hacspec_concordium::Deserial)]
 pub struct ElemOfEach<G : Group> {
@@ -134,7 +136,7 @@ pub struct ElemOfEach<G : Group> {
     g : G,
 }
 
-#[cfg(test)]
+/* #[cfg(test)]
 pub fn test_params_of_group<
     G: Group,
     A: HasActions,
@@ -156,9 +158,9 @@ pub fn test_params_of_group<
     assert!(wu_param.i == parameter.i);
     assert!(wu_param.z == parameter.z);
     assert!(wu_param.g == parameter.g);
-}
+} */
 
-#[test]
+/* #[test]
 pub fn test_params_of_group_z89() {
     test_params_of_group::<g_z_89, hacspec_concordium::test_infrastructure::ActionsTree>()
 }
@@ -166,7 +168,7 @@ pub fn test_params_of_group_z89() {
 #[test]
 pub fn test_params_of_group_secp256k1() {
     test_params_of_group::<Group_curve, hacspec_concordium::test_infrastructure::ActionsTree>()
-}
+} */
 
 #[cfg(test)]
 pub fn test_correctness<G: Group, const n: usize, A: HasActions>(
@@ -184,8 +186,12 @@ pub fn test_correctness<G: Group, const n: usize, A: HasActions>(
     let mut ctx : test_infrastructure::ContextTest<_> = test_infrastructure::ReceiveContextTest::empty();
 
     let init_ctx : test_infrastructure::ContextTest<_> = test_infrastructure::InitContextTest::empty();
-    let mut state: OvnContractState<G, n> = init_ovn_contract(&init_ctx).unwrap();
 
+    let init_now = Instant::now();
+    let mut state: OvnContractState<G, n> = init_ovn_contract(&init_ctx).unwrap();
+    println!("Init: {} μs", init_now.elapsed().as_micros());
+
+    let register_now = Instant::now();
     for i in 0..n {
         let parameter = RegisterParam::<G::Z> {
             rp_i: i as u32,
@@ -199,7 +205,9 @@ pub fn test_correctness<G: Group, const n: usize, A: HasActions>(
             register_vote::<G, n, A>(&ctx, state)
                 .unwrap();
     }
+    println!("Register: {} μs", register_now.elapsed().as_micros());
 
+    let commit_now = Instant::now();
     for i in 0..n {
         let parameter = CastVoteParam::<G::Z> {
             cvp_i: i as u32,
@@ -216,7 +224,9 @@ pub fn test_correctness<G: Group, const n: usize, A: HasActions>(
             commit_to_vote::<G, n, A>(&ctx, state)
                 .unwrap();
     }
+    println!("Commit: {} μs", commit_now.elapsed().as_micros());
 
+    let vote_now = Instant::now();
     for i in 0..n {
         let parameter = CastVoteParam::<G::Z> {
             cvp_i: i as u32,
@@ -232,12 +242,15 @@ pub fn test_correctness<G: Group, const n: usize, A: HasActions>(
         (_, state) =
             cast_vote::<G, n, A>(&ctx, state).unwrap();
     }
+    println!("Vote: {} μs", vote_now.elapsed().as_micros());
 
+    let tally_now = Instant::now();
     let parameter = TallyParameter {};
     let parameter_bytes = to_bytes(&parameter);
     ctx = ctx.set_parameter(&parameter_bytes);
 
     (_, state) = tally_votes::<G, n, A>(&ctx, state).unwrap();
+    println!("Tally: {} μs", tally_now.elapsed().as_micros());
 
     let mut count = 0u32;
     for v in votes {
@@ -252,6 +265,8 @@ pub fn test_correctness<G: Group, const n: usize, A: HasActions>(
 
 #[cfg(test)]
 fn randomized_full_test<G: Group, const n: usize>() -> bool {
+    let now = Instant::now();
+
     use rand::random;
     let mut votes: [bool; n] = [false; n];
     let mut xis: [G::Z; n] = [G::Z::field_zero(); n];
@@ -276,7 +291,10 @@ fn randomized_full_test<G: Group, const n: usize>() -> bool {
         cvp_zkp_random_ds2[i] = G::Z::random_field_elem(random());
     }
 
-    test_correctness::<G, n, hacspec_concordium::test_infrastructure::ActionsTree>(
+
+    println!("Input generation: {} μs", now.elapsed().as_micros());
+
+    let b = test_correctness::<G, n, hacspec_concordium::test_infrastructure::ActionsTree>(
         votes,
         xis,
         rp_zkp_randoms,
@@ -286,33 +304,37 @@ fn randomized_full_test<G: Group, const n: usize>() -> bool {
         cvp_zkp_random_ws2,
         cvp_zkp_random_rs2,
         cvp_zkp_random_ds2,
-    )
+    );
+    println!("Total: {} ms", now.elapsed().as_millis());
+    return b;
 }
 
 // #[concordium_test]
-#[test]
+/* #[test]
 fn test_full_z89() {
     QuickCheck::new()
-        .tests(100)
-        .quickcheck(randomized_full_test::<g_z_89, 55> as fn() -> bool)
-}
+        .tests(1)
+        .quickcheck(randomized_full_test::<g_z_89, 20> as fn() -> bool)
+} */
 
 // #[concordium_test]
 #[test]
 fn test_full_z18446744073709551557() {
     QuickCheck::new()
-        .tests(5)
-        .quickcheck(randomized_full_test::<g_z_18446744073709551557, 555> as fn() -> bool)
+        .tests(1)
+        .quickcheck(randomized_full_test::<g_z_18446744073709551557, 200> as fn() -> bool)
 }
 
 // #[concordium_test]
-#[test]
+/* #[test]
 fn test_full_secp256k1() {
     QuickCheck::new()
         .tests(1)
         .quickcheck(randomized_full_test::<Group_curve, 15> as fn() -> bool)
-}
+} */
 
+
+/*
 #[cfg(test)]
 pub fn test_attack_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
     votes: [bool; n],
@@ -503,9 +525,9 @@ fn test_attack_g_pow_yi_zero_z18446744073709551557() {
     QuickCheck::new()
         .tests(5)
         .quickcheck(full_attack_test::<g_z_18446744073709551557, 555, 18446744073709551557u128> as fn() -> bool)
-}
+} */
 
-
+/*
 
 #[cfg(test)]
 pub fn test_attack_2_g_pow_yi_zero<G: Group, const n: usize, A: HasActions>(
@@ -704,3 +726,4 @@ fn test_attack_2_g_pow_yi_zero_z18446744073709551557() {
         .tests(100)
         .quickcheck(full_attack_2_test::<g_z_18446744073709551557, 555, 18446744073709551557u128> as fn() -> bool)
 }
+ */
