@@ -13,6 +13,7 @@ pub use hacspec_ovn::ovn_group::*;
 pub use hacspec_ovn::ovn_secp256k1::*;
 pub use hacspec_ovn::ovn_z89::*;
 pub use hacspec_ovn::ovn_z18446744073709551557::*;
+pub use hacspec_ovn::ovn_zkcrypto::*;
 use rand::random;
 
 #[cfg(test)]
@@ -47,6 +48,13 @@ pub fn schorr_zkp_secp256k1_correctness() {
     QuickCheck::new()
         .tests(10)
         .quickcheck(schnorr_zkp_correctness::<Group_curve> as fn(u128, u128) -> bool)
+}
+
+#[test]
+pub fn schorr_zkp_zkcrypto_correctness() {
+    QuickCheck::new()
+        .tests(10)
+        .quickcheck(schnorr_zkp_correctness::<Gzk> as fn(u128, u128) -> bool)
 }
 
 #[cfg(test)]
@@ -90,6 +98,13 @@ pub fn or_zkp_correctness_z18446744073709551557() {
 pub fn or_zkp_secp256k1_correctness() {
     QuickCheck::new().tests(10).quickcheck(
         or_zkp_correctness::<Group_curve> as fn(u128, u128, u128, u128, u128, bool) -> bool,
+    )
+}
+
+#[test]
+pub fn or_zkp_zkcrypto_correctness() {
+    QuickCheck::new().tests(10).quickcheck(
+        or_zkp_correctness::<Gzk> as fn(u128, u128, u128, u128, u128, bool) -> bool,
     )
 }
 
@@ -166,6 +181,11 @@ pub fn test_params_of_group_z89() {
 #[test]
 pub fn test_params_of_group_secp256k1() {
     test_params_of_group::<Group_curve, hacspec_concordium::test_infrastructure::ActionsTree>()
+}
+
+#[test]
+pub fn test_params_of_group_zkcrypto() {
+    test_params_of_group::<Gzk, hacspec_concordium::test_infrastructure::ActionsTree>()
 }
 
 #[cfg(test)]
