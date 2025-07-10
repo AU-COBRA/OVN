@@ -29,7 +29,7 @@ cargo hax into ssprove
 cd proofs/ssprove
 ./sed.sh
 ```
-Then the new (fixed) files will be in `rust_src/ovn/proofs/ssprove/extraction/`.
+Then the new (fixed) files will be in `rust_src/ovn/proofs/ssprove/extraction/`. This might require installation of some system packages to get hax working. Documentation on hax can be found at [https://github.com/cryspen/hax](hax).
 
 ## Documentation
 Coqdoc can be generate with `make html`, the generated documentation will be in the `docs` directory.

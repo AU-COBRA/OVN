@@ -9,7 +9,6 @@
 
 theories/hacspec/Hacspec_helpers.v
 theories/hacspec/Hacspec_ovn_Ovn_traits.v
-# theories/hacspec/Hacspec_ovn_Ovn_z_89_.v
 theories/hacspec/Hacspec_ovn.v
 theories/hacspec/Hacspec_ovn_group_and_field.v
 
@@ -19,7 +18,6 @@ theories/hacspec/Hacspec_ovn_schnorr.v
 theories/hacspec/Hacspec_ovn_or.v
 
 theories/hacspec/Hacspec_ovn_total_proof.v
-# theories/hacspec/Hacspec_ovn_proof_z_89.v
 
 theories/ssprove/Schnorr.v
 theories/ssprove/SigmaProtocol.v
