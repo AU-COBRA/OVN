@@ -19,12 +19,11 @@ depends: [
   "coq-concert" {= "dev"}
   "coq" {>= "9.0.0"}
   "coq-ssprove" {= "0.2.4"}
-  "coq-hacspec-ssprove" {= "dev"}
+  # "coq-hacspec-ssprove" {= "dev"}
 ]
 
 pin-depends: [
   ["coq-concert.dev" "git+https://github.com/AU-COBRA/ConCert.git#10768763dd8fc64e7d01181e79d88f0e6b972c0b"]
-  ["coq-hacspec-ssprove.dev" "git+https://github.com/4ever2/hax.git#ssprove_backend_lib"]
 ]
 
 build: [

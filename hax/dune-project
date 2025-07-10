@@ -7,8 +7,8 @@
  (name coq-hacspec-ssprove)
  (synopsis "A short synopsis")
  (description "A longer description")
- (maintainers "Lasse Letager Hansen<letager@cs.au.dk>")
- (authors "Lasse Letager Hansen<letager@cs.au.dk>")
+ (maintainers "REDACTED")
+ (authors "REDACTED")
  (depends
         ocaml
         dune

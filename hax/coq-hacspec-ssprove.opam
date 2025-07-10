@@ -2,8 +2,8 @@
 opam-version: "2.0"
 synopsis: "A short synopsis"
 description: "A longer description"
-maintainer: ["Lasse Letager Hansen<letager@cs.au.dk>"]
-authors: ["Lasse Letager Hansen<letager@cs.au.dk>"]
+maintainer: ["REDACTED"]
+authors: ["REDACTED"]
 tags: ["topics" "to describe" "your" "project"]
 depends: [
   "ocaml"
