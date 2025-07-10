@@ -4,10 +4,8 @@ version: "dev"
 synopsis: "Verified implementation of the Open Vote Network protocol"
 description: "Verified implementation of the Open Vote Network protocol"
 maintainer: "todo"
-authors: "The COBRA team"
+authors: "REDACTED"
 license: "MIT"
-homepage: "https://github.com/AU-COBRA/OVN"
-bug-reports: "https://github.com/AU-COBRA/OVN/issues"
 depends: [
   "atd" {= "2.16.0"}
   "atdgen" {= "2.15.0"}
@@ -99,7 +97,6 @@ depends: [
 ]
 build: [make "theory"]
 install: [make "install"]
-dev-repo: "git+https://github.com/AU-COBRA/OVN.git"
 pin-depends: [
   [
   "coq-concert.dev"

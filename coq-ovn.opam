@@ -6,11 +6,8 @@ description: """
 Verified implementation of the Open Vote Network protocol
 """
 maintainer: "todo"
-authors: "The COBRA team"
+authors: "REDACTED"
 license: "MIT"
-homepage: "https://github.com/AU-COBRA/OVN"
-dev-repo: "git+https://github.com/AU-COBRA/OVN.git"
-bug-reports: "https://github.com/AU-COBRA/OVN/issues"
 
 depends: [
   "ocaml"
