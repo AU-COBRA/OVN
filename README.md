@@ -38,7 +38,6 @@ Coqdoc can be generate with `make html`, the generated documentation will be in 
 |  |  |
 |-----|-----|
 | [theories/hacspec](/theories/hacspec/) | OVN formalization |
-| TODO: describe each file in theories/hacspec folder | |
 | [theories/ssprove](/theories/ssprove/) | SSP formalization of Schnorr |
 | [rust_src/ovn](/rust_src/ovn/) | OVN implementation in Rust/Hax |
 | [hax](/hax/) | A fork of the [Hax framework](https://github.com/cryspen/hax) containing modifications for smart contract integration |
