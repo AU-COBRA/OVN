@@ -682,80 +682,136 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     (in custom pack_type at level 2).
 
   Definition DL : nat := 101.
+  Definition DL_GUESS : nat := 102.
+  Definition DL_loc : Location := (option v_Z ; 1000%nat).
 
-  Program Definition dl_real :
-    package fset0
+  Program Definition get_option' (A : choice_type) (n : nat) : code (fset [('option A ; n)]) [interface] A :=
+    {code
+       ox ← get ('option A; n) ;;
+     match ox with
+     | Some x => ret x
+     | None => fail
+     end
+    }.
+  Next Obligation.
+    destruct v.
+    - apply valid_ret.
+    - apply valid_fail.
+  Qed.
+  Fail Next Obligation.
+
+  Definition get_option (ℓ : Location) {A : choice_type} `(ℓ.π1 = 'option A) : code (fset [ℓ]) [interface] A.
+    destruct ℓ.
+    simpl in H.
+    rewrite H.
+    apply (get_option' A n0).
+  Defined.
+
+  Definition DL_game' :
+    bool ->
+    package
+      (fset [DL_loc])
       [interface]
       [interface
-         #val #[ DL ] : chDLInput → chDLOutput
+         #val #[ DL ] : 'unit → chDLOutput ;
+       #val #[ DL_GUESS ] : chDLInput → 'bool
       ]
     :=
-    [package
-        #def #[ DL ] (xi : chDLInput) : chDLOutput
-        {
-          (* xi ← sample (uniform #|'Z_q|) ;; let xi := WitnessToField (otf xi) in *)
-          ret (g ^+ FieldToWitness xi)
-        }
-    ].
-  Fail Final Obligation.
-
-  Program Definition dl_ideal :
-    package fset0
-      [interface]
-      [interface
-         #val #[ DL ] : chDLInput → chDLOutput
-      ]
-    :=
-    [package
-        #def #[ DL ] (_ : chDLInput) : chDLOutput
+    λ b,
+      [package
+        #def #[ DL ] (_ : 'unit) : chDLOutput
         {
           xi ← sample (uniform #|'Z_q|) ;; let xi := WitnessToField (otf xi) in
-          ret (g ^+ FieldToWitness xi)
-        }
-    ].
-  Fail Final Obligation.
-
-  Notation " 'chDLRandom' " :=
-    (v_G × v_Z)
-    (in custom pack_type at level 2).
-
-  Definition DL_RANDOM : nat := 102.
-
-  Program Definition dl_random :
-    package fset0
-      [interface
-         #val #[ DL ] : chDLInput → chDLOutput
-      ]
-      [interface
-         #val #[ DL_RANDOM ] : 'unit → chDLRandom
-      ]
-    :=
-    [package
-        #def #[ DL_RANDOM ] (_ : 'unit) : chDLRandom
+          #put DL_loc := some xi ;;
+          ret (g ^+ FieldToWitness xi : v_G)
+        } ;
+        #def #[ DL_GUESS ] (xi : chDLInput) : 'bool
         {
-          #import {sig #[ DL ] : chDLInput → chDLOutput }
-          as DL ;;
-          xi ← sample (uniform #|'Z_q|) ;;
-          let xi := WitnessToField (otf xi) in
-          h ← DL xi ;;
-          ret (h, xi : f_Z)
+          ax ← get_option DL_loc erefl ;;
+          if b
+          then ret false
+          else ret (g ^+ FieldToWitness ax == g ^+ FieldToWitness xi)
         }
-    ].
-  Fail Final Obligation.
-
-  Definition dl_real_ : loc_package [interface] [interface #val #[ DL_RANDOM ] : 'unit → chDLRandom] := {locpackage (pack dl_random ∘ pack dl_real) #with ltac:(unshelve solve_valid_package ; apply fsubsetxx)} .
-
-  Definition dl_ideal_ : loc_package [interface] [interface #val #[ DL_RANDOM ] : 'unit → chDLRandom] := {locpackage (pack dl_random ∘ pack dl_ideal) #with ltac:(unshelve solve_valid_package ; apply fsubsetxx)} .
+      ].
 
   Definition DL_game :
-    loc_GamePair [interface
-         #val #[ DL_RANDOM ] : 'unit → chDLRandom
-      ] :=
-    λ b,
-      if b then dl_real_ else dl_ideal_.
+    loc_GamePair
+      [interface
+         #val #[ DL ] : 'unit → chDLOutput ;
+         #val #[ DL_GUESS ] : chDLInput → 'bool
+      ]
+    := λ b, {locpackage DL_game' b}.
+  Fail Next Obligation.
 
   (* (∀ D, DDH.ϵ_DDH D <= ϵ_DDH) *)
   Definition ϵ_DL := Advantage DL_game.
+
+  (** DDH *)
+
+  Notation " 'chDDHInput' " :=
+    (f_Z)
+    (in custom pack_type at level 2).
+
+  Notation " 'chDDHOutput' " :=
+    (v_G × v_G)
+    (in custom pack_type at level 2).
+
+  Definition DDH : nat := 1010.
+  Definition DDH_GUESS : nat := 1020.
+  Definition DDH_loc1 : Location := (option v_Z ; 1001%nat).
+  Definition DDH_loc2 : Location := (option v_Z ; 1002%nat).
+
+  Definition DDH_game :
+    bool -> package
+      (fset [DDH_loc1; DDH_loc2])
+      [interface]
+      [interface
+         #val #[ DDH ] : 'unit → chDDHOutput ;
+         #val #[ DDH_GUESS ] : chDDHInput → 'bool
+      ].
+    refine (
+    fun b =>
+      [package
+        #def #[ DDH ] (_ : 'unit) : chDDHOutput
+        {
+          xi ← sample (uniform (H := Zq_pos) #|'Z_q|) ;; let xi := WitnessToField (otf xi) in
+          #put DDH_loc1 := some xi ;;
+          yi ← sample (uniform (H := Zq_pos) #|'Z_q|) ;; let yi := WitnessToField (otf yi) in
+          #put DDH_loc2 := some yi ;;
+          @ret (v_G × v_G) ((g ^+ FieldToWitness xi : v_G, g ^+ FieldToWitness yi : v_G))
+        } ;
+        #def #[ DDH_GUESS ] (zi : chDDHInput) : 'bool
+        {
+          ax ← get_option DDH_loc1 erefl ;;
+          ay ← get_option DDH_loc2 erefl ;;
+          if b
+          then ret false
+          else ret (g ^+ (FieldToWitness ax * FieldToWitness ay) == g ^+ FieldToWitness zi)
+      }]).
+
+    apply valid_package_cons.
+    - apply valid_package_cons.
+      + apply valid_empty_package.
+      + intros.
+        ssprove_valid.
+        * eapply valid_injectLocations.
+          2: apply get_option.
+          solve_in_fset.
+        * eapply valid_injectLocations.
+          2: apply get_option.
+          solve_in_fset.
+      + rewrite <- fset0E.
+        rewrite imfset0.
+        reflexivity.
+    - intros.
+      ssprove_valid.
+    - rewrite <- fset1E.
+      rewrite imfset1.
+      reflexivity.
+  Defined.
+
+  (* (∀ D, DDH.ϵ_DDH D <= ϵ_DDH) *)
+  Definition ϵ_DDH := Advantage DDH_game.
 
   (** Schnorr *) (* TODO: move to schnorr file *)
   Notation " 'schnorrInput' " :=
@@ -1494,19 +1550,9 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       ssprove_sync=> r.
       now apply r_ret.
     }
-  Qed. (* Fail Timeout 5 Qed. Admitted. (* 216.817 secs *) *)
+  (* Qed. *) Fail Timeout 5 Qed. Admitted. (* 216.817 secs *)
 
   (** DL_ *)
-
-  Notation " 'chDL_Input' " :=
-    (v_G × f_Z × f_Z)
-    (in custom pack_type at level 2).
-
-  Notation " 'chDL_Output' " :=
-    (v_G)
-    (in custom pack_type at level 2).
-
-  Definition DL_ : nat := 101.
 
   Theorem N_lt_succ_l : forall {a b},
       (a.+1 < b)%N -> (a < b)%N.
@@ -1643,31 +1689,6 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     reflexivity.
   Qed.
 
-  (* Program Definition dl' : *)
-  (*   package fset0 *)
-  (*     [interface *)
-  (*        #val #[ DL ] : chDLInput → chDLOutput *)
-  (*     ] *)
-  (*     [interface *)
-  (*        #val #[ DL_ ] : chDL_Input → chDL_Output *)
-  (*     ] *)
-  (*   := *)
-  (*   [package *)
-  (*       #def #[ DL_ ] ('(h,xi) : chDL_Input) : chDL_Output *)
-  (*       { *)
-  (*         #import {sig #[ DL ] : chDLInput → chDLOutput } *)
-  (*         as dl ;; *)
-  (*         dl (WitnessToField (FieldToWitness xi * (inv h)))%R *)
-  (*       } *)
-  (*   ]. *)
-  (* Solve All Obligations with now intros ; destruct from_uint_size. *)
-  (* Final Obligation. *)
-  (*   intros. *)
-  (*   ssprove_valid. *)
-  (*   destruct x as [[h xi] c]. *)
-  (*   ssprove_valid. *)
-  (* Qed. *)
-
   Notation " 'chSingleProtocolTranscript' " :=
     ((t_SchnorrZKPCommit × v_G) × (v_Z) × (t_OrZKPCommit × v_G))
     (in custom pack_type at level 2).
@@ -1676,9 +1697,10 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   Definition SECOND_STEP : nat := 103.
 
   Program Definition full_protocol_interface (state : t_OvnContractState) (i : nat) (vi : 'bool) :
-    package fset0
+    package (fset [DL_loc])
       [interface
-         #val #[ DL ] : chDLInput → chDLOutput
+         #val #[ DL ] : 'unit → chDLOutput
+       ; #val #[ DL_GUESS ] : chDLInput → 'bool
        ; #val #[ SCHNORR ] : schnorrInput → schnorrOutput
        ; #val #[ GPOWYINOTZERO ] : chGPowYiNotZeroInput → chGPowYiNotZeroOutput
        ; #val #[ COMMIT ] : chCommitInput → chCommitOutput
@@ -1691,7 +1713,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   Next Obligation.
     intros.
     refine (
-          #import {sig #[ DL ] : chDLInput → chDLOutput }
+          #import {sig #[ DL ] : 'unit → chDLOutput }
           as dl ;;
           #import {sig #[ SCHNORR ] : schnorrInput → schnorrOutput }
           as schnorr ;;
@@ -1701,16 +1723,19 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           as commit_to ;;
           #import {sig #[ CDS ] : CDSinput → CDSoutput }
           as CDS ;;
-          xi ← sample (uniform #|'Z_q|) ;; let xi := WitnessToField (otf xi) in
-          g_pow_xi ← dl xi ;;
+          g_pow_xi ← dl Datatypes.tt ;;
+          xi ← get_option DL_loc erefl ;;
           zkp_i ← schnorr (xi, g_pow_xi) ;;
           g_pow_yi ← g_pow_yi_nz Datatypes.tt ;;
-          g_pow_xy ← dl (WitnessToField (FieldToWitness xi * (inv g_pow_yi)))%R ;;
-          vote_i ← ret ((g_pow_xy : gT) * g^+(if vi then 1 else 0)%R)%g ;;
+          (* g_pow_xy ← ddh _ ;; *)
+          g_pow_xy ← @ret v_G ((g_pow_yi : gT) ^+ (FieldToWitness xi)) ;;
+
+          (* (WitnessToField (FieldToWitness xi * (inv g_pow_yi)))%R *)
+          vote_i ← ret ((g_pow_xy : gT) * (g^+(if vi then 1 else 0)%R : v_G))%g ;;
           commit ← commit_to vote_i ;;
           cds_i ← CDS ((g_pow_xi, g_pow_yi, vote_i), (xi, vi)) ;;
           ret (((zkp_i, g_pow_xi, commit : f_Z, (cds_i : t_OrZKPCommit, vote_i))) : (((t_SchnorrZKPCommit × v_G) × v_Z) × (t_OrZKPCommit × v_G))%pack)
-    ).
+      ).
   Defined.
   Final Obligation.
     intros.
@@ -1720,18 +1745,21 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     - apply valid_empty_package.
     - intros.
       ssprove_valid.
+      eapply valid_injectMap.
+      2: apply prog_valid.
+      + solve_in_fset.
     - try (rewrite <- fset0E ; setoid_rewrite @imfset0 ; rewrite in_fset0 ; reflexivity).
   Qed.
+  Fail Next Obligation.
 
   Program Definition full_protocol_interface_step1 (state : t_OvnContractState) (i : nat) (vi : 'bool) :
-    package fset0
+    package (fset [DL_loc])
       [interface
-         #val #[ DL ] : chDLInput → chDLOutput
+         #val #[ DL ] : 'unit → chDLOutput
        ; #val #[ SCHNORR ] : schnorrInput → schnorrOutput
        ; #val #[ GPOWYINOTZERO ] : chGPowYiNotZeroInput → chGPowYiNotZeroOutput
        ; #val #[ COMMIT ] : chCommitInput → chCommitOutput
        ; #val #[ CDS ] : CDSinput → CDSoutput
-       ; #val #[ DL_RANDOM ] : 'unit → chDLRandom
       ]
       [interface
          #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript
@@ -1739,7 +1767,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   Next Obligation.
     intros.
     refine (
-          #import {sig #[ DL ] : chDLInput → chDLOutput }
+          #import {sig #[ DL ] : 'unit → chDLOutput }
           as dl ;;
           #import {sig #[ SCHNORR ] : schnorrInput → schnorrOutput }
           as schnorr ;;
@@ -1749,12 +1777,12 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           as commit_to ;;
           #import {sig #[ CDS ] : CDSinput → CDSoutput }
           as CDS ;;
-          #import {sig #[ DL_RANDOM ] : 'unit → chDLRandom }
-          as dl_random ;;
-          '(g_pow_xi, xi) ← dl_random Datatypes.tt ;;
+          g_pow_xi ← dl Datatypes.tt ;;
+          xi ← get_option DL_loc erefl ;;
           zkp_i ← schnorr (xi, g_pow_xi) ;;
           g_pow_yi ← g_pow_yi_nz Datatypes.tt ;;
-          g_pow_xy ← dl (WitnessToField (FieldToWitness xi * (inv g_pow_yi)))%R ;;
+          g_pow_xy ← @ret v_G ((g_pow_yi : gT) ^+ (FieldToWitness xi)) ;;
+          (* g_pow_xy ← dl (WitnessToField (FieldToWitness xi * (inv g_pow_yi)))%R ;; *)
           vote_i ← ret ((g_pow_xy : gT) * g^+(if vi then 1 else 0)%R)%g ;;
           commit ← commit_to vote_i ;;
           cds_i ← CDS ((g_pow_xi, g_pow_yi, vote_i), (xi, vi)) ;;
@@ -1769,18 +1797,20 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     - apply valid_empty_package.
     - intros.
       ssprove_valid.
+      eapply valid_injectMap.
+      2: apply prog_valid.
+      + solve_in_fset.
     - try (rewrite <- fset0E ; setoid_rewrite @imfset0 ; rewrite in_fset0 ; reflexivity).
   Qed.
 
   Program Definition full_protocol_interface_step2 (state : t_OvnContractState) (i : nat) (vi : 'bool) :
-    package fset0
+    package (fset [DL_loc])
       [interface
-         #val #[ DL ] : chDLInput → chDLOutput
+         #val #[ DL ] : 'unit → chDLOutput
        ; #val #[ SCHNORR ] : schnorrInput → schnorrOutput
        ; #val #[ GPOWYINOTZERO ] : chGPowYiNotZeroInput → chGPowYiNotZeroOutput
        ; #val #[ COMMIT ] : chCommitInput → chCommitOutput
        ; #val #[ CDS ] : CDSinput → CDSoutput
-       ; #val #[ DL_RANDOM ] : 'unit → chDLRandom
       ]
       [interface
          #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript
@@ -1789,9 +1819,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   Next Obligation.
     intros.
     refine (
-          #import {sig #[ DL_RANDOM ] : 'unit → chDLRandom }
-          as dl_random ;;
-          #import {sig #[ DL ] : chDLInput → chDLOutput }
+          #import {sig #[ DL ] : 'unit → chDLOutput }
           as dl ;;
           #import {sig #[ SCHNORR ] : schnorrInput → schnorrOutput }
           as schnorr ;;
@@ -1801,12 +1829,12 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           as commit_to ;;
           #import {sig #[ CDS ] : CDSinput → CDSoutput }
           as CDS ;;
-          '(g_pow_xi,_) ← dl_random Datatypes.tt ;;
-          xi ← sample uniform #|'Z_q| ;;
-          let xi := (WitnessToField (otf xi : 'Z_q) : v_Z) in
+          g_pow_xi ← dl Datatypes.tt ;;
+          xi ← get_option DL_loc erefl ;;
           zkp_i ← schnorr (xi, g_pow_xi) ;;
           g_pow_yi ← g_pow_yi_nz Datatypes.tt ;;
-          g_pow_xy ← dl (WitnessToField (FieldToWitness (xi) * (inv g_pow_yi)))%R ;;
+          g_pow_xy ← @ret v_G ((g_pow_yi : gT) ^+ (FieldToWitness xi)) ;;
+          (* g_pow_xy ← dl (WitnessToField (FieldToWitness (xi) * (inv g_pow_yi)))%R ;; *)
           vote_i ← ret ((g_pow_xy : gT) * g^+(if vi then 1 else 0)%R)%g ;;
           commit ← commit_to vote_i ;;
           cds_i ← CDS ((g_pow_xi, g_pow_yi, vote_i), (xi, vi)) ;;
@@ -1819,18 +1847,20 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     - apply valid_empty_package.
     - intros.
       ssprove_valid.
+      eapply valid_injectMap.
+      2: apply prog_valid.
+      + solve_in_fset.
     - try (rewrite <- fset0E ; setoid_rewrite @imfset0 ; rewrite in_fset0 ; reflexivity).
   Qed.
 
   Program Definition full_protocol_interface_step3 (state : t_OvnContractState) (i : nat) (vi : 'bool) :
-    package fset0
+    package (fset [DL_loc])
       [interface
-         #val #[ DL ] : chDLInput → chDLOutput
+         #val #[ DL ] : 'unit → chDLOutput
        ; #val #[ SCHNORR ] : schnorrInput → schnorrOutput
        ; #val #[ GPOWYINOTZERO ] : chGPowYiNotZeroInput → chGPowYiNotZeroOutput
        ; #val #[ COMMIT ] : chCommitInput → chCommitOutput
        ; #val #[ CDS ] : CDSinput → CDSoutput
-       ; #val #[ DL_RANDOM ] : 'unit → chDLRandom
       ]
       [interface
          #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript
@@ -1839,9 +1869,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   Next Obligation.
     intros.
     refine (
-          #import {sig #[ DL_RANDOM ] : 'unit → chDLRandom }
-          as dl_random ;;
-          #import {sig #[ DL ] : chDLInput → chDLOutput }
+          #import {sig #[ DL ] : 'unit → chDLOutput }
           as dl ;;
           #import {sig #[ SCHNORR ] : schnorrInput → schnorrOutput }
           as schnorr ;;
@@ -1851,17 +1879,19 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           as commit_to ;;
           #import {sig #[ CDS ] : CDSinput → CDSoutput }
           as CDS ;;
-          '(g_pow_xi,_) ← dl_random Datatypes.tt ;;
+          g_pow_xi ← dl Datatypes.tt ;;
           zkp_i ← schnorr (WitnessToField (inv g_pow_xi), g_pow_xi) ;;
           g_pow_yi ← g_pow_yi_nz Datatypes.tt ;;
           vote_i ← ret (g^+(if vi then 1 else 0)%R)%g ;;
-          xi ← sample uniform #|'Z_q| ;;
-          let xi := (WitnessToField (otf xi : 'Z_q) : v_Z) in
-          g_pow_xy ← dl (WitnessToField (FieldToWitness (xi) * (inv g_pow_yi)))%R ;;
-            vote_i ← ret ((g_pow_xy : gT) * g^+(if vi then 1 else 0)%R)%g ;;
-            commit ← commit_to vote_i ;;
-            cds_i ← CDS ((g_pow_xi, g_pow_yi, vote_i), (xi, vi)) ;;
-            ret (((zkp_i, g_pow_xi, commit, (cds_i : t_OrZKPCommit, vote_i))) : (((t_SchnorrZKPCommit × v_G) × v_Z) × (t_OrZKPCommit × v_G))%pack)).
+          xi ← get_option DL_loc erefl ;;
+          (* xi ← sample uniform #|'Z_q| ;; *)
+          (* let xi := (WitnessToField (otf xi : 'Z_q) : v_Z) in *)
+          (* g_pow_xy ← dl (WitnessToField (FieldToWitness (xi) * (inv g_pow_yi)))%R ;; *)
+          g_pow_xy ← @ret v_G ((g_pow_yi : gT) ^+ (FieldToWitness xi)) ;;
+          vote_i ← ret ((g_pow_xy : gT) * g^+(if vi then 1 else 0)%R)%g ;;
+          commit ← commit_to vote_i ;;
+          cds_i ← CDS ((g_pow_xi, g_pow_yi, vote_i), (xi, vi)) ;;
+          ret (((zkp_i, g_pow_xi, commit, (cds_i : t_OrZKPCommit, vote_i))) : (((t_SchnorrZKPCommit × v_G) × v_Z) × (t_OrZKPCommit × v_G))%pack)).
   Defined.
   Final Obligation.
     intros.
@@ -1870,38 +1900,21 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     - apply valid_empty_package.
     - intros.
       ssprove_valid.
+      eapply valid_injectMap.
+      2: apply prog_valid.
+      + solve_in_fset.
     - try (rewrite <- fset0E ; setoid_rewrite @imfset0 ; rewrite in_fset0 ; reflexivity).
   Qed.
 
-  Program Definition dl_random2 :
-    package fset0
-      [interface
-         #val #[ DL_RANDOM ] : 'unit → chDLRandom
-      ]
-      [interface
-         #val #[ (DL_RANDOM+1)%nat ] : 'unit → chDLRandom
-      ]
-    :=
-    [package
-        #def #[ (DL_RANDOM+1)%nat ] (_ : 'unit) : chDLRandom
-        {
-          #import {sig #[ DL_RANDOM ] : 'unit → chDLRandom }
-          as dl_random ;;
-          res ← dl_random Datatypes.tt ;;
-          ret res
-        }
-    ].
-  Fail Final Obligation.
-
   Program Definition full_protocol_interface_step4 (state : t_OvnContractState) (i : nat) (vi : 'bool) :
-    package fset0
+    package (fset [DDH_loc1; DDH_loc2])
       [interface
-         #val #[ SCHNORR ] : schnorrInput → schnorrOutput
+         #val #[ DL ] : 'unit → chDLOutput
+       ; #val #[ DDH ] : 'unit → chDDHOutput
+       ; #val #[ SCHNORR ] : schnorrInput → schnorrOutput
        ; #val #[ COMMIT ] : chCommitInput → chCommitOutput
        ; #val #[ GPOWYINOTZERO ] : chGPowYiNotZeroInput → chGPowYiNotZeroOutput
        ; #val #[ CDS ] : CDSinput → CDSoutput
-       ; #val #[ DL_RANDOM ] : 'unit → chDLRandom
-       ; #val #[ (DL_RANDOM+1)%nat ] : 'unit → chDLRandom
       ]
       [interface
          #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript
@@ -1910,12 +1923,10 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
   Next Obligation.
     intros.
     refine (
-        #import {sig #[ DL ] : chDLInput → chDLOutput }
+        #import {sig #[ DL ] : 'unit → chDLOutput }
         as dl ;;
-          #import {sig #[ DL_RANDOM ] : 'unit → chDLRandom }
-          as dl_random ;;
-          #import {sig #[ (DL_RANDOM+1)%nat ] : 'unit → chDLRandom }
-          as dl_random2 ;;
+        #import {sig #[ DDH ] : 'unit → chDDHOutput }
+        as ddh ;;
           #import {sig #[ SCHNORR ] : schnorrInput → schnorrOutput }
           as schnorr ;;
           #import {sig #[ GPOWYINOTZERO ] : chGPowYiNotZeroInput → chGPowYiNotZeroOutput }
@@ -1924,10 +1935,13 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           as commit_to ;;
           #import {sig #[ CDS ] : CDSinput → CDSoutput }
           as CDS ;;
-          '(g_pow_xi,_) ← dl_random Datatypes.tt ;;
+          (* g_pow_xi ← dl Datatypes.tt ;; *)
+          '(g_pow_xi, g_pow_yi) ← ddh Datatypes.tt ;;
           zkp_i ← schnorr (WitnessToField (inv g_pow_xi), g_pow_xi) ;;
-          g_pow_yi ← g_pow_yi_nz Datatypes.tt ;;
-          '(g_pow_xy,xi) ← dl_random2 Datatypes.tt ;;
+          (* g_pow_yi ← g_pow_yi_nz Datatypes.tt ;; *)
+          let g_pow_yi : v_G := g_pow_yi in
+          xi ← get_option DDH_loc1 erefl ;;
+          g_pow_xy ← @ret v_G ((g_pow_yi : gT) ^+ (FieldToWitness xi)) ;;
           vote_i ← ret ((g_pow_xy : gT) * g^+(if vi then 1 else 0)%R)%g ;;
           commit ← commit_to vote_i ;;
           cds_i ← CDS ((g_pow_xi, g_pow_yi, vote_i), (xi, vi)) ;;
@@ -1940,21 +1954,50 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     - apply valid_empty_package.
     - intros.
       ssprove_valid.
+      eapply valid_injectLocations.
+      2:{
+        eapply valid_injectMap.
+        2: apply prog_valid.
+        + solve_in_fset.
+      }
+       + solve_in_fset.
     - try (rewrite <- fset0E ; setoid_rewrite @imfset0 ; rewrite in_fset0 ; reflexivity).
   Qed.
+  Fail Next Obligation.
 
   (** All steps *)
 
-  Program Definition full_protocol_intantiated (state : t_OvnContractState) (i : nat) (vi : 'bool) : package fset0 [interface]
+  Program Definition full_protocol_intantiated (state : t_OvnContractState) (i : nat) (vi : 'bool) : package (fset [DL_loc]) [interface]
       [interface
          #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript
       ] :=
-    {package (full_protocol_interface state i vi ∘ par dl_real (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real)))}.
+    {package (full_protocol_interface state i vi ∘ par (DL_game false) (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real)))}.
   Final Obligation.
-    intros.
-    trimmed_package (dl_real).
-    trimmed_package (dl_ideal).
-    trimmed_package (dl_random).
+  intros.
+  (* set (DL_game false). *)
+  (*   trimmed_package (DL_game false). *)
+    (* trimmed_package (dl_ideal). *)
+  (* trimmed_package (dl_random). *)
+  assert (trimmed [interface #val #[DL] : 'unit → chDLOutput ; #val #[DL_GUESS] : chDLInput → 'bool ] (DL_game false)).
+  1:{
+    unfold trimmed.
+    unfold trim.
+    rewrite filterm_set.
+    simpl ; fold chElement.
+
+    rewrite in_fset.
+    rewrite mem_head.
+    simpl.
+
+    setoid_rewrite filterm_set ; simpl ; fold chElement.
+    rewrite in_fset.
+    rewrite in_cons.
+    rewrite mem_head.
+    rewrite Bool.orb_true_r.
+
+    rewrite filterm0.
+    reflexivity.
+  }
 
     trimmed_package (schnorr_real).
     trimmed_package (schnorr_ideal).
@@ -1975,8 +2018,24 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     all: try (apply fsubsetxx).
     all: try rewrite <- fset0E.
     all: try rewrite !fset0U.
-    1: rewrite <- !fset_cat ; simpl.
-    all: try (apply fsubsetxx || solve_in_fset).
+    all: try rewrite !fsetU0.
+
+    all: try rewrite <- fset1E.
+    all: unfold idents.
+    all: try rewrite imfset1.
+    all: try rewrite fdisjoints1.
+    all: try rewrite (fset_cons).
+    all: try rewrite fset1E.
+    all: try rewrite imfsetU.
+    all: try rewrite <- !fset1E.
+    all: try rewrite !imfset1.
+    all: try now rewrite notin_fset.
+    (* 1: rewrite <- !fset_cat ; simpl. *)
+    all: try rewrite !fset1E.
+    all: try rewrite <- !fset_cat.
+    all: simpl.
+    all: unfold Game_import ; try rewrite <- fset0E.
+    all: apply fsubsetxx.
   Qed.
 
   (* Theorem valid_link_inv : *)
@@ -2006,6 +2065,106 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
     repeat (apply (ssrbool.elimT ssrbool.orP) in H0 ; destruct H0) ; apply (ssrbool.elimT eqP) in H0 ; now inversion H0 ; subst.
 
+  Lemma advantage_reflexivity :
+    forall P A, AdvantageE P P A = 0%R.
+  Proof.
+    unfold AdvantageE.
+    intros.
+    rewrite subrr.
+    rewrite Num.Theory.normr0.
+    reflexivity.
+  Qed.
+
+  Ltac simpl_idents :=
+    unfold idents
+    ; rewrite !fset_cons
+    ; try rewrite <- !(fset_cons _ [::])
+    ; rewrite <- !fset1E
+    ; rewrite !imfsetU
+    ; rewrite !imfset1
+    ; rewrite !fset1E
+    ; rewrite <- !fset_cat
+    ; simpl.
+
+  Ltac solve_idents :=
+    rewrite fset_cons
+    ; rewrite fdisjointUl
+    ; rewrite <- !fset1E
+    ; rewrite !fdisjoint1s
+    ; try rewrite !fset1E
+    ; rewrite !in_fset
+    ; easy.
+
+  Lemma Advantage_par_emptyR :
+    ∀ G₀ G₁ A,
+      AdvantageE (par G₀ emptym) (par G₁ emptym) A = AdvantageE G₀ G₁ A.
+  Proof.
+    intros G₀ G₁ A.
+    unfold AdvantageE.
+    unfold par.
+    rewrite !unionm0.
+    reflexivity.
+  Qed.
+
+  Lemma Advantage_parR :
+    ∀ G₀ G₁ G₁' A L₀ L₁ L₁' E₀ E₁,
+      ValidPackage L₀ Game_import E₀ G₀ →
+      ValidPackage L₁ Game_import E₁ G₁ →
+      ValidPackage L₁' Game_import E₁ G₁' →
+      flat E₁ →
+      trimmed E₀ G₀ →
+      trimmed E₁ G₁ →
+      trimmed E₁ G₁' →
+      AdvantageE (par G₁ G₀) (par G₁' G₀) A =
+        AdvantageE G₁ G₁' (A ∘ par (ID E₁) G₀).
+  Proof.
+    intros G₀ G₁ G₁' A L₀ L₁ L₁' E₀ E₁.
+    intros Va0 Va1 Va1' Fe0 Te0 Te1 Te1'.
+    replace (par G₁ G₀) with ((par (ID E₁) G₀) ∘ (par G₁ (ID Game_import) )).
+    2:{
+      erewrite <- interchange.
+      all: ssprove_valid.
+      4:{
+        ssprove_valid.
+        rewrite domm_ID_fset.
+        rewrite -fset0E.
+        apply fdisjoints0.
+      }
+      2:{ unfold Game_import. rewrite -fset0E. discriminate. }
+      2: apply trimmed_ID.
+      rewrite link_id.
+      2:{ unfold Game_import. rewrite -fset0E. discriminate. }
+      2: assumption.
+      rewrite id_link.
+      2: assumption.
+      reflexivity.
+    }
+    replace (par G₁' G₀) with ((par (ID E₁) G₀) ∘ (par G₁' (ID Game_import))).
+    2:{
+      erewrite <- interchange.
+      all: ssprove_valid.
+      4:{
+        ssprove_valid.
+        rewrite domm_ID_fset.
+        rewrite -fset0E.
+        apply fdisjoints0.
+      }
+      2:{ unfold Game_import. rewrite -fset0E. discriminate. }
+      2: apply trimmed_ID.
+      rewrite link_id.
+      2:{ unfold Game_import. rewrite -fset0E. discriminate. }
+      2: assumption.
+      rewrite id_link.
+      2: assumption.
+      reflexivity.
+    }
+    rewrite -Advantage_link.
+    unfold Game_import. rewrite -fset0E.
+    rewrite Advantage_par_emptyR.
+    reflexivity.
+    Unshelve. all: auto.
+  Qed.
+
   Lemma protocol_dl_real_to_ideal :
     forall state (i : nat) vi,
     ∀ (LA : {fset Location}) (A : raw_package),
@@ -2014,6 +2173,8 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       LA :#: Schnorr_ZKP.Schnorr.MyAlg.Simulator_locs ->
       LA :#: OR_ZKP.proof_args.MyAlg.Sigma_locs ->
       LA :#: OR_ZKP.proof_args.MyAlg.Simulator_locs ->
+      LA :#: fset [:: DL_loc] ->
+      LA :#: fset [:: DDH_loc1; DDH_loc2] ->
       forall (ϵ : _),
       (forall P, ϵ_DL P <= ϵ)%R →
       forall (ψ : _),
@@ -2021,16 +2182,64 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       forall (ν : _),
       (forall P, ϵ_GPOWYINOTZERO i state P <= ν)%R →
       (AdvantageE
-           (full_protocol_interface state i vi ∘ par dl_real (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real)))
-           (full_protocol_interface_step4 state i vi ∘ (par (dl_random ∘ dl_ideal) (par (dl_random2 ∘ (dl_random ∘ dl_ideal)) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))))
+           (full_protocol_interface state i vi ∘ par (DL_game false) (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real)))
+           (full_protocol_interface_step4 state i vi ∘ (par (DL_game true) (par (DDH_game true) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))))
            A <= ((ψ + ν) + (ϵ + ϵ))%R)%R.
   Proof.
-    intros ? ? ? ? ? ? H_LA_Schnorr_Sigma H_LA_Schnorr_Simulator H_LA_Or_Sigma H_LA_Or_Simulator ? ? ? ? ? ?.
+    intros ? ? ? ? ? ? H_LA_Schnorr_Sigma H_LA_Schnorr_Simulator H_LA_Or_Sigma H_LA_Or_Simulator H_LA_Or_DL_loc H_LA_Or_DDH_loc ? ? ? ? ? ?.
 
-    trimmed_package (dl_real).
-    trimmed_package (dl_ideal).
-    trimmed_package (dl_random).
-    trimmed_package (dl_random2).
+    assert (trimmed_DL : forall b, trimmed [interface #val #[DL] : 'unit → chDLOutput ; #val #[DL_GUESS] : chDLInput → 'bool ] (DL_game b)).
+    1:{
+      intros.
+      unfold trimmed.
+      unfold trim.
+      rewrite filterm_set.
+      simpl ; fold chElement.
+
+      rewrite in_fset.
+      rewrite mem_head.
+      simpl.
+
+      setoid_rewrite filterm_set ; simpl ; fold chElement.
+      rewrite in_fset.
+      rewrite in_cons.
+      rewrite mem_head.
+      rewrite Bool.orb_true_r.
+
+      rewrite filterm0.
+      reflexivity.
+    }
+    pose (trimmed_DL false).
+    pose (trimmed_DL true).
+
+    assert (trimmed_DDH : forall b, trimmed [interface #val #[DDH] : 'unit → chDDHOutput ; #val #[DDH_GUESS] : chDDHInput → 'bool ] (DDH_game b)).
+    1:{
+      intros.
+      unfold trimmed.
+      unfold trim.
+      rewrite filterm_set.
+      simpl ; fold chElement.
+
+      rewrite in_fset.
+      rewrite mem_head.
+      simpl.
+
+      setoid_rewrite filterm_set ; simpl ; fold chElement.
+      rewrite in_fset.
+      rewrite in_cons.
+      rewrite mem_head.
+      rewrite Bool.orb_true_r.
+
+      rewrite filterm0.
+      reflexivity.
+    }
+    pose (trimmed_DDH false).
+    pose (trimmed_DDH true).
+
+    (* trimmed_package (dl_real). *)
+    (* trimmed_package (dl_ideal). *)
+    (* trimmed_package (dl_random). *)
+    (* trimmed_package (dl_random2). *)
 
     trimmed_package (schnorr_real).
     trimmed_package (schnorr_ideal).
@@ -2050,7 +2259,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     unfold full_protocol_intantiated in fpv.
     unfold pack in fpv.
 
-    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface state i vi ∘ par dl_real (par schnorr_ideal (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal)))) | ].
+    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface state i vi ∘ par (DL_game false) (par schnorr_ideal (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal)))) | ].
     (* rewrite <- (add0r (ϵ + ψ)%R). *)
     apply Num.Theory.lerD.
     {
@@ -2069,39 +2278,76 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       apply Num.Theory.lerD ; [ replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ easy | symmetry ] | ].
       {
         rewrite !(par_commut _ (par _ _)).
-        unfold_advantageE.
-        2: solve_flat.
-        eapply schnorr_advantage.
-        2,3: eassumption.
+
+        erewrite (Advantage_par _ _ _ _ (fset [DL_loc] :|: LA)).
+        3,4: apply pack_valid.
+        4,5,6: solve_trimmed.
+        3: solve_flat.
+        2:{
+          admit.
+          (* ssprove_valid. *)
+
+          (* all:revgoals. *)
+          (* all: try (apply fsubsetxx). *)
+          (* all: try rewrite <- fset0E. *)
+          (* all: try rewrite !fset0U. *)
+          (* all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset). *)
+          (* all: try (apply fsubsetxx || solve_in_fset). *)
+        }
+
+        apply (schnorr_advantage (fset [DL_loc] :|: LA)).
+        2:{ rewrite fdisjointUl.
+            apply /andP ; split.
+            2: eassumption.
+            rewrite <- fset1E.
+            rewrite fdisjoint1s.
+            rewrite notin_fset.
+            easy.
+        }
+        2: apply fdisjoints0.
+
+        (* ssprove_valid. *)
+
+        (* 3,4: apply pack_valid. *)
+        (* 4,5,6: solve_trimmed. *)
+        (* 3: solve_flat. *)
+        (* 2:{ *)
+        (*   ssprove_valid. *)
+
+        (*   all:revgoals. *)
+        (*   all: try (apply fsubsetxx). *)
+        (*   all: try rewrite <- fset0E. *)
+        (*   all: try rewrite !fset0U. *)
+        (*   all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset). *)
+        (*   all: try (apply fsubsetxx || solve_in_fset). *)
+        (* } *)
+
 
         pose (trimmed_ID ([interface #val #[SCHNORR] : schnorrInput → schnorrOutput ]
-           :|: ([interface #val #[GPOWYINOTZERO] : chGPowYiNotZeroInput → chDL_Output ]
-                :|: [interface #val #[COMMIT] : chDL_Output → chCommitOutput ]
+           :|: ([interface #val #[GPOWYINOTZERO] : chGPowYiNotZeroInput → chGPowYiNotZeroOutput ]
+                :|: [interface #val #[COMMIT] : chCommitInput → chCommitOutput ]
                 :|: [interface #val #[CDS] : CDSinput → CDSoutput ]))).
         pose (trimmed_ID [interface #val #[SCHNORR] : schnorrInput → schnorrOutput ]).
 
         solve_valid_package.
         1: apply H.
         1:{
-          unfold idents.
-          rewrite !imfsetU.
-          simpl.
-          rewrite <- !fset1E.
-          rewrite !imfset1.
-          rewrite !fset1E.
-          rewrite <- !fset_cat.
-          simpl.
-          rewrite <- !fset1E.
-          rewrite fdisjoint1s.
-          rewrite !in_fset.
-          easy.
+          simpl_idents.
+          solve_idents.
         }
         1: apply valid_ID ; solve_flat.
         1: apply valid_ID ; solve_flat.
         Unshelve.
+        all:revgoals.
+
+        all: try rewrite <- fset0E.
+        all: try rewrite !fset0U.
+        all: try rewrite !fsetU0.
+
         all: try (apply fsubsetxx).
         all: try rewrite <- fset0E.
         all: try rewrite !fset0U.
+        all: unfold Game_import ; try rewrite <- fset0E.
         all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
         all: try (apply fsubsetxx || solve_in_fset).
       }
@@ -2162,15 +2408,25 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         all: try (apply fsubsetxx || solve_in_fset).
 
         eapply cds_advantage.
-        2,3: eassumption.
+        1: instantiate (1 := LA :|: (fset [DL_loc;DDH_loc1; DDH_loc2])).
+        2:{
+          unfold OR_ZKP.proof_args.MyAlg.Sigma_locs.
+          rewrite fdisjointUl.
+          apply /andP ; split.
+          - eassumption.
+          - rewrite <- fset1E.
+            rewrite fdisjoints1.
+            apply notin_fset.
+        }
+        2:{ apply fdisjoints0. }
 
         pose (trimmed_ID
           ([interface #val #[SCHNORR] : schnorrInput → schnorrOutput ]
-           :|: ([interface #val #[GPOWYINOTZERO] : chGPowYiNotZeroInput → chDL_Output ]
-                :|: [interface #val #[COMMIT] : chDL_Output → chCommitOutput ]
+           :|: ([interface #val #[GPOWYINOTZERO] : chGPowYiNotZeroInput → chDLOutput ]
+                :|: [interface #val #[COMMIT] : chDLOutput → chCommitOutput ]
                 :|: [interface #val #[CDS] : CDSinput → CDSoutput ]))).
-        pose (trimmed_ID ([interface #val #[GPOWYINOTZERO] : chGPowYiNotZeroInput → chDL_Output ]
-          :|: [interface #val #[COMMIT] : chDL_Output → chCommitOutput ]
+        pose (trimmed_ID ([interface #val #[GPOWYINOTZERO] : chGPowYiNotZeroInput → chDLOutput ]
+          :|: [interface #val #[COMMIT] : chDLOutput → chCommitOutput ]
           :|: [interface #val #[CDS] : CDSinput → CDSoutput ])).
         epose (trimmed_ID [interface #val #[CDS] : CDSinput → CDSoutput ]).
 
@@ -2178,29 +2434,12 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         1: apply H.
 
         1:{
-          unfold idents.
-          rewrite !imfsetU.
-          simpl.
-          rewrite <- !fset1E.
-          rewrite !imfset1.
-          rewrite !fset1E.
-          rewrite <- !fset_cat.
-          simpl.
-          rewrite <- !fset1E.
-          rewrite fdisjoint1s.
-          rewrite !in_fset.
-          easy.
+          simpl_idents.
+          solve_idents.
         }
 
         2:{
-          unfold idents.
-          rewrite !imfsetU.
-          simpl.
-          rewrite <- !fset1E.
-          rewrite !imfset1.
-          rewrite !fset1E.
-          rewrite <- !fset_cat.
-          simpl.
+          simpl_idents.
           rewrite <- !fset1E.
           rewrite fdisjoint1s.
           rewrite !in_fset.
@@ -2208,10 +2447,27 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         }
 
         1,2,3: apply valid_ID ; solve_flat.
+
+        Unshelve.
+        all:revgoals.
+        all: try (apply fsubsetxx).
+        all: try rewrite <- fset0E.
+        all: try rewrite !fset0U.
+        all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+        (* all: try (apply fsubsetxx || solve_in_fset). *)
+        all: try (apply fsubsetxx).
+        all: unfold Game_import ; try rewrite <- fset0E.
+        1: try (apply fsubsetxx || solve_in_fset).
+        1: try (apply fsubsetxx || solve_in_fset).
+        1: instantiate (1 := fset0).
+        1: simpl.
+        1: try (apply fsubsetxx || solve_in_fset).
+        1: try (apply fsubsetxx || solve_in_fset).
+        1: try (apply fsubsetxx || solve_in_fset).
       }
     }
 
-    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface state i vi ∘ par dl_real (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))) | ].
+    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface state i vi ∘ par (DL_game false) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))) | ].
     rewrite <- (add0r (ϵ + ϵ)%R).
     apply Num.Theory.lerD.
     {
@@ -2224,8 +2480,11 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         all: try (apply fsubsetxx).
         all: try rewrite <- fset0E.
         all: try rewrite !fset0U.
+        all: try rewrite !fsetU0.
         all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
         all: try (apply fsubsetxx || solve_in_fset).
+
+        all: simpl_idents; solve_idents.
       }
       1:{
         unshelve solve_valid_package.
@@ -2233,12 +2492,15 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         all: try (apply fsubsetxx).
         all: try rewrite <- fset0E.
         all: try rewrite !fset0U.
+        all: try rewrite !fsetU0.
         all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
         all: try (apply fsubsetxx || solve_in_fset).
+
+        all: simpl_idents; solve_idents.
       }
       3: apply H.
       1: (apply fsubsetxx || solve_in_fset).
-      2,3: apply fdisjoints0.
+      2,3: eassumption.
 
       unfold eq_up_to_inv.
       simplify_eq_rel inp_unit.
@@ -2250,11 +2512,19 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       fold chElement.
 
       apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros xi ].
+      apply better_r_put_get_lhs.
+      apply better_r_put_get_rhs.
+      apply r_put_vs_put.
+
       rewrite bind_rewrite.
-      rewrite bind_rewrite.
+      (* rewrite bind_rewrite. *)
 
       simpl.
 
+      repeat choice_type_eqP_handle.
+      erewrite !cast_fun_K.
+      fold chElement.
+      
       apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
 
       replace (Schnorr_ZKP.Schnorr.MyParam.R
@@ -2286,14 +2556,14 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       rewrite !eqxx.
       rewrite !FieldToWitnessCancel.
 
-      replace (_ == _) with true ; [ | symmetry ].
-      2:{
-        rewrite mulrC.
-        rewrite trunc_pow.
-        rewrite expgM.
-        rewrite inv_is_inv.
-        destruct vi ; now rewrite eqxx.
-      }
+      (* replace (_ == _) with true ; [ | symmetry ]. *)
+      (* 2:{ *)
+      (*   rewrite mulrC. *)
+      (*   rewrite trunc_pow. *)
+      (*   rewrite expgM. *)
+      (*   rewrite inv_is_inv. *)
+      (*   destruct vi ; now rewrite eqxx. *)
+      (* } *)
       simpl.
       ssprove_sync=> ?.
       ssprove_sync=> ?.
@@ -2302,12 +2572,32 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       apply r_ret.
       {
         intros.
-        split ; [ | easy ].
-        repeat rewrite pair_equal_spec ; repeat split.
+        split ; [ repeat rewrite pair_equal_spec ; repeat split | ].
+        unfold heap_ignore.
+        intros ℓ ?.
+        destruct H13 as [? [[? []] ?]].
+        subst.
+        rewrite get_set_heap_neq.
+        2:{ apply /eqP ; red ; intros.
+            subst.
+            rewrite fsetUid in H14.
+            rewrite in_fset in H14.
+            now rewrite mem_head in H14.
+        }
+
+        rewrite get_set_heap_neq.
+        2:{ apply /eqP ; red ; intros.
+            subst.
+            rewrite fsetUid in H14.
+            rewrite in_fset in H14.
+            now rewrite mem_head in H14.
+        }
+
+        now apply H13.
       }
     }
 
-    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface_step1 state i vi ∘ (par (dl_random ∘ dl_real) (par dl_real (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))))) | ].
+    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface_step1 state i vi ∘ (par (DL_game false) ((par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))))) | ].
     rewrite <- (add0r (ϵ + ϵ)%R).
     apply Num.Theory.lerD.
     1:{
@@ -2320,8 +2610,10 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         all: try (apply fsubsetxx).
         all: try rewrite <- fset0E.
         all: try rewrite !fset0U.
+        all: try rewrite !fsetU0.
         all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
         all: try (apply fsubsetxx || solve_in_fset).
+        all: (simpl_idents ; solve_idents).
       }
       1:{
         unshelve solve_valid_package.
@@ -2329,12 +2621,14 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         all: try (apply fsubsetxx).
         all: try rewrite <- fset0E.
         all: try rewrite !fset0U.
+        all: try rewrite !fsetU0.
         all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
         all: try (apply fsubsetxx || solve_in_fset).
+        all: (simpl_idents ; solve_idents).
       }
       3: apply H.
       1: (apply fsubsetxx || solve_in_fset).
-      2,3: apply fdisjoints0.
+      2,3: eassumption.
 
       unfold eq_up_to_inv.
       simplify_eq_rel inp_unit.
@@ -2346,8 +2640,13 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       fold chElement.
 
       apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros xi ].
+
+      apply better_r_put_get_lhs.
+      apply better_r_put_get_rhs.
+      apply r_put_vs_put.
+
       rewrite bind_rewrite.
-      rewrite bind_rewrite.
+      (* rewrite bind_rewrite. *)
 
       simpl.
 
@@ -2372,172 +2671,147 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       ssprove_sync=> ?.
 
       apply r_ret.
-      split ; [ | easy ].
-      repeat rewrite pair_equal_spec ; repeat split.
+      split ; [ repeat rewrite pair_equal_spec ; repeat split | ].
+
+      unfold heap_ignore.
+      intros ℓ ?.
+      destruct H13 as [? [[? []] ?]].
+      subst.
+      rewrite get_set_heap_neq.
+      2:{ apply /eqP ; red ; intros.
+          subst.
+          rewrite fsetUid in H14.
+          rewrite in_fset in H14.
+          now rewrite mem_head in H14.
+      }
+
+      rewrite get_set_heap_neq.
+      2:{ apply /eqP ; red ; intros.
+          subst.
+          rewrite fsetUid in H14.
+          rewrite in_fset in H14.
+          now rewrite mem_head in H14.
+      }
+
+      now apply H13.
     }
 
-    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface_step1 state i vi ∘ (par (dl_random ∘ dl_ideal) (par dl_real (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))))) | ].
+    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface_step1 state i vi ∘ (par (DL_game true) ((par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))))) | ].
     apply Num.Theory.lerD.
     1:{
-      unfold_advantageE.
-      rewrite (par_commut (dl_random ∘ dl_real)).
-      rewrite (par_commut (dl_random ∘ dl_ideal)).
-      unfold_advantageE.
-      Unshelve.
-      all: revgoals.
-      all: try (apply fsubsetxx).
-      all: try rewrite <- fset0E.
-      all: try rewrite !fset0U.
-      all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
-      all: try (apply fsubsetxx || solve_in_fset).
-      1: eapply flat_valid_package ; apply dl_random.
-      match goal with | |- context [ AdvantageE _ _ ?A ] => specialize (H0 A) end.
-      unfold ϵ_DL in H0.
-      rewrite Advantage_sym.
-      rewrite Advantage_E in H0.
+      rewrite <- Advantage_link.
+      epose (Advantage_parR (par schnorr_ideal_no_assert
+                                               (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)) (DL_game false) (DL_game true) (A ∘ full_protocol_interface_step1 state i vi)).
+      erewrite e.
+      3,4: apply pack_valid.
+      4,5,6: solve_trimmed.
+      3:{
+        rewrite fset_cons.
+        rewrite fset1E.
+        
+        clear ;
+          unfold flat ;
+
+          intros n u1 u2 ;
+          try rewrite !in_fsetU ;
+
+          let H := fresh in
+          let H0 := fresh in
+          intros H H0.
+        rewrite <- !fset1E in H, H0.
+        rewrite !in_fset1 in H, H0 ;
+
+    repeat (apply (ssrbool.elimT ssrbool.orP) in H ; destruct H) ; apply (ssrbool.elimT eqP) in H ; inversion H ; subst ;
+
+      repeat (apply (ssrbool.elimT ssrbool.orP) in H0 ; destruct H0) ; apply (ssrbool.elimT eqP) in H0 ; now inversion H0 ; subst.
+      }
+      2:{
+        unshelve solve_valid_package.
+        all: revgoals.
+        all: try (apply fsubsetxx).
+        all: try rewrite <- fset0E.
+        all: try rewrite !fset0U.
+        all: try rewrite !fsetU0.
+        all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+        all: try (apply fsubsetxx || solve_in_fset).
+        all: (simpl_idents ; solve_idents).
+      }
       apply H0.
     }
 
-    pose (step4 := full_protocol_interface_step4 state i vi ∘ (par (dl_random ∘ dl_ideal) (par (dl_random2 ∘ (dl_random ∘ dl_real)) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert))))).
+    pose (step4 := full_protocol_interface_step4 state i vi ∘ (par (DL_game true) (par (DDH_game true)(par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert))))).
     eassert (step4_valid : ValidPackage _ Game_import [interface #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript ] step4).
     {
       subst step4.
+      instantiate (1 := (fset [DL_loc;DDH_loc1; DDH_loc2])).
       unshelve solve_valid_package.
       all: revgoals.
       all: try (apply fsubsetxx).
       all: try rewrite <- fset0E.
       all: try rewrite !fset0U.
+      all: try rewrite !fsetU0.
       all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
       all: try (apply fsubsetxx || solve_in_fset).
-
-      eapply valid_par_upto.
-      1:{
-        rewrite <- H5 at 1.
-        erewrite !link_trim_commut.
-        apply parable_par_r.
-        1:{
-          rewrite <- H6 at 1.
-          erewrite !link_trim_commut.
-          solve_Parable.
-        }
-        apply parable_par_r.
-        1:{
-          rewrite <- H9 at 1.
-          solve_Parable.
-        }
-        apply parable_par_r.
-        1:{
-          apply parable_par_r.
-          1:{
-            rewrite <- H11.
-            solve_Parable.
-          }
-          rewrite <- H13.
-          solve_Parable.
-        }
-        rewrite <- H16.
-        solve_Parable.
-      }
-      1:{ solve_valid_package.
-          Unshelve.
-          all: revgoals.
-          all: try (apply fsubsetxx).
-          all: try rewrite <- fset0E.
-          all: try rewrite !fset0U.
-          all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
-          all: try (apply fsubsetxx || solve_in_fset).
-          all: shelve. }
-      1:{ solve_valid_package.
-          Unshelve.
-          all: revgoals.
-          all: try (apply fsubsetxx).
-          all: try rewrite <- fset0E.
-          all: try rewrite !fset0U.
-          all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
-          all: try (apply fsubsetxx || solve_in_fset).
-          all: shelve. }
-      all: revgoals.
-      all: try (apply fsubsetxx).
-      all: try rewrite <- fset0E.
-      all: try rewrite !fset0U.
-      all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
-      all: try (apply fsubsetxx || solve_in_fset).
-    }
-    eapply Order.le_trans ; [ apply Advantage_triangle with (R := step4) | ].
-    rewrite <- (add0r ϵ%R).
-    apply Num.Theory.lerD.
-    2:{
-      subst step4.
-      unfold_advantageE.
-
-      trimmed_package (dl_random2).
-
-      unfold_advantageE.
-      2: solve_flat.
-      Unshelve.
-      all: revgoals.
-      all: try (apply fsubsetxx).
-      all: try rewrite <- fset0E.
-      all: try rewrite !fset0U.
-      all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
-      all: try (apply fsubsetxx || solve_in_fset).
-
-      rewrite !(par_commut _ (par schnorr_ideal_no_assert _)).
-      unfold_advantageE.
-      2: solve_flat.
-      Unshelve.
-      all: revgoals.
-      all: try (apply fsubsetxx).
-      all: try rewrite <- fset0E.
-      all: try rewrite !fset0U.
-      all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
-      all: try (apply fsubsetxx || solve_in_fset).
-
-      unfold_advantageE.
-
-      match goal with | |- context [ AdvantageE _ _ ?A ] => specialize (H0 A) end.
-      unfold ϵ_DL in H0.
-      rewrite Advantage_sym.
-      rewrite Advantage_E in H0.
-      apply H0.
+      all: try (simpl_idents ; solve_idents).
+      simpl.
+      solve_in_fset.
     }
 
-    pose (step1 := (full_protocol_interface_step1 state i vi ∘ (par (dl_random ∘ dl_ideal) (par dl_real (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))))).
+    pose (step1 := (full_protocol_interface_step1 state i vi ∘ (par (DL_game true) ((* par (DDH_game false) *) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))))).
     eassert (step1_valid : ValidPackage _ Game_import [interface #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript ] step1).
     {
       subst step1.
+      instantiate (1 := (fset [DL_loc])).
       unshelve solve_valid_package.
       all: revgoals.
       all: try (apply fsubsetxx).
       all: try rewrite <- fset0E.
       all: try rewrite !fset0U.
+      all: try rewrite !fsetU0.
       all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
       all: try (apply fsubsetxx || solve_in_fset).
+      all: try (simpl_idents ; solve_idents).
     }
 
-    pose (step2 := full_protocol_interface_step2 state i vi ∘ (par (dl_random ∘ dl_ideal) (par dl_real (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert))))).
+    pose (step2 := full_protocol_interface_step2 state i vi ∘ (par (DL_game true) (par (DDH_game false) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert))))).
     eassert (step2_valid : ValidPackage _ Game_import [interface #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript ] step2).
     {
       subst step2.
+      instantiate (1 := (fset [DL_loc;DDH_loc1; DDH_loc2])).
       unshelve solve_valid_package.
 
       all: revgoals.
       all: try (apply fsubsetxx).
       all: try rewrite <- fset0E.
       all: try rewrite !fset0U.
+      all: try rewrite !fsetU0.
       all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
       all: try (apply fsubsetxx || solve_in_fset).
+      all: try (simpl_idents ; solve_idents).
+      simpl.
+      solve_in_fset.
     }
 
-    split_advantage step2.
+    try apply (AdvantageE_le_0 _ _ _ ) ;
+    eapply Order.le_trans ; [ apply Advantage_triangle with (R := step2) | ] ;
+    replace (AdvantageE _ _ _) with (@GRing.zero R) ; [
+        replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ rewrite add0r ; admit | symmetry ] |
+        symmetry ] ; revgoals.
+    (* split_advantage step2. *)
     {
+      fold step1.
       subst step1 step2.
-
+      
       replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ easy | symmetry ].
 
       apply: eq_rel_perf_ind_ignore.
       1: (apply fsubsetxx || solve_in_fset).
-      2,3: apply fdisjoints0.
+      2: eassumption.
+      2:{ rewrite fset_cons.
+          rewrite fset1E.
+          rewrite fdisjointUr.
+          apply /andP ; split ; eassumption.
+      }
 
       unfold eq_up_to_inv.
       simplify_eq_rel inp_unit.
@@ -2550,40 +2824,81 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
       simpl.
 
-      eapply r_const_sample_R ; [ apply LosslessOp_uniform | intros ].
+      apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros xi ].
 
-      eapply r_transR.
-      1: apply swap_samples.
+      apply better_r_put_get_rhs.
+      apply better_r_put_get_lhs.
+      apply r_put_vs_put.
+
+      (* apply better_r_put_lhs. *)
+
+      (* eapply r_transR. *)
+      (* 1: apply swap_samples. *)
 
       (** Reflexivity from here on *)
 
+      simpl.
       repeat choice_type_eqP_handle.
       erewrite !cast_fun_K.
       fold chElement.
 
       simpl.
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      ssprove_same_head_generic.
+      ssprove_same_head_generic.
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      apply r_ret.
+      split ; [ repeat rewrite pair_equal_spec ; repeat split | ].
+      destruct H13 as [? []].
+      destruct H13 as [? []].
+      subst.
+      intros ? ?.
+      rewrite get_set_heap_neq.
+      2:{ clear -H13 H14.
+        apply /eqP ; red ; intros.
+          subst.
+          rewrite <- fset_cat in H14.
+          rewrite in_fset in H14.
+          simpl in H14.
+          rewrite notin_cons in H14.
+          now move: H14 => /andP [] /eqP.
+      }
 
-      ssprove_sync=> ?.
-      ssprove_sync=> ?.
-      ssprove_sync=> ?.
-      ssprove_sync=> ?.
-      ssprove_same_head_generic.
-      ssprove_same_head_generic.
-      apply (r_reflexivity_alt (L := fset0)) ; [ | easy | easy ].
-      ssprove_valid.
+      rewrite get_set_heap_neq.
+      2:{ clear -H13 H14.
+          apply /eqP ; red ; intros.
+          subst.
+          rewrite <- fset_cat in H14.
+          rewrite in_fset in H14.
+          simpl in H14.
+          rewrite notin_cons in H14.
+          now move: H14 => /andP [] /eqP.
+      }
+
+      now apply H13.
     }
 
-    pose (step3 := full_protocol_interface_step3 state i vi ∘ (par (dl_random ∘ dl_ideal) (par dl_real (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert))))).
+    pose (step3 := full_protocol_interface_step3 state i vi ∘ (par (DL_game true) (par (DDH_game false) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert))))).
     eassert (step3_valid : ValidPackage _ Game_import [interface #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript ] step3).
     {
       subst step3.
+      instantiate (1 := (fset [DL_loc;DDH_loc1; DDH_loc2])).
       unshelve solve_valid_package.
       all: revgoals.
       all: try (apply fsubsetxx).
       all: try rewrite <- fset0E.
       all: try rewrite !fset0U.
+      all: try rewrite !fsetU0.
       all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
       all: try (apply fsubsetxx || solve_in_fset).
+      all: try (simpl_idents ; solve_idents).
+      simpl.
+      solve_in_fset.
     }
 
     split_advantage step3.
@@ -2594,7 +2909,16 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
       apply: eq_rel_perf_ind_ignore.
       1: (apply fsubsetxx || solve_in_fset).
-      2,3: apply fdisjoints0.
+      2:{ rewrite fset_cons.
+          rewrite fset1E.
+          rewrite fdisjointUr.
+          apply /andP ; split ; eassumption.
+      }
+      2:{ rewrite fset_cons.
+          rewrite fset1E.
+          rewrite fdisjointUr.
+          apply /andP ; split ; eassumption.
+      }
 
       unfold eq_up_to_inv.
       simplify_eq_rel inp_unit.
@@ -2607,57 +2931,101 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
       simpl.
 
+      ssprove_sync=> ?.
+      apply better_r_put_get_lhs.
+      apply r_put_vs_put.
+
+      simpl.
+
       repeat choice_type_eqP_handle.
       erewrite !cast_fun_K.
       fold chElement.
 
       simpl.
-      ssprove_sync=> _.
+      (* eapply r_transR. *)
+      (* 1: apply swap_samples. *)
 
-      eapply r_transR.
-      1:{
-        apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
-        apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
-        apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
-        eapply bobble_sampleC.
-        ssprove_same_head_generic.
-        eapply bobble_sampleC.
-        apply r_bind_feq ; [ apply rreflexivity_rule | intros ].
-        apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
-        apply rreflexivity_rule.
-      }
-
-      ssprove_sync=> f0.
-
-      eapply r_transR.
-      1:{
-        eapply r_transR.
-        1:{
-          apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
-          apply swap_samples.
-        }
-        apply swap_samples.
-      }
-
-      ssprove_sync=> f1.
-      ssprove_sync=> f2.
-      ssprove_sync=> f3.
-
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
       ssprove_same_head_generic.
       ssprove_same_head_generic.
 
-      apply (r_reflexivity_alt (L := fset0)) ; [ssprove_valid | easy | easy].
+      (* apply better_r_get_remind_lhs. *)
+      eapply r_get_remind_rhs.
+      1:{
+        unfold Remembers_rhs.
+        intros.
+        unfold rem_rhs.
+        destruct H13 as [? []].
+        destruct H13 as [? []].
+        subst.
+        rewrite get_set_heap_eq.
+        reflexivity.
+      }
+
+      simpl.
+
+      repeat choice_type_eqP_handle.
+      erewrite !cast_fun_K.
+      fold chElement.
+
+      simpl.
+
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      ssprove_sync=> ?.
+      apply r_ret.
+      split ; [ repeat rewrite pair_equal_spec ; repeat split | ].
+      destruct H13 as [? []].
+      destruct H13 as [? []].
+      subst.
+      intros ? ?.
+      rewrite get_set_heap_neq.
+      2:{ clear -H13 H14.
+        apply /eqP ; red ; intros.
+          subst.
+          rewrite <- fset_cat in H14.
+          rewrite in_fset in H14.
+          simpl in H14.
+          rewrite notin_cons in H14.
+          now move: H14 => /andP [] /eqP.
+      }
+
+      rewrite get_set_heap_neq.
+      2:{ clear -H13 H14.
+          apply /eqP ; red ; intros.
+          subst.
+          rewrite <- fset_cat in H14.
+          rewrite in_fset in H14.
+          simpl in H14.
+          rewrite notin_cons in H14.
+          now move: H14 => /andP [] /eqP.
+      }
+
+      now apply H13.
     }
 
 
     {
+      fold step4.
       subst step3 step4.
 
       replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ easy | symmetry ].
 
       apply: eq_rel_perf_ind_ignore.
       1: (apply fsubsetxx || solve_in_fset).
-      2,3: apply fdisjoints0.
+      2:{ rewrite fset_cons.
+          rewrite fset1E.
+          rewrite fdisjointUr.
+          apply /andP ; split ; eassumption.
+      }
+      2:{ rewrite fset_cons.
+          rewrite fset1E.
+          rewrite fdisjointUr.
+          apply /andP ; split ; eassumption.
+      }
 
       unfold eq_up_to_inv.
       simplify_eq_rel inp_unit.
@@ -2670,37 +3038,10 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
       simpl.
 
-      repeat choice_type_eqP_handle.
-      erewrite !cast_fun_K.
-      fold chElement.
+      ssprove_sync=> ?.
+      apply r_put_vs_put.
 
       simpl.
-
-      (* eapply r_const_sample_L ; [ apply LosslessOp_uniform | intros ]. *)
-      ssprove_sync=> ?.
-      ssprove_sync=> ?.
-      ssprove_sync=> ?.
-      ssprove_sync=> ?.
-      ssprove_same_head_generic.
-      rewrite !bind_assoc.
-      ssprove_same_head_generic.
-      simpl.
-
-      eapply r_transL.
-      1:{
-        apply r_nice_swap_rule ; [ easy | easy | ].
-        apply r_bind_assertD.
-      }
-      eapply r_transR.
-      1:{
-        apply r_nice_swap_rule ; [ easy | easy | ].
-        apply r_bind_assertD.
-      }
-
-      apply r_assertD_same.
-      intros.
-
-      rewrite bind_rewrite.
 
       repeat choice_type_eqP_handle.
       erewrite !cast_fun_K.
@@ -2708,67 +3049,162 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
       simpl.
 
-      eapply (r_uniform_bij) with (f := (fun x => fto ((otf x) * inv a0))%R).
+      eapply (r_transL (_
+     )).
       1:{
-        assert (inv a0 \is a GRing.unit).
+        (* eapply (proj1 (bobble_sampleC _ _ _ _)). *)
+        (* ssprove_sync=> ?. *)
+        apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
+        (* eapply (proj1 (bobble_sampleC _ _ _ _)). *)
+        apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
+        ssprove_same_head_generic.
+        rewrite bind_assoc.
+
+        match goal with | |- context [ ⊢ ⦃ _ ⦄ _ ≈ bind _ ?f ⦃ _ ⦄ ] => set f end.
+
+        eassert (forall f,
+                   ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ yi ← sample uniform #|'Z_q| ;; let yi := (WitnessToField (otf yi : 'Z_q) : v_Z) in f (g ^+ (FieldToWitness yi)) ≈
+     x ← is_state (compute_g_pow_yi (ret_both i) (f_g_pow_xis (ret_both state))) ;;
+                                                                          f x ⦃ Logic.eq ⦄).
         {
-          rewrite <- FieldToWitnessCancel.
-          apply rmorph_unit.
-          rewrite unitfE.
-
-          apply /eqP.
-          apply (ssrbool.elimN eqP) in e.
-          red ; intros.
-          apply e.
-          symmetry in H17.
-          rewrite H17.
-          rewrite FieldToWitnessCancel.
-          rewrite inv_is_inv.
-
-          reflexivity.
+          admit.
         }
+        apply H13.
+      }
+      simpl.
 
-        eapply (Bijective (g := fun x => fto ((otf x) / inv a0)%R)).
-        {
-          unfold cancel.
-          simpl.
-          intros.
-          rewrite otf_fto.
-          rewrite <- mulrA.
-          rewrite mulrV.
-          2: apply H17.
-          rewrite mulr1.
-          rewrite fto_otf.
-          reflexivity.
+      eapply (r_transL).
+      1:{
+        eapply (r_transL).
+        1:apply swap_samples.
+        apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
+
+        eapply (r_transL).
+        1:apply swap_samples.
+        apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
+
+        eapply (proj2 (bobble_sampleC _ _ _ _)).
+        apply r_bind_feq.
+        1: apply rreflexivity_rule.
+        intros.
+        apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
+        apply rreflexivity_rule.
+      }
+      simpl.
+      ssprove_sync=> ?.
+      apply better_r_put_rhs.
+      apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
+      apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
+      ssprove_same_head_generic.
+      simpl.
+
+      apply better_r.
+      eapply r_get_remind_rhs.
+      1:{
+        unfold Remembers_rhs.
+        intros.
+        unfold rem_rhs.
+        destruct H13 as [? []].
+        destruct H13 as [? []].
+        subst.
+        rewrite get_set_heap_neq.
+        1:{
+          rewrite get_set_heap_eq.
+          1:{
+            reflexivity.
+          }
         }
-        {
-          unfold cancel.
-          simpl.
-          intros.
-          rewrite otf_fto.
-          rewrite mulrVK.
-          2: apply H17.
-          rewrite fto_otf.
+        now apply /eqP.
+      }
+      apply better_r.
+
+      simpl.
+      rewrite FieldToWitnessCancel.
+
+      replace (g ^+ _ != g ^+ FieldToWitness 0%R) with true.
+      2:{
+        admit.
+      }
+      simpl.
+
+      apply better_r.
+      eapply r_get_remind_lhs.
+      1:{
+        unfold Remembers_lhs.
+        intros.
+        unfold rem_lhs.
+        destruct H13 as [? []].
+        destruct H13 as [? []].
+        destruct H13 as [? []].
+        subst.
+        rewrite get_set_heap_eq.
+        1:{
           reflexivity.
         }
       }
-      intros.
-      ssprove_sync=> ?.
-      (* ssprove_same_head_generic. *)
-      ssprove_sync=> ?.
-      ssprove_sync=> ?.
-      ssprove_sync=> ?.
-      ssprove_sync=> ?.
+      apply better_r.
+
+      simpl.
+
+      repeat choice_type_eqP_handle.
+      erewrite !cast_fun_K.
+      fold chElement.
+
+      simpl.
+      apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
+      apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
+      apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
+      apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
+      apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
       apply r_ret.
-      split ; [ | easy ].
+      {
+        intros.
+        split ; [ repeat rewrite pair_equal_spec ; repeat split | ].
+        unfold heap_ignore.
+        intros ℓ ?.
+        destruct H13 as [? [[? [[? []]]] ?]].
+        subst.
+        rewrite get_set_heap_neq.
+        2:{ apply /eqP ; red ; intros.
+            subst.
+            rewrite fsetUid in H14.
+            rewrite in_fset in H14.
+            now rewrite !mem_head in H14.
+        }
 
-      intros.
-      rewrite !rmorphM.
-      rewrite !FieldToWitnessCancel.
-      rewrite !otf_fto.
-      reflexivity.
+        rewrite get_set_heap_neq.
+        2:{ apply /eqP ; red ; intros.
+            subst.
+            rewrite fsetUid in H14.
+            rewrite in_fset in H14.
+            rewrite notin_cons in H14.
+            rewrite notin_cons in H14.
+            rewrite !mem_head in H14.
+            move: H14 => /andP [_] /andP [_].
+            easy.
+        }
+
+        rewrite get_set_heap_neq.
+        2:{ apply /eqP ; red ; intros.
+            subst.
+            rewrite fsetUid in H14.
+            rewrite in_fset in H14.
+            rewrite notin_cons in H14.
+            rewrite notin_cons in H14.
+            move: H14 => /andP [_] /andP [] /eqP ? _.
+            easy.
+        }
+
+        now apply H13.
+      }
+      (* intros. *)
+      (* rewrite !rmorphM. *)
+      (* rewrite !FieldToWitnessCancel. *)
+      (* rewrite !otf_fto. *)
+      (* reflexivity. *)
     }
-  Qed. (* Fail Timeout 5 Qed. Admitted. (* 123.43 secs *) *)
+  Admitted.
+  (* Qed. (* Fail Timeout 5 Qed. Admitted. (* 123.43 secs *) *) *)
 
   Lemma all_step_advantage :
     forall state (i : nat),
@@ -2785,13 +3221,13 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       forall (ν : _),
       (forall P, ϵ_GPOWYINOTZERO i state P <= ν)%R →
       (AdvantageE
-         (full_protocol_interface state i true ∘ par dl_real (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real)))
-        (full_protocol_interface state i false ∘ par dl_real (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real))) A <= ((ψ + ν) + (ϵ + ϵ)) + ((ψ + ν) + (ϵ + ϵ)))%R.
+         (full_protocol_interface state i true ∘ par (DL_game false) (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real)))
+        (full_protocol_interface state i false ∘ par (DL_game false) (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real))) A <= ((ψ + ν) + (ϵ + ϵ)) + ((ψ + ν) + (ϵ + ϵ)))%R.
   Proof.
     intros ? ? ? ? ? H_LA_Schnorr_Sigma H_LA_Schnorr_Simulator H_LA_Or_Sigma H_LA_Or_Simulator ? ? ? ? ? ?.
 
     (* Close in from the left *)
-    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface_step4 state i true ∘ (par (dl_random ∘ dl_ideal) (par (dl_random2 ∘ (dl_random ∘ dl_ideal)) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))))) | ].
+    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface_step4 state i true ∘ (par (DL_game true) (par (DDH_game true) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))))) | ].
     apply Num.Theory.lerD.
     1: eapply (protocol_dl_real_to_ideal) ; eassumption.
 

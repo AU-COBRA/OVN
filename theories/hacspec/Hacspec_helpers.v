@@ -639,7 +639,7 @@ Proof.
   - apply both_eq_reflexivity.
   - rewrite array_from_list_equation_1.
     apply array_from_list_helper_eq.
-    + now rewrite List.length_map.
+    + now rewrite List.map_length.
     + now rewrite ret_both_is_pure_cancel.
     + induction l.
       * apply List.Forall_nil.
