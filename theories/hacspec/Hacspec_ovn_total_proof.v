@@ -1157,7 +1157,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     1: apply valid_scheme ; rewrite <- fset0E ; apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
   Qed.
 
-  Program Definition GPowYiNotZero_ideal i state :
+  Program Definition GPowYiNotZero_ideal (* i state *) :
     package fset0
       [interface]
       [interface
@@ -1167,16 +1167,20 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     [package
         #def #[ GPOWYINOTZERO ] (_ : chGPowYiNotZeroInput) : chGPowYiNotZeroOutput
         {
-          temp ← is_state (compute_g_pow_yi (ret_both (i : int32)) (f_g_pow_xis (ret_both state))) ;;
-          #assert ((temp : gT) != g ^+ nat_of_ord (FieldToWitness (0%R))) ;;
-          ret (temp : v_G)
+          yi ← sample uniform #|'Z_q| ;;
+          let yi := (WitnessToField (otf yi : 'Z_q) : v_Z) in
+          ret (g ^+ (FieldToWitness yi))
+          (* temp ← is_state (compute_g_pow_yi (ret_both (i : int32)) (f_g_pow_xis (ret_both state))) ;; *)
+          (* #assert ((temp : gT) != g ^+ nat_of_ord (FieldToWitness (0%R))) ;; *)
+          (* ret (temp : v_G) *)
         }
     ].
-  Final Obligation.
-    intros.
-    ssprove_valid.
-    1: apply valid_scheme ; rewrite <- fset0E ; apply (ChoiceEquality.is_valid_code (both_prog_valid _)).
-  Qed.
+  (* Final Obligation. *)
+  (*   intros. *)
+  (*   ssprove_valid. *)
+  (*   1: apply valid_scheme ; rewrite <- fset0E ; apply (ChoiceEquality.is_valid_code (both_prog_valid _)). *)
+  (* Qed. *)
+  Fail Next Obligation.
 
   (* GPowYiNotZero - game *)
   Definition GPowYiNotZero_game i state :
@@ -1184,7 +1188,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
          #val #[ GPOWYINOTZERO ] : chGPowYiNotZeroInput → chGPowYiNotZeroOutput
       ] :=
     λ b,
-      if b then {locpackage (GPowYiNotZero_real i state)} else {locpackage (GPowYiNotZero_ideal i state)}.
+      if b then {locpackage (GPowYiNotZero_real i state)} else {locpackage (GPowYiNotZero_ideal (* i state *))}.
 
   (* (∀ D, DDH.ϵ_DDH D <= ϵ_DDH) *)
   Definition ϵ_GPOWYINOTZERO i state := Advantage (GPowYiNotZero_game i state).
@@ -2004,7 +2008,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     trimmed_package (schnorr_ideal_no_assert).
 
     trimmed_package (GPowYiNotZero_real i state).
-    trimmed_package (GPowYiNotZero_ideal i state).
+    trimmed_package (GPowYiNotZero_ideal (* i state *)).
 
     trimmed_package (commit_real).
     trimmed_package (commit_ideal).
@@ -2165,6 +2169,25 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     Unshelve. all: auto.
   Qed.
 
+  (* Lemma compute_g_pow_yi_is_rand i state : *)
+  (*   forall (ν : _), *)
+  (*     (forall P, ϵ_GPOWYINOTZERO i state P <= ν)%R → *)
+  (*   ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ *)
+  (*       yi ← sample uniform #|'Z_q| ;; *)
+  (*       let yi := (WitnessToField (otf yi : 'Z_q) : v_Z) in *)
+  (*       ret (g ^+ (FieldToWitness yi)) ≈ *)
+  (*       x ← is_state (compute_g_pow_yi (ret_both i) (f_g_pow_xis (ret_both state))) ;; *)
+  (*       ret (x : gT) *)
+  (*         ⦃ Logic.eq ⦄. *)
+  (* Proof. *)
+  (*   (* intros. *) *)
+  (*   (* epose (ϵ_GPOWYINOTZERO i state). *) *)
+  (*   (* unfold ϵ_GPOWYINOTZERO in s. *) *)
+
+  (*   (* unfold GPowYiNotZero_game in s. *) *)
+    
+  (* Admitted. *)
+
   Lemma protocol_dl_real_to_ideal :
     forall state (i : nat) vi,
     ∀ (LA : {fset Location}) (A : raw_package),
@@ -2183,7 +2206,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       (forall P, ϵ_GPOWYINOTZERO i state P <= ν)%R →
       (AdvantageE
            (full_protocol_interface state i vi ∘ par (DL_game false) (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real)))
-           (full_protocol_interface_step4 state i vi ∘ (par (DL_game true) (par (DDH_game true) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))))
+           (full_protocol_interface_step4 state i vi ∘ (par (DL_game true) (par (DDH_game true) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal_no_assert)))))
            A <= ((ψ + ν) + (ϵ + ϵ))%R)%R.
   Proof.
     intros ? ? ? ? ? ? H_LA_Schnorr_Sigma H_LA_Schnorr_Simulator H_LA_Or_Sigma H_LA_Or_Simulator H_LA_Or_DL_loc H_LA_Or_DDH_loc ? ? ? ? ? ?.
@@ -2246,7 +2269,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     trimmed_package (schnorr_ideal_no_assert).
 
     trimmed_package (GPowYiNotZero_real i state).
-    trimmed_package (GPowYiNotZero_ideal i state).
+    trimmed_package (GPowYiNotZero_ideal (* i state *)).
 
     trimmed_package (commit_real).
     trimmed_package (commit_ideal).
@@ -2259,7 +2282,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     unfold full_protocol_intantiated in fpv.
     unfold pack in fpv.
 
-    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface state i vi ∘ par (DL_game false) (par schnorr_ideal (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal)))) | ].
+    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface state i vi ∘ par (DL_game false) (par schnorr_ideal (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal)))) | ].
     (* rewrite <- (add0r (ϵ + ψ)%R). *)
     apply Num.Theory.lerD.
     {
@@ -2284,15 +2307,14 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         4,5,6: solve_trimmed.
         3: solve_flat.
         2:{
-          admit.
-          (* ssprove_valid. *)
+          ssprove_valid.
 
-          (* all:revgoals. *)
-          (* all: try (apply fsubsetxx). *)
-          (* all: try rewrite <- fset0E. *)
-          (* all: try rewrite !fset0U. *)
-          (* all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset). *)
-          (* all: try (apply fsubsetxx || solve_in_fset). *)
+          all:revgoals.
+          all: try (apply fsubsetxx).
+          all: try rewrite <- fset0E.
+          all: try rewrite !fset0U.
+          all: try now (rewrite <- !fset_cat ; simpl ; solve_in_fset).
+          all: try (apply fsubsetxx || solve_in_fset).
         }
 
         apply (schnorr_advantage (fset [DL_loc] :|: LA)).
@@ -2361,7 +2383,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       all: try (apply fsubsetxx || solve_in_fset).
 
 
-      eapply Order.le_trans ; [ apply Advantage_triangle with (R := ((par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_real))) | ].
+      eapply Order.le_trans ; [ apply Advantage_triangle with (R := ((par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_real))) | ].
       rewrite <- (addr0 (ψ + ν)%R).
       apply Num.Theory.lerD ; [ | replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ easy | symmetry ] ].
       {
@@ -2467,7 +2489,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       }
     }
 
-    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface state i vi ∘ par (DL_game false) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))) | ].
+    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface state i vi ∘ par (DL_game false) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal_no_assert)))) | ].
     rewrite <- (add0r (ϵ + ϵ)%R).
     apply Num.Theory.lerD.
     {
@@ -2545,14 +2567,9 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
       ssprove_sync=> ?.
       ssprove_same_head_generic.
-      rewrite !bind_assoc.
-      ssprove_same_head_generic.
-
-      simpl.
-      apply (rsame_head_alt (L := fset0)) ; [ destruct (_ != _) ; ssprove_valid | done | done | intros ? ].
-
       ssprove_sync=> ?.
-
+      ssprove_sync=> ?.
+      
       rewrite !eqxx.
       rewrite !FieldToWitnessCancel.
 
@@ -2597,7 +2614,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       }
     }
 
-    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface_step1 state i vi ∘ (par (DL_game false) ((par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))))) | ].
+    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface_step1 state i vi ∘ (par (DL_game false) ((par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal_no_assert)))))) | ].
     rewrite <- (add0r (ϵ + ϵ)%R).
     apply Num.Theory.lerD.
     1:{
@@ -2660,10 +2677,11 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       ssprove_sync=> ?.
 
       ssprove_same_head_generic.
-      ssprove_same_head_generic.
+      (* ssprove_same_head_generic. *)
 
       rewrite !FieldToWitnessCancel.
 
+      ssprove_sync=> ?.
       ssprove_sync=> ?.
       ssprove_sync=> ?.
       ssprove_sync=> ?.
@@ -2696,12 +2714,12 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       now apply H13.
     }
 
-    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface_step1 state i vi ∘ (par (DL_game true) ((par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))))) | ].
+    eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface_step1 state i vi ∘ (par (DL_game true) ((par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal_no_assert)))))) | ].
     apply Num.Theory.lerD.
     1:{
       rewrite <- Advantage_link.
       epose (Advantage_parR (par schnorr_ideal_no_assert
-                                               (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)) (DL_game false) (DL_game true) (A ∘ full_protocol_interface_step1 state i vi)).
+                                               (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal_no_assert)) (DL_game false) (DL_game true) (A ∘ full_protocol_interface_step1 state i vi)).
       erewrite e.
       3,4: apply pack_valid.
       4,5,6: solve_trimmed.
@@ -2739,7 +2757,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       apply H0.
     }
 
-    pose (step4 := full_protocol_interface_step4 state i vi ∘ (par (DL_game true) (par (DDH_game true)(par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert))))).
+    pose (step4 := full_protocol_interface_step4 state i vi ∘ (par (DL_game true) (par (DDH_game true)(par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal_no_assert))))).
     eassert (step4_valid : ValidPackage _ Game_import [interface #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript ] step4).
     {
       subst step4.
@@ -2757,7 +2775,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       solve_in_fset.
     }
 
-    pose (step1 := (full_protocol_interface_step1 state i vi ∘ (par (DL_game true) ((* par (DDH_game false) *) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert)))))).
+    pose (step1 := (full_protocol_interface_step1 state i vi ∘ (par (DL_game true) ((* par (DDH_game false) *) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal_no_assert)))))).
     eassert (step1_valid : ValidPackage _ Game_import [interface #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript ] step1).
     {
       subst step1.
@@ -2773,7 +2791,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       all: try (simpl_idents ; solve_idents).
     }
 
-    pose (step2 := full_protocol_interface_step2 state i vi ∘ (par (DL_game true) (par (DDH_game false) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert))))).
+    pose (step2 := full_protocol_interface_step2 state i vi ∘ (par (DL_game true) (par (DDH_game false) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal_no_assert))))).
     eassert (step2_valid : ValidPackage _ Game_import [interface #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript ] step2).
     {
       subst step2.
@@ -2795,13 +2813,19 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     try apply (AdvantageE_le_0 _ _ _ ) ;
     eapply Order.le_trans ; [ apply Advantage_triangle with (R := step2) | ] ;
     replace (AdvantageE _ _ _) with (@GRing.zero R) ; [
-        replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ rewrite add0r ; admit | symmetry ] |
+        replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ rewrite add0r | symmetry ] |
         symmetry ] ; revgoals.
+    3:{
+      eapply Order.le_trans.
+      2: apply (H0 A).
+      apply Num.Theory.normr_ge0.
+    }
+
     (* split_advantage step2. *)
     {
       fold step1.
       subst step1 step2.
-      
+
       replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ easy | symmetry ].
 
       apply: eq_rel_perf_ind_ignore.
@@ -2846,7 +2870,8 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       ssprove_sync=> ?.
       ssprove_sync=> ?.
       ssprove_same_head_generic.
-      ssprove_same_head_generic.
+      (* ssprove_same_head_generic. *)
+      ssprove_sync=> ?.
       ssprove_sync=> ?.
       ssprove_sync=> ?.
       ssprove_sync=> ?.
@@ -2883,7 +2908,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       now apply H13.
     }
 
-    pose (step3 := full_protocol_interface_step3 state i vi ∘ (par (DL_game true) (par (DDH_game false) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal i state) commit_ideal) cds_ideal_no_assert))))).
+    pose (step3 := full_protocol_interface_step3 state i vi ∘ (par (DL_game true) (par (DDH_game false) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal_no_assert))))).
     eassert (step3_valid : ValidPackage _ Game_import [interface #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript ] step3).
     {
       subst step3.
@@ -2948,7 +2973,8 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       ssprove_sync=> ?.
       ssprove_sync=> ?.
       ssprove_same_head_generic.
-      ssprove_same_head_generic.
+      (* ssprove_same_head_generic. *)
+      ssprove_sync=> ?.
 
       (* apply better_r_get_remind_lhs. *)
       eapply r_get_remind_rhs.
@@ -3049,28 +3075,27 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
       simpl.
 
-      eapply (r_transL (_
-     )).
-      1:{
-        (* eapply (proj1 (bobble_sampleC _ _ _ _)). *)
-        (* ssprove_sync=> ?. *)
-        apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
-        (* eapply (proj1 (bobble_sampleC _ _ _ _)). *)
-        apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ].
-        ssprove_same_head_generic.
-        rewrite bind_assoc.
+     (*  eapply r_transL. *)
+     (*  1:{ *)
+     (*    (* eapply (proj1 (bobble_sampleC _ _ _ _)). *) *)
+     (*    (* ssprove_sync=> ?. *) *)
+     (*    apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ]. *)
+     (*    (* eapply (proj1 (bobble_sampleC _ _ _ _)). *) *)
+     (*    apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros ? ]. *)
+     (*    ssprove_same_head_generic. *)
+     (*    (* rewrite bind_assoc. *) *)
 
-        match goal with | |- context [ ⊢ ⦃ _ ⦄ _ ≈ bind _ ?f ⦃ _ ⦄ ] => set f end.
+     (*    (* match goal with | |- context [ ⊢ ⦃ _ ⦄ _ ≈ bind _ ?f ⦃ _ ⦄ ] => set f end. *) *)
 
-        eassert (forall f,
-                   ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ yi ← sample uniform #|'Z_q| ;; let yi := (WitnessToField (otf yi : 'Z_q) : v_Z) in f (g ^+ (FieldToWitness yi)) ≈
-     x ← is_state (compute_g_pow_yi (ret_both i) (f_g_pow_xis (ret_both state))) ;;
-                                                                          f x ⦃ Logic.eq ⦄).
-        {
-          admit.
-        }
-        apply H13.
-      }
+     (*    eassert (forall f, *)
+     (*               ⊢ ⦃ λ '(s₀, s₁), s₀ = s₁ ⦄ yi ← sample uniform #|'Z_q| ;; let yi := (WitnessToField (otf yi : 'Z_q) : v_Z) in f (g ^+ (FieldToWitness yi)) ≈ *)
+     (* x ← is_state (compute_g_pow_yi (ret_both i) (f_g_pow_xis (ret_both state))) ;; *)
+     (*                                                                      f x ⦃ Logic.eq ⦄). *)
+     (*    { *)
+     (*      admit. *)
+     (*    } *)
+     (*    apply H13. *)
+     (*  } *)
       simpl.
 
       eapply (r_transL).
@@ -3121,11 +3146,11 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       simpl.
       rewrite FieldToWitnessCancel.
 
-      replace (g ^+ _ != g ^+ FieldToWitness 0%R) with true.
-      2:{
-        admit.
-      }
-      simpl.
+      (* replace (g ^+ _ != g ^+ FieldToWitness 0%R) with true. *)
+      (* 2:{ *)
+      (*   admit. *)
+      (* } *)
+      (* simpl. *)
 
       apply better_r.
       eapply r_get_remind_lhs.
@@ -3203,8 +3228,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       (* rewrite !otf_fto. *)
       (* reflexivity. *)
     }
-  Admitted.
-  (* Qed. (* Fail Timeout 5 Qed. Admitted. (* 123.43 secs *) *) *)
+  Qed. (* Fail Timeout 5 Qed. Admitted. (* 123.43 secs *) *)
 
   Lemma all_step_advantage :
     forall state (i : nat),
