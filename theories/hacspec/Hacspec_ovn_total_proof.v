@@ -1528,7 +1528,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       ssprove_sync=> r.
       now apply r_ret.
     }
-  (* Qed. *) Fail Timeout 5 Qed. Admitted. (* 216.817 secs *)
+  Qed. (* Fail Timeout 5 Qed. Admitted. (* 216.817 secs *) *)
 
   (** DL_ *)
 
@@ -3983,15 +3983,43 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     destruct Hb as [Hc Hb].
     subst.
     eapply rpre_weaken_rule.
-    2: admit.
+    2: shelve.
 
     apply somewhat_let_substitution.
     eapply rpre_weaken_rule.
-    2: admit.
+    2: shelve.
 
     apply somewhat_substitution.
     rewrite bind_rewrite.
     apply somewhat_let_substitution.
+
+    Unshelve.
+    2:{
+      intros ? ? ?.
+      destruct H10.
+      simpl in H11.
+      subst.
+      intros ? ?.
+      rewrite get_set_heap_neq.
+      2:{ clear -H10.
+          rename H10 into H.
+          apply /eqP ; red ; intros.
+          subst.
+          unfold Schnorr_ZKP.Schnorr.MyAlg.Sigma_locs in H.
+          rewrite fset0U in H.
+          rewrite notin_fset in H.
+          rewrite !notin_cons in H.
+          repeat move: H => /andP [/eqP ? H].
+          easy.
+      }
+
+      now apply Hc.
+    }
+    2:{
+      intros ? ? ?.
+      intros ? ?.
+      now apply H10.
+    }
 
     progress repeat replace (f_rp_zkp_random _) with (ret_both (WitnessToField (otf ri))) by now apply both_eq.
     progress repeat replace (f_rp_xi _) with (ret_both (WitnessToField (otf xi))) by now apply both_eq.
@@ -4617,7 +4645,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         rewrite <- conversion_is_true.
         destruct vi ; [ rewrite rmorph1 | rewrite rmorph0 ] ; reflexivity.
     }
-  Admitted. (* Qed. (* Fail Timeout 5 Qed. Admitted. (* 319.394 secs *) *) *)
+   Qed. (* Fail Timeout 5 Qed. Admitted. (* 319.394 secs *) *)
 
   Lemma real_protocol_is_maximum_balloc_secrecy_hiding :
     forall state (i : nat),
