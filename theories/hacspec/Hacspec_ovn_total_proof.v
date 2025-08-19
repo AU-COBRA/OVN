@@ -3459,11 +3459,13 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       (forall P, ϵ_COMMIT P <= ψ)%R ->
       forall (ν : _),
       (forall P, ϵ_GPOWYINOTZERO i state P <= ν)%R →
+      forall (ζ : _),
+      (forall P, ϵ_DDH P <= ζ)%R →
       (AdvantageE
          (full_protocol_interface state i true ∘ par (DL_game false) (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real)))
-        (full_protocol_interface state i false ∘ par (DL_game false) (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real))) A <= ((ψ + ν) + (ϵ + ϵ)) + ((ψ + ν) + (ϵ + ϵ)))%R.
+        (full_protocol_interface state i false ∘ par (DL_game false) (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real))) A <= ((ψ + ν) + (ϵ + (ϵ + ζ))) + ((ψ + ν) + (ϵ + (ϵ + ζ))))%R.
   Proof.
-    intros ? ? ? ? ? H_LA_Schnorr_Sigma H_LA_Schnorr_Simulator H_LA_Or_Sigma H_LA_Or_Simulator H_LA_Or_DL_loc H_LA_Or_DDH_loc ? ? ? ? ? ?.
+    intros ? ? ? ? ? H_LA_Schnorr_Sigma H_LA_Schnorr_Simulator H_LA_Or_Sigma H_LA_Or_Simulator H_LA_Or_DL_loc H_LA_Or_DDH_loc ? ? ? ? ? ? ζ H_DDH.
 
     (* Close in from the left *)
     eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface_step4 state i true ∘ (par (DL_game true) (par (DDH_game true) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal_no_assert)))))) | ].
@@ -3472,7 +3474,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
     (* Close in from the right *)
     eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface_step4 state i false ∘ (par (DL_game true) (par (DDH_game true) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal_no_assert)))))) | ].
-    rewrite <- (add0r ((ψ + ν) + (ϵ + ϵ))%R).
+    rewrite <- (add0r ((ψ + ν) + (ϵ + (ϵ + ζ)))%R).
     apply Num.Theory.lerD.
     2: rewrite Advantage_sym ; eapply (protocol_dl_real_to_ideal) ; eassumption.
 
@@ -3519,11 +3521,11 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         rewrite mem_head.
         simpl.
 
-        setoid_rewrite filterm_set ; simpl ; fold chElement.
-        rewrite in_fset.
-        rewrite in_cons.
-        rewrite mem_head.
-        rewrite Bool.orb_true_r.
+        (* setoid_rewrite filterm_set ; simpl ; fold chElement. *)
+        (* rewrite in_fset. *)
+        (* rewrite in_cons. *)
+        (* rewrite mem_head. *)
+        (* rewrite Bool.orb_true_r. *)
 
         rewrite filterm0.
         reflexivity.
@@ -3602,9 +3604,12 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       (* apply better_r_put_lhs. *)
       apply r_put_vs_put.
 
-      eapply (r_uniform_bij) with (f := (fun (x : Arit (uniform #|'Z_q|)) => fto (otf x + (otf xi)%R ^-1 )%R)) ; [ | intros yi ].
+      ssprove_sync=> yi.
+
+      apply r_put_vs_put.
+      eapply (r_uniform_bij) with (f := (fun (x : Arit (uniform #|'Z_q|)) => fto (otf x + 1 )%R)) ; [ | intros zi ].
       1:{
-        eapply (Bijective (g := (fun (x : Arit (uniform #|'Z_q|)) => fto (otf x - (otf xi) ^-1)%R))).
+        eapply (Bijective (g := (fun (x : Arit (uniform #|'Z_q|)) => fto (otf x - 1)%R))).
         {
           unfold cancel.
           intros.
@@ -3624,12 +3629,8 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           reflexivity.
         }
       }
-
-      (* ssprove_sync=> ?. *)
-
-      apply r_put_vs_put.
-      ssprove_sync=> xi2. (* GOTO HERE *)
-      ssprove_sync=> yi2.
+      (* ssprove_sync=> xi2. (* GOTO HERE *) *)
+      ssprove_sync=> a1.
 
 (* (* g_pow_xi ← dl Datatypes.tt ;; *) *)
 (*           '(g_pow_xi, g_pow_yi) ← ddh Datatypes.tt ;; *)
@@ -3642,7 +3643,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 (*           commit ← commit_to vote_i ;; *)
 (*           cds_i ← CDS ((g_pow_xi, g_pow_yi, vote_i), (xi, vi)) ;; *)
 (*           ret (((zkp_i, g_pow_xi, commit, (cds_i : t_OrZKPCommit, vote_i))) : (((t_SchnorrZKPCommit × v_G) × v_Z) × (t_OrZKPCommit × v_G))%pack)). *)
-
+      ssprove_sync=> a2.
 
       ssprove_same_head_generic.
 
@@ -3718,109 +3719,85 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       apply r_ret.
       {
         intros.
-
-        
-        rewrite !FieldToWitnessCancel.
         rewrite !trunc_pow.
         rewrite !mulg1.
         rewrite !expgD.
 
-        replace ((g ^+ otf yi * g ^+ ((otf xi)^-1)%R) ^+ otf xi)
-          with
-          (g ^+ otf yi ^+ otf xi * g ^+ 1%R)%g.
-        2:{
-          symmetry.
-          rewrite <- expgD.
-          rewrite <- expgM.
-          rewrite mulnDl.
-          rewrite expgD.
-          f_equal.
-          + apply expgM.
-          + replace (g ^+ (muln _ _)) with (g ^+ (nat_of_ord (((otf xi)^-1)%R * otf xi)%R)).
-            2:{ rewrite trunc_pow. reflexivity. }
-            rewrite mulVr ; [ reflexivity | ].
-            admit.
-        }
-        rewrite !trunc_pow.
-
         split ; [ repeat rewrite pair_equal_spec ; repeat split | ].
-        - f_equal.
-          admit.
-        - 
-          
-          symmetry.
-          rewrite <- expgD.
-          rewrite <- expgM.
-          rewrite mulnDl.
-          rewrite expgD.
-          f_equal.
-          + apply expgM.
-          + replace (g ^+ (muln _ _)) with (g ^+ (nat_of_ord (((otf xi)^-1)%R * otf xi)%R)).
-            2:{ rewrite trunc_pow. reflexivity. }
-            rewrite mulVr.
-            2:{ admit. }
-            reflexivity.
-        - rewrite trunc_pow.
-            epose (mulKg _ _).
-            epose (mulVg _).
-
-            epose GaFP.mulg_invg_sub.
-            Set Printing All.
-            epose GaFP.mulg_invg_sub
-            Unset Printing Notations.
-
-            (* (otf xi) *)
-
-          f_equal.
-          rewrite mulVf.
-          Unset Printing Notations.
-          
-          simpl in e.
-
-          rewrite <- !expgM.
-          rewrite mulg
-
-
-
+        
         unfold heap_ignore.
         intros ℓ ?.
-        destruct H13 as [? [[? [[? []]]] ?]].
+
+        destruct H15.
+        destruct H15.
+        destruct H15.
+        destruct H15.
+        destruct H15.
+        destruct H15.
+        destruct H15.
+        destruct H15.
         subst.
-        rewrite get_set_heap_neq.
-        2:{ apply /eqP ; red ; intros.
-            subst.
-            rewrite fsetUid in H14.
-            rewrite in_fset in H14.
-            now rewrite !mem_head in H14.
-        }
 
         rewrite get_set_heap_neq.
-        2:{ apply /eqP ; red ; intros.
+        2:{ clear -H16.
+            rename H16 into H.
+            apply /eqP ; red ; intros.
             subst.
-            rewrite fsetUid in H14.
-            rewrite in_fset in H14.
-            rewrite notin_cons in H14.
-            rewrite notin_cons in H14.
-            rewrite !mem_head in H14.
-            move: H14 => /andP [_] /andP [_].
+            unfold Schnorr_ZKP.Schnorr.MyAlg.Sigma_locs in H.
+            rewrite <- !fset_cat in H.
+            simpl in H.
+            rewrite notin_fset in H.
+            rewrite !notin_cons in H.
+            repeat move: H => /andP [/eqP ? H].
             easy.
         }
 
         rewrite get_set_heap_neq.
-        2:{ apply /eqP ; red ; intros.
+        2:{ clear -H16.
+            rename H16 into H.
+            apply /eqP ; red ; intros.
             subst.
-            rewrite fsetUid in H14.
-            rewrite in_fset in H14.
-            rewrite notin_cons in H14.
-            rewrite notin_cons in H14.
-            move: H14 => /andP [_] /andP [] /eqP ? _.
+            unfold Schnorr_ZKP.Schnorr.MyAlg.Sigma_locs in H.
+            rewrite <- !fset_cat in H.
+            simpl in H.
+            rewrite notin_fset in H.
+            rewrite !notin_cons in H.
+            repeat move: H => /andP [/eqP ? H].
             easy.
         }
 
-        now apply H13.
+        rewrite get_set_heap_neq.
+        2:{ clear -H16.
+            rename H16 into H.
+            apply /eqP ; red ; intros.
+            subst.
+            unfold Schnorr_ZKP.Schnorr.MyAlg.Sigma_locs in H.
+            rewrite <- !fset_cat in H.
+            simpl in H.
+            rewrite notin_fset in H.
+            rewrite !notin_cons in H.
+            repeat move: H => /andP [/eqP ? H].
+            easy.
+        }
+
+        rewrite get_set_heap_neq.
+        2:{ clear -H16.
+            rename H16 into H.
+            apply /eqP ; red ; intros.
+            subst.
+            unfold Schnorr_ZKP.Schnorr.MyAlg.Sigma_locs in H.
+            rewrite <- !fset_cat in H.
+            simpl in H.
+            rewrite notin_fset in H.
+            rewrite !notin_cons in H.
+            repeat move: H => /andP [/eqP ? H].
+            easy.
+        }
+
+        now apply H15.
       }
 
-      easy.
+      (* easy. *)
     }
   Qed.
 
