@@ -3865,24 +3865,49 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       (Z.to_nat (unsigned (i : int32)) < from_uint_size (is_pure n))%coq_nat ->
     ∀ (LA : {fset Location}) (A : raw_package),
       ValidPackage LA [interface #val #[ FULL_PROTOCOL_INTERFACE ] : 'unit → chSingleProtocolTranscript ] A_export A →
+      LA :#: fset [:: DL_loc] ->
       (AdvantageE
          (real_protocol i state vi)
-         (full_protocol_interface state i vi ∘ par dl_real (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real)))
+         (full_protocol_interface state i vi ∘ par (DL_game false) (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real)))
          A = 0)%R.
   Proof.
-    intros state i vi i_lt_n.
+    intros state i vi i_lt_n ? ? ? H_disj_DL.
     intros.
 
-    trimmed_package (dl_real).
-    trimmed_package (dl_ideal).
-    trimmed_package (dl_random).
+    assert (trimmed_DL : forall b, trimmed [interface #val #[DL] : 'unit → chDLOutput ; #val #[DL_GUESS] : chDLInput → 'bool ] (DL_game b)).
+    1:{
+      intros.
+      unfold trimmed.
+      unfold trim.
+      rewrite filterm_set.
+      simpl ; fold chElement.
+
+      rewrite in_fset.
+      rewrite mem_head.
+      simpl.
+
+      setoid_rewrite filterm_set ; simpl ; fold chElement.
+      rewrite in_fset.
+      rewrite in_cons.
+      rewrite mem_head.
+      rewrite Bool.orb_true_r.
+
+      rewrite filterm0.
+      reflexivity.
+    }
+    pose (trimmed_DL false).
+    pose (trimmed_DL true).
+
+    (* trimmed_package (dl_real). *)
+    (* trimmed_package (dl_ideal). *)
+    (* trimmed_package (dl_random). *)
 
     trimmed_package (schnorr_real).
     trimmed_package (schnorr_ideal).
     trimmed_package (schnorr_ideal_no_assert).
 
     trimmed_package (GPowYiNotZero_real i state).
-    trimmed_package (GPowYiNotZero_ideal i state).
+    trimmed_package (GPowYiNotZero_ideal (* i state *)).
 
     trimmed_package (commit_real).
     trimmed_package (commit_ideal).
@@ -3895,7 +3920,8 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
     apply: eq_rel_perf_ind_ignore.
     1: (apply fsubsetxx || solve_in_fset || shelve).
-    2,3: apply fdisjoints0.
+    2: apply fdisjoints0.
+    2: apply H_disj_DL.
 
     unfold eq_up_to_inv.
     simplify_eq_rel inp_unit.
@@ -3905,8 +3931,29 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     fold chElement.
 
     apply (r_uniform_bij) with (f := fun x => x) ; [ now apply inv_bij | intros xi ].
-    rewrite (bind_rewrite v_G _ (g ^+ FieldToWitness (WitnessToField (otf xi)))).
+    apply better_r_put_rhs.
+
+    apply better_r.
+    eapply r_get_remind_rhs.
+    1:{
+      unfold Remembers_rhs.
+      intros.
+      unfold rem_rhs.
+      destruct H10 as [? []].
+      subst.
+      rewrite get_set_heap_eq.
+      1:{
+        reflexivity.
+      }
+    }
     simpl.
+
+    repeat choice_type_eqP_handle.
+    erewrite !cast_fun_K.
+    fold chElement.
+
+    (* rewrite (bind_rewrite v_G _ (g ^+ FieldToWitness (WitnessToField (otf xi)))). *)
+    (* simpl. *)
 
     replace (Schnorr_ZKP.Schnorr.MyParam.R _ _) with true ; [ | symmetry ].
     2:{
@@ -3930,7 +3977,18 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
     (* STUCK .. *)
 
+    apply rpre_hypothesis_rule.
+    intros.
+    destruct H10 as [Ha Hb].
+    destruct Hb as [Hc Hb].
+    subst.
+    eapply rpre_weaken_rule.
+    2: admit.
+
     apply somewhat_let_substitution.
+    eapply rpre_weaken_rule.
+    2: admit.
+
     apply somewhat_substitution.
     rewrite bind_rewrite.
     apply somewhat_let_substitution.
@@ -3990,9 +4048,9 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       reflexivity.
     }
 
-    rewrite H13.
-    rewrite H14.
-    clear H13 H14.
+    rewrite H10.
+    rewrite H11.
+    clear H10 H11.
 
     (* rewrite <- (hacspec_function_guarantees (fun x => n_seq_array_or_seq x _)). *)
     (* rewrite <- (hacspec_function_guarantees (fun x => array_index x _)). *)
@@ -4060,10 +4118,10 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         reflexivity.
       }
 
-      rewrite H16.
-      rewrite H15.
-      rewrite H14.
-      clear H14 H15 H16.
+      rewrite H13.
+      rewrite H12.
+      rewrite H11.
+      clear H11 H12 H13.
 
 
     rewrite <- (hacspec_function_guarantees (fun x => array_index x _)).
@@ -4079,7 +4137,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
     setoid_rewrite (array_update_eq _ (ret_both _) i i_lt_n).
     rewrite bind_rewrite.
-    subst r H13.
+    subst r H10.
     hnf.
     rewrite bind_rewrite.
 
@@ -4141,10 +4199,10 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       reflexivity.
     }
 
-    rewrite H15.
-    rewrite H14.
-    rewrite H13.
-    clear H13 H14 H15.
+    rewrite H12.
+    rewrite H11.
+    rewrite H10.
+    clear H10 H11 H12.
     replace (cast_int (ret_both i)) with (ret_both (i : int32)).
     2:{ apply both_eq.
         simpl.
@@ -4179,17 +4237,17 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       {
         unfold compute_group_element_for_vote at 1.
 
-        rewrite mulrC.
-        rewrite trunc_pow.
-        rewrite expgM.
-        rewrite inv_is_inv.
+        (* rewrite mulrC. *)
+        (* rewrite trunc_pow. *)
+        (* rewrite expgM. *)
+        (* rewrite inv_is_inv. *)
 
         Misc.push_down_sides.
         rewrite <- pow_witness_to_field.
         rewrite <- conversion_is_true.
         destruct vi ; [ rewrite rmorph1 | rewrite rmorph0 ] ; reflexivity.
       }
-      rewrite H13.
+      rewrite H10.
       apply (r_reflexivity_alt (L := fset0)) ; [ ssprove_valid | easy | easy ].
       all: try (apply valid_scheme ; rewrite <- fset0E ; apply (ChoiceEquality.is_valid_code (both_prog_valid _))).
     }
@@ -4205,15 +4263,15 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     unfold cast_vote at 1.
 
     rewrite !eqxx.
-    replace (_ == _) with true ; [ | symmetry].
-    2:{
-      rewrite !FieldToWitnessCancel.
-      rewrite mulrC.
-        rewrite trunc_pow.
-        rewrite expgM.
-        rewrite inv_is_inv.
-        destruct vi ; now rewrite eqxx.
-    }
+    (* replace (_ == _) with true ; [ | symmetry]. *)
+    (* 2:{ *)
+    (*   rewrite !FieldToWitnessCancel. *)
+    (*   rewrite mulrC. *)
+    (*     rewrite trunc_pow. *)
+    (*     rewrite expgM. *)
+    (*     rewrite inv_is_inv. *)
+    (*     destruct vi ; now rewrite eqxx. *)
+    (* } *)
     simpl assertD.
     simpl.
 
@@ -4308,11 +4366,11 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
           reflexivity.
         }
 
-        rewrite H16.
-        rewrite H15.
-        rewrite H14.
         rewrite H13.
-        clear H13 H14 H15 H16.
+        rewrite H12.
+        rewrite H11.
+        rewrite H10.
+        clear H10 H11 H12 H13.
 
         subst b.
         rewrite <- hacspec_function_guarantees.
@@ -4478,10 +4536,10 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     {
       unfold compute_group_element_for_vote at 1.
       rewrite !FieldToWitnessCancel.
-      rewrite mulrC.
-      rewrite trunc_pow.
-      rewrite expgM.
-      rewrite inv_is_inv.
+      (* rewrite mulrC. *)
+      (* rewrite trunc_pow. *)
+      (* rewrite expgM. *)
+      (* rewrite inv_is_inv. *)
 
         simpl.
         (* rewrite hacspec_function_guarantees2. *)
@@ -4559,7 +4617,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         rewrite <- conversion_is_true.
         destruct vi ; [ rewrite rmorph1 | rewrite rmorph0 ] ; reflexivity.
     }
-  Qed. (* Fail Timeout 5 Qed. Admitted. (* 319.394 secs *) *)
+  Admitted. (* Qed. (* Fail Timeout 5 Qed. Admitted. (* 319.394 secs *) *) *)
 
   Lemma real_protocol_is_maximum_balloc_secrecy_hiding :
     forall state (i : nat),
@@ -4569,15 +4627,19 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       LA :#: Schnorr_ZKP.Schnorr.MyAlg.Sigma_locs ->
       LA :#: Schnorr_ZKP.Schnorr.MyAlg.Simulator_locs ->
       LA :#: OR_ZKP.proof_args.MyAlg.Sigma_locs ->
+      LA :#: fset [:: DL_loc] ->
+      LA :#: fset [:: DDH_loc1; DDH_loc2] ->
     forall (ϵ : _),
     (forall P, ϵ_DL P <= ϵ)%R →
     forall (ψ : _),
     (forall P, ϵ_COMMIT P <= ψ)%R ->
     forall (ν : _),
     (forall P, ϵ_GPOWYINOTZERO i state P <= ν)%R →
+    forall (ζ : _),
+    (forall P, ϵ_DDH P <= ζ)%R →
     (AdvantageE
        (real_protocol i state true)
-       (real_protocol i state false) A <= ((ψ + ν) + (ϵ + ϵ)) + ((ψ + ν) + (ϵ + ϵ)))%R.
+       (real_protocol i state false) A <= ((ψ + ν) + (ϵ + (ϵ + ζ))) + ((ψ + ν) + (ϵ + (ϵ + ζ))))%R.
   Proof.
     intros.
 
