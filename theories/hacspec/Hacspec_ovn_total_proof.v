@@ -2189,7 +2189,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       (AdvantageE
            (full_protocol_interface state i vi ∘ par (DL_game false) (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real)))
            (full_protocol_interface_step4 state i vi ∘ (par (DL_game true) (par (DDH_game true) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal_no_assert)))))
-           A <= ((ψ + ν) + (ϵ + (ϵ + ζ)))%R)%R.
+           A <= ((ψ + ν) + (ϵ + ζ))%R)%R.
   Proof.
     intros ? ? ? ? ? ? H_LA_Schnorr_Sigma H_LA_Schnorr_Simulator H_LA_Or_Sigma H_LA_Or_Simulator H_LA_Or_DL_loc H_LA_Or_DDH_loc ? ? ? ? ? ? ζ H_DDH.
 
@@ -2472,7 +2472,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     }
 
     eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface state i vi ∘ par (DL_game false) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal_no_assert)))) | ].
-    rewrite <- (add0r (ϵ + (ϵ + ζ))%R).
+    rewrite <- (add0r (ϵ + ζ)%R). (* rewrite <- (add0r (ϵ + (ϵ + ζ))%R). *)
     apply Num.Theory.lerD.
     {
       replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ easy | symmetry ].
@@ -2597,7 +2597,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     }
 
     eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface_step1 state i vi ∘ (par (DL_game false) ((par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal_no_assert)))))) | ].
-    rewrite <- (add0r (ϵ + (ϵ + ζ))%R).
+    rewrite <- (add0r (ϵ + ζ)%R). (* rewrite <- (add0r (ϵ + (ϵ + ζ))%R). *)
     apply Num.Theory.lerD.
     1:{
       replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ easy | symmetry ].
@@ -2791,7 +2791,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       all: try (apply fsubsetxx || solve_in_fset).
     }
 
-    rewrite <- (add0r (ϵ + ζ)%R).
+    rewrite <- (add0r ζ%R). (* rewrite <- (add0r (ϵ + ζ)%R). *)
     (* try apply (AdvantageE_le_0 _ _ _ ) ; *)
     eapply Order.le_trans ; [ apply Advantage_triangle with (R := step2) | ].
     apply Num.Theory.lerD.
@@ -2918,7 +2918,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       all: try (apply fsubsetxx || solve_in_fset).
     }
 
-    rewrite <- (add0r (ϵ + ζ)%R).
+    rewrite <- (add0r ζ%R). (* rewrite <- (add0r (ϵ + ζ)%R). *)
     eapply Order.le_trans ; [ apply Advantage_triangle with (R := step3) | ].
     apply Num.Theory.lerD.
     (* split_advantage step3. *)
@@ -3198,7 +3198,8 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       fold step4.
       subst step3 step4.
 
-      rewrite addrC.
+      rewrite <- (addr0 ζ).
+      (* rewrite addrC. *)
       eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface_step3 state i vi ∘ (par (DL_game true) (par (DDH_game true) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal_no_assert)))))) | ].
       apply Num.Theory.lerD.
 
@@ -3262,13 +3263,13 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
         solve_flat.
       }
 
-      replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ | symmetry ].
-      {
-        eapply Order.le_trans.
-        2: apply (H0 A).
-        apply Num.Theory.normr_ge0.
-      }
-      (* replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ easy | symmetry ]. *)
+      (* replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ | symmetry ]. *)
+      (* { *)
+      (*   eapply Order.le_trans. *)
+      (*   2: apply (H0 A). *)
+      (*   apply Num.Theory.normr_ge0. *)
+      (* } *)
+      replace (AdvantageE _ _ _) with (@GRing.zero R) ; [ easy | symmetry ].
 
       apply: eq_rel_perf_ind_ignore.
       1: (apply fsubsetxx || solve_in_fset).
@@ -3463,7 +3464,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
       (forall P, ϵ_DDH P <= ζ)%R →
       (AdvantageE
          (full_protocol_interface state i true ∘ par (DL_game false) (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real)))
-        (full_protocol_interface state i false ∘ par (DL_game false) (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real))) A <= ((ψ + ν) + (ϵ + (ϵ + ζ))) + ((ψ + ν) + (ϵ + (ϵ + ζ))))%R.
+        (full_protocol_interface state i false ∘ par (DL_game false) (par schnorr_real (par (par (GPowYiNotZero_real i state) commit_real) cds_real))) A <= ((ψ + ν) + (ϵ + ζ)) + ((ψ + ν) + (ϵ + ζ)))%R.
   Proof.
     intros ? ? ? ? ? H_LA_Schnorr_Sigma H_LA_Schnorr_Simulator H_LA_Or_Sigma H_LA_Or_Simulator H_LA_Or_DL_loc H_LA_Or_DDH_loc ? ? ? ? ? ? ζ H_DDH.
 
@@ -3474,7 +3475,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
 
     (* Close in from the right *)
     eapply Order.le_trans ; [ apply Advantage_triangle with (R := (full_protocol_interface_step4 state i false ∘ (par (DL_game true) (par (DDH_game true) (par schnorr_ideal_no_assert (par (par (GPowYiNotZero_ideal (* i state *)) commit_ideal) cds_ideal_no_assert)))))) | ].
-    rewrite <- (add0r ((ψ + ν) + (ϵ + (ϵ + ζ)))%R).
+    rewrite <- (add0r ((ψ + ν) + (ϵ + ζ))%R).
     apply Num.Theory.lerD.
     2: rewrite Advantage_sym ; eapply (protocol_dl_real_to_ideal) ; eassumption.
 
@@ -4667,7 +4668,7 @@ Module OVN_proof (HOP : HacspecOvnParameter) (HOGaFP : HacspecOvnGroupAndFieldPa
     (forall P, ϵ_DDH P <= ζ)%R →
     (AdvantageE
        (real_protocol i state true)
-       (real_protocol i state false) A <= ((ψ + ν) + (ϵ + (ϵ + ζ))) + ((ψ + ν) + (ϵ + (ϵ + ζ))))%R.
+       (real_protocol i state false) A <= ((ψ + ν) + (ϵ + ζ)) + ((ψ + ν) + (ϵ + ζ)))%R.
   Proof.
     intros.
 
