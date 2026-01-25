@@ -4,7 +4,7 @@ Verified implementation of the Open Vote Network protocol
 ## Checking the proofs
 To set up an opam switch with all the project dependencies do:
 ```
-opam switch create ./ 4.14.1
+opam switch create ./ 4.14.2
 eval $(opam env)
 opam repo add rocq-released https://rocq-prover.org/opam/released
 opam install --locked --deps-only ./coq-ovn.opam
@@ -47,6 +47,7 @@ Coqdoc can be generate with `make html`, the generated documentation will be in 
 The switch used to check the Rocq proofs.
 Follow the instructions above to set it up.
 ```
+# Packages matching: installed
 # Name                          # Installed    # Synopsis
 angstrom                        0.16.1         Parser combinators built for speed and memory-efficiency
 atd                             2.16.0         Parser for the ATD data format description language
@@ -59,42 +60,50 @@ base-threads                    base
 base-unix                       base
 base_bigstring                  v0.16.0        String type based on [Bigarray], for use in I/O and C-bindings
 base_quickcheck                 v0.16.0        Randomized testing framework, designed for compatibility with Base
-batteries                       3.9.0          A community-maintained standard library extension
+batteries                       3.10.0         A community-maintained standard library extension
 bigstringaf                     0.10.0         Bigstring intrinsics and fast blits based on memcpy/memmove
 bin_prot                        v0.16.0        A binary protocol generator
 biniou                          1.2.2          Binary data format designed for speed, safety, ease of use and backward compatibility as protocols evolve
 camlp-streams                   5.0.1          The Stream and Genlex libraries for use with Camlp4 and Camlp5
 cmdliner                        1.3.0          Declarative definition of command line interfaces for OCaml
+conf-clang                      2              Virtual package relying on clang
 conf-gmp                        5              Virtual package relying on a GMP lib system installation
+conf-linux-libc-dev             0              Virtual package relying on the installation of the Linux kernel headers files
 conf-pkg-config                 4              Check if pkg-config is installed and create an opam switch local pkgconfig folder
-coq                             9.0.0          pinned to version 9.0.0
+coq                             9.0.0          Compatibility metapackage for Coq after the Rocq renaming
 coq-bignums                     9.0.0+rocq9.0  Compatibility wrapper for rocq-bignums
-coq-concert                     dev            pinned to version dev at git+https://github.com/AU-COBRA/ConCert.git#10768763dd8fc64e7d01181e79d88f0e6b972c0b
+coq-certicoq                    dev            pinned to version dev
+coq-compcert                    3.16           The CompCert C compiler (64 bit)
+coq-concert                     dev            pinned to version dev
 coq-core                        9.0.0          Compatibility binaries for Coq after the Rocq renaming
 coq-deriving                    0.2.2          Generic instances of MathComp classes
 coq-elm-extraction              0.1.1          Coq extraction to Elm
 coq-equations                   1.3.1+9.0      Compatibility package, see rocq-equations
 coq-ext-lib                     0.13.0         A library of Coq definitions, theorems, and tactics
 coq-extructures                 0.5.0          Finite sets, maps, and other data structures with extensional reasoning
-coq-hacspec-ssprove             dev            pinned to version dev at file:///OVN/hax
+coq-flocq                       4.2.1          A formalization of floating-point arithmetic for the Coq system
+coq-hacspec-ssprove             dev            pinned to version dev
 coq-hierarchy-builder           1.9.1          Compatibility package for rocq-hierarchy-builder
 coq-mathcomp-algebra            2.3.0          Mathematical Components Library on Algebra
 coq-mathcomp-analysis           1.8.0          An analysis library for mathematical components
 coq-mathcomp-bigenough          1.0.2          A small library to do epsilon - N reasoning
-coq-mathcomp-classical          1.8.0          pinned to version 1.8.0
+coq-mathcomp-classical          1.8.0          A library for classical logic for mathematical components
 coq-mathcomp-experimental-reals 1.8.0          A library for alternative real numbers for mathematical components
 coq-mathcomp-field              2.3.0          Mathematical Components Library on Fields
 coq-mathcomp-fingroup           2.3.0          Mathematical Components Library on finite groups
 coq-mathcomp-finmap             2.2.1          Compatibility package for rocq-mathcomp-finmap
 coq-mathcomp-reals              1.8.0          A library for real numbers for mathematical components
 coq-mathcomp-solvable           2.3.0          Mathematical Components Library on finite groups (II)
-coq-mathcomp-ssreflect          2.3.0          pinned to version 2.3.0
+coq-mathcomp-ssreflect          2.3.0          Small Scale Reflection
 coq-mathcomp-word               3.2            Yet Another Coq Library on Machine Words
 coq-mathcomp-zify               1.5.0+2.0+8.16 Micromega tactics for Mathematical Components
+coq-menhirlib                   20240715       A support library for verified Coq parsers produced by Menhir
 coq-metacoq-common              1.3.4+9.0      The common library of Template Coq and PCUIC
 coq-metacoq-erasure             1.3.4+9.0      Implementation and verification of an erasure procedure for Coq
+coq-metacoq-erasure-plugin      1.3.4+9.0      Implementation and verification of an erasure procedure for Coq
 coq-metacoq-pcuic               1.3.4+9.0      A type system equivalent to Coq's and its metatheory
 coq-metacoq-safechecker         1.3.4+9.0      Implementation and verification of safe conversion and typechecking algorithms for Coq
+coq-metacoq-safechecker-plugin  1.3.4+9.0      Implementation and verification of an erasure procedure for Coq
 coq-metacoq-template            1.3.4+9.0      A quoting and unquoting library for Coq in Coq
 coq-metacoq-template-pcuic      1.3.4+9.0      Translations between Template Coq and PCUIC and proofs of correctness
 coq-metacoq-utils               1.3.4+9.0      The utility library of Template Coq and PCUIC
@@ -114,22 +123,22 @@ easy-format                     1.3.4          High-level and functional interfa
 elpi                            2.0.7          ELPI - Embeddable λProlog Interpreter
 fieldslib                       v0.16.0        Syntax extension to define first class values representing record fields, to get and set record fields, iterate and fold over all fields of a record and create new record values
 gen                             1.1            Iterators for OCaml, both restartable and consumable
-hax-engine                      dev            pinned to version dev at file:///OVN/hax/engine
+hax-engine                      dev            pinned to version dev
 int_repr                        v0.16.0        Integers of various widths
 jane-street-headers             v0.16.0        Jane Street C header files
-js_of_ocaml                     6.0.1          Compiler from OCaml bytecode to JavaScript
-js_of_ocaml-compiler            6.0.1          Compiler from OCaml bytecode to JavaScript
-js_of_ocaml-ppx                 6.0.1          Compiler from OCaml bytecode to JavaScript
+js_of_ocaml                     6.2.0          Compiler from OCaml bytecode to JavaScript
+js_of_ocaml-compiler            6.2.0          Compiler from OCaml bytecode to JavaScript
+js_of_ocaml-ppx                 6.2.0          Compiler from OCaml bytecode to JavaScript
 jst-config                      v0.16.0        Compile-time configuration for Jane Street libraries
-logs                            0.8.0          Logging infrastructure for OCaml
-menhir                          20240715       An LR(1) parser generator
+logs                            0.10.0         Logging infrastructure for OCaml
+menhir                          20240715       pinned to version 20240715
 menhirCST                       20240715       Runtime support library for parsers generated by Menhir
 menhirLib                       20240715       Runtime support library for parsers generated by Menhir
 menhirSdk                       20240715       Compile-time library for auxiliary tools related to Menhir
 non_empty_list                  0.1            A non empty list library for OCaml
-num                             1.5-1          The legacy Num library for arbitrary-precision integer and rational arithmetic
-ocaml                           4.14.1         The OCaml compiler (virtual package)
-ocaml-base-compiler             4.14.1         Official release 4.14.1
+num                             1.6            The legacy Num library for arbitrary-precision integer and rational arithmetic
+ocaml                           4.14.2         The OCaml compiler (virtual package)
+ocaml-base-compiler             4.14.2         Official release 4.14.2
 ocaml-compiler-libs             v0.12.4        OCaml compiler libraries repackaged
 ocaml-config                    2              OCaml Switch Configuration
 ocaml-options-vanilla           1              Ensure that OCaml is compiled with no special options enabled
@@ -152,7 +161,7 @@ ppx_deriving                    6.0.3          Type-driven code generation for O
 ppx_deriving_yojson             3.9.1          JSON codec generator for OCaml
 ppx_disable_unused_warnings     v0.16.0        Expands [@disable_unused_warnings] into [@warning "-20-26-32-33-34-35-36-37-38-39-60-66-67"]
 ppx_enumerate                   v0.16.0        Generate a list containing all values of a finite type
-ppx_expect                      v0.16.1        Cram like framework for OCaml
+ppx_expect                      v0.16.2        Cram like framework for OCaml
 ppx_fields_conv                 v0.16.0        Generation of accessor and iteration functions for ocaml records
 ppx_fixed_literal               v0.16.0        Simpler notation for fixed point literals
 ppx_globalize                   v0.16.0        A ppx rewriter that generates functions to copy local values to the global heap
@@ -164,7 +173,7 @@ ppx_jane                        v0.16.0        Standard Jane Street ppx rewriter
 ppx_js_style                    v0.16.0        Code style checker for Jane Street Packages
 ppx_let                         v0.16.0        Monadic let-bindings
 ppx_log                         v0.16.0        Ppx_sexp_message-like extension nodes for lazily rendering log messages
-ppx_matches                     0.1            Small ppx to help check if a value matches a pattern
+ppx_matches                     0.1.0          A syntax extension for Rust's `matches!` in OCaml 🐪
 ppx_module_timer                v0.16.0        Ppx rewriter that records top-level module startup times
 ppx_optcomp                     v0.16.0        Optional compilation for OCaml
 ppx_optional                    v0.16.0        Pattern matching on flat options
@@ -191,7 +200,7 @@ rocq-mathcomp-finmap            2.2.1          Finite sets, finite maps, finitel
 rocq-prover                     9.0.0          The Rocq Prover with Stdlib
 rocq-runtime                    9.0.0          The Rocq Prover -- Core Binaries and Tools
 rocq-stdlib                     9.0.0          The Rocq Proof Assistant -- Standard Library
-sedlex                          3.6            An OCaml lexer generator for Unicode
+sedlex                          3.7            An OCaml lexer generator for Unicode
 seq                             base           Compatibility package for OCaml's standard iterator type starting from 4.07.
 sexplib                         v0.16.0        Library for serializing OCaml values to and from S-expressions
 sexplib0                        v0.16.0        Library containing the definition of S-expressions and some base converters
@@ -200,7 +209,7 @@ stdint                          0.7.2          Signed and unsigned integer types
 stdio                           v0.16.0        Standard IO library for OCaml
 stdlib-shims                    0.3.0          Backport some of the new stdlib features to older compiler
 time_now                        v0.16.0        Reports the current time
-topkg                           1.0.8          The transitory OCaml software packager
+topkg                           1.1.1          The transitory OCaml software packager
 typerep                         v0.16.0        Typerep is a library for runtime types
 variantslib                     v0.16.0        Part of Jane Street's Core library
 yojson                          2.2.2          Yojson is an optimized parsing and printing library for the JSON format
